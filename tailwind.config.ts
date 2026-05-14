@@ -11,14 +11,13 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // WWT Design System - From the "Total 11" Study
         cooked: {
-          bg: "#14181c", // Letterboxd Deep Blue-Black
+          bg: "#14181c",
           accent: "#FF4D4D",
           glow: "#FF4500",
         },
         chill: {
-          bg: "#FAF1E4", // Unfold Warm Beige
+          bg: "#FAF1E4",
           accent: "#2D9E8B",
         },
         unstable: {
@@ -33,12 +32,14 @@ const config: Config = {
           ink: "#1a1a1a",
           muted: "#6b6b6b",
           soft: "#4d4d4d",
-        }
+        },
       },
       fontFamily: {
-        cinematic: ["Lora", "serif"], // Storytelling/Nostalgia
-        data: ["Inter", "sans-serif"], // Identity/Stats
-        vibe: ["Space Grotesk", "sans-serif"], // Gen Z/Viral
+        // Semantic names → CSS vars set by next/font/google in layout.tsx
+        cinematic: ["var(--font-lora)", "Georgia", "serif"],
+        data: ["var(--font-inter)", "system-ui", "sans-serif"],
+        vibe: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       borderRadius: {
         '2xl': '1.25rem',
@@ -57,17 +58,23 @@ const config: Config = {
           '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        'pulse-soft': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
       },
       animation: {
         marquee: 'marquee 40s linear infinite',
         'fade-in': 'fade-in 1s ease-out forwards',
         'slide-up': 'slide-up 0.8s ease-out forwards',
+        'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
       },
       boxShadow: {
         '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
-      }
+      },
     },
   },
   plugins: [],
 };
+
 export default config;

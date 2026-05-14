@@ -25,6 +25,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // Refresh session — keeps Supabase auth cookies fresh
   await supabase.auth.getUser();
 
   return response;

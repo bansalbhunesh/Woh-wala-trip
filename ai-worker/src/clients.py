@@ -1,12 +1,9 @@
-from openai import OpenAI
+import anthropic
 from supabase import create_client, Client
 from .config import settings
 
-# Using OpenAI client for compatibility with aicredits.in proxy
-openai_client = OpenAI(
-    api_key=settings.ANTHROPIC_API_KEY,
-    base_url="https://api.aicredits.in/v1"
-)
+# Native Anthropic SDK — supports vision, prompt caching, structured output
+anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 try:
     supabase: Client = create_client(
@@ -15,5 +12,4 @@ try:
     )
 except Exception as e:
     print(f"Warning: Supabase client failed to initialize: {e}")
-    # Mock or None for UI-only testing
-    supabase = None # type: ignore
+    supabase = None  # type: ignore
