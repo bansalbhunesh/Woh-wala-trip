@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #FAF8F4;
+  --foreground: #1a1a1a;
+}
+
+body {
+  font-family: var(--font-inter), sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, .font-outfit {
+  font-family: var(--font-outfit), sans-serif;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Premium shadows */
+.shadow-premium {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+/* Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply bg-black text-white rounded-2xl py-4 px-6 font-medium transition-all active:scale-95 disabled:opacity-30;
+}
+
+.btn-secondary {
+  @apply bg-white border border-gray-200 text-black rounded-2xl py-4 px-6 font-medium transition-all active:scale-95 disabled:opacity-30;
+}
+
+/* Inputs */
+.input-field {
+  @apply w-full bg-transparent border-b border-gray-200 py-4 text-lg focus:outline-none focus:border-black transition-all placeholder:text-gray-300;
+}
