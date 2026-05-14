@@ -2,8 +2,8 @@ import { TRPCProvider } from '@/lib/trpc/provider';
 import './globals.css';
 
 export const metadata = {
-  title: 'Woh Wala Trip',
-  description: 'Your trips, narrated.',
+  title: 'Woh Wala Trip — AI Friendship Lore',
+  description: 'Turn your trips and friendships into cinematic chaos lore.',
   manifest: '/manifest.json',
 };
 

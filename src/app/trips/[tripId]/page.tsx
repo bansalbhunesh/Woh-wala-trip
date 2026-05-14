@@ -213,13 +213,34 @@ function LoreView({
       </section>
 
       <section>
-        <p className="text-xs uppercase tracking-wider text-gray-400 mb-3">Chaos score</p>
+        <p className="text-xs uppercase tracking-wider text-gray-400 mb-3">Cooked level</p>
         <div className="flex items-baseline gap-3">
-          <span className="text-5xl font-medium">{lore.chaos_score}</span>
+          <span className="text-5xl font-medium">{lore.cooked_level || lore.chaos_score}</span>
           <span className="text-gray-400">/ 100</span>
         </div>
-        <p className="text-sm text-gray-600 mt-2">{lore.chaos_verdict}</p>
+        <p className="text-sm font-medium text-red-500 mt-2">{lore.cooked_verdict}</p>
+        <p className="text-sm text-gray-600 mt-1">{lore.cooked_explanation || lore.chaos_verdict}</p>
       </section>
+
+      {lore.season_recap && (
+        <section>
+          <p className="text-xs uppercase tracking-wider text-gray-400 mb-4">Season Recap</p>
+          <div className="space-y-6">
+            <div className="border-l-2 border-black pl-4">
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Act 1: The Setup</p>
+              <p className="text-sm text-gray-700">{lore.season_recap.act_1}</p>
+            </div>
+            <div className="border-l-2 border-black pl-4">
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Act 2: The Downfall</p>
+              <p className="text-sm text-gray-700">{lore.season_recap.act_2}</p>
+            </div>
+            <div className="border-l-2 border-black pl-4">
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Act 3: The Bonding</p>
+              <p className="text-sm text-gray-700">{lore.season_recap.act_3}</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {eras.length > 0 && (
         <section>

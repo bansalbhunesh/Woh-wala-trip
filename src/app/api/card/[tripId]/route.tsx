@@ -9,7 +9,7 @@ import {
   Eyebrow,
   Title,
   Tagline,
-  ChaosScore,
+  CookedLevel,
   Closing,
   CardFooter,
 } from '@/lib/og/components';
@@ -48,7 +48,11 @@ export async function GET(
       <Eyebrow palette={palette}>Woh Wala Trip</Eyebrow>
       <Title palette={palette}>{lore.trip_title}</Title>
       <Tagline palette={palette}>{lore.tagline}</Tagline>
-      <ChaosScore palette={palette} score={trip.chaos_score || 0} />
+      <CookedLevel 
+        palette={palette} 
+        level={trip.chaos_score || 0} 
+        verdict={lore.cooked_verdict}
+      />
       <Closing palette={palette}>{lore.closing_line}</Closing>
       <CardFooter
         palette={palette}

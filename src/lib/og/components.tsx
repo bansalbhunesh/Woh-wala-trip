@@ -108,12 +108,14 @@ export function Tagline({
   );
 }
 
-export function ChaosScore({
+export function CookedLevel({
   palette,
-  score,
+  level,
+  verdict,
 }: {
   palette: CardPalette;
-  score: number;
+  level: number;
+  verdict?: string;
 }) {
   return (
     <div
@@ -134,7 +136,7 @@ export function ChaosScore({
           letterSpacing: -6,
         }}
       >
-        {score}
+        {level}
       </div>
       <div
         style={{
@@ -144,7 +146,7 @@ export function ChaosScore({
         }}
       >
         <span style={{ fontSize: 30, color: palette.inkSoft, fontWeight: 500 }}>
-          chaos score
+          {verdict || 'how cooked?'}
         </span>
         <span style={{ fontSize: 22, color: palette.inkMuted }}>out of 100</span>
       </div>

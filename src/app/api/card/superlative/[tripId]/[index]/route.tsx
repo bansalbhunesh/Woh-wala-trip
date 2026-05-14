@@ -52,7 +52,7 @@ export async function GET(
       <div style={{ display: 'flex', alignItems: 'center', gap: 40, marginTop: 'auto' }}>
         <MemberInitial palette={palette} name={superlative.winner_name} size={180} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 36, color: palette.inkSoft }}>Awarded to</div>
+          <div style={{ fontSize: 32, color: palette.inkSoft }}>{superlative.archetype || 'Awarded to'}</div>
           <div style={{ fontSize: 72, fontWeight: 500 }}>{superlative.winner_name}</div>
         </div>
       </div>
