@@ -22,22 +22,23 @@ export async function GET(
     .eq('id', tripId)
     .single();
 
-  if (error || !trip || !trip.lore_json) {
+  const t = trip as any;
+  if (error || !t || !t.lore_json) {
     return errorImage('Trip lore not ready');
   }
 
-  const lore = trip.lore_json as any;
+  const lore = t.lore_json;
   const stats = lore.receipt_stats || [];
 
   if (stats.length === 0) {
     return errorImage('No stats found for receipt');
   }
 
-  const palette = paletteFor(trip.chaos_score || 50);
+  const palette = paletteFor(t.chaos_score || 50);
   const origin = req.headers.get('origin');
   const [fonts, qr] = await Promise.all([
     loadCardFonts(origin),
-    qrDataUrl(`${origin}/join/${trip.invite_code}`, {
+    qrDataUrl(`${origin}/join/${t.invite_code}`, {
       dark: palette.ink,
     }),
   ]);
@@ -74,7 +75,7 @@ export async function GET(
             fontFamily: 'monospace',
           }}
         >
-          *** ORDER #{(trip.id as string).slice(0, 8).toUpperCase()} ***
+          *** ORDER #{(t.id as string).slice(0, 8).toUpperCase()} ***
         </div>
 
         <DashedDivider />
@@ -86,7 +87,7 @@ export async function GET(
             fontFamily: 'monospace',
           }}
         >
-          {trip.name.toUpperCase()}
+          {t.name.toUpperCase()}
         </div>
         <DashedDivider />
 
@@ -97,7 +98,7 @@ export async function GET(
         </div>
 
         <DashedDivider />
-        <ReceiptRow label="CHAOS SCORE" value={trip.chaos_score || 0} emphasis />
+        <ReceiptRow label="CHAOS SCORE" value={t.chaos_score || 0} emphasis />
         <DashedDivider />
 
         <div
@@ -132,7 +133,7 @@ export async function GET(
         <CardFooter
           palette={palette}
           qrDataUrl={qr}
-          showWatermark={trip.tier === 'free'}
+          showWatermark={t.tier === 'free'}
           qrLabel="Scan to join"
         />
       </div>

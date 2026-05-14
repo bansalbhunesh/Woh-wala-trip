@@ -29,8 +29,9 @@ export async function GET(
     return errorImage('Battle not found');
   }
 
-  const tripA = battle.trip_a as any;
-  const tripB = battle.trip_b as any;
+  const b = battle as any;
+  const tripA = b.trip_a;
+  const tripB = b.trip_b;
   const palette = PALETTES.inferno; // Battles are high stakes
   const origin = req.headers.get('origin');
   const [fonts, qr] = await Promise.all([

@@ -4,7 +4,7 @@ import { loadCardFonts } from '../../../../../../lib/og/fonts';
 import { PALETTES } from '../../../../../../lib/og/colors';
 import { qrDataUrl } from '../../../../../../lib/og/qr';
 import { renderCard, errorImage } from '../../../../../../lib/og/render';
-import { CardFrame, Eyebrow, Title, CardFooter } from '../../../../../../lib/og/components';
+import { CardFrame, Title, CardFooter } from '../../../../../../lib/og/components';
 import { MemberInitial, SignatureMove } from '../../../../../../lib/og/components-viral';
 
 export const runtime = 'edge';
@@ -23,11 +23,12 @@ export async function GET(
     .eq('user_id', userId)
     .single();
 
-  if (error || !member || member.status !== 'absent') {
+  const m = member as any;
+  if (error || !m || m.status !== 'absent') {
     return errorImage('User is not marked as absent');
   }
 
-  const trip = member.trips as any;
+  const trip = m.trips;
   const palette = PALETTES.chaos; // Missing cards are always high-chaos alert themed
   const origin = req.headers.get('origin');
   const [fonts, qr] = await Promise.all([
@@ -37,7 +38,7 @@ export async function GET(
     }),
   ]);
 
-  const displayName = (member.profiles as any)?.display_name || 'Anonymous';
+  const displayName = m.profiles?.display_name || 'Anonymous';
 
   return renderCard(
     <CardFrame palette={palette}>
@@ -78,7 +79,7 @@ export async function GET(
 
         <div style={{ marginTop: 'auto' }}>
           <SignatureMove palette={palette}>
-            Reason for absence: {member.absence_reason || 'Skill issue / FOMO'}
+            Reason for absence: {m.absence_reason || 'Skill issue / FOMO'}
           </SignatureMove>
 
           <CardFooter
