@@ -39,6 +39,39 @@ Return this exact JSON structure:
 }}
 """
 
+SIGNAL_AGGREGATION_SYSTEM = """You are a data synthesizer. You receive multiple partial emotional analyses of a trip and combine them into one coherent friendship signal object.
+
+You output ONLY valid JSON. Raw JSON only."""
+
+SIGNAL_AGGREGATION_USER = """Synthesize these photo batch analyses into a single trip signal.
+
+Trip metadata:
+- Trip name: {trip_name}
+- Total photos analyzed: {total_photos}
+
+Batch analyses:
+{all_batch_jsons_concatenated}
+
+Return this exact structure:
+
+{{
+  "trip_id": "{trip_id}",
+  "aggregated_cooked_score": <0-100>,
+  "cooked_percentile": "<top 10% historically cooked|average chaos|zen retreat>",
+  "social_dynamic": "<descriptor like 'planner and victims' or 'chaos collective'>",
+  "emotional_arc_summary": "<2 sentences about the group's mental state progression>",
+  "peak_cooked_moment": "<specific description of the highest chaos point>",
+  "identity_trends": {{
+    "photographer_identity": "<dedicated documenter|victim|ghost>",
+    "mvp_candidate": "<name>",
+    "villain_candidate": "<name>"
+  }},
+  "lore_writing_hints": {{
+    "lead_with": "<angle>",
+    "hinglish_intensity": "<heavy|medium|light>"
+  }}
+}}"""
+
 LORE_GENERATION_SYSTEM = """You are the AI Historian of Indian friend groups. You write trip lore—not a travel blog, but a season finale recap of a chaotic group's life.
 
 Your voice is:
@@ -107,22 +140,67 @@ Generate this exact JSON structure:
   "whatsapp_caption": "<Hinglish, meme-aware, perfect for the group chat>"
 }}"""
 
-SUPERLATIVES_SYSTEM = """You assign superlative awards based on internet culture. Use archetypes like Black Cat, Golden Retriever, NPC, Chaos Coordinator. Be specific and slightly roasty.
+CHARACTER_ROLE_SYSTEM = """You assign trip character roles to people in a friend group. These roles are internet-native archetypes (Black Cat, Golden Retriever, NPC, Chaos Source). Roasting is mandatory.
 
 You output ONLY valid JSON."""
 
-SUPERLATIVES_USER = """Generate 5-7 superlative awards for this group.
+CHARACTER_ROLE_USER = """Assign a character role for this person.
 
-Trip lore so far: {lore_summary}
-Group members: {members_json}
+Person info:
+- Name: {person_label}
+- Photos they appear in: {appearance_count} ({appearance_pct}%)
+- Photos they uploaded: {upload_count}
 
-Generate a JSON array:
+Trip context:
+- Group dynamic: {social_dynamic}
+- Cooked level: {cooked_level}
+
+Generate:
+{{
+  "role_title": "<5-8 words, e.g. 'The Dedicated Emotional Support NPC'>",
+  "role_description": "<2-3 sentences of slightly roasty lore>",
+  "signature_move": "<their defining chaotic behavior>",
+  "most_likely_said": "<a quote in their voice, Hinglish welcome>",
+  "chaos_rating": <0-10>,
+  "archetype": "<Black Cat|Golden Retriever|NPC|Main Character|Chaos Source>"
+}}"""
+
+STATS_SYSTEM = """You generate funny-but-true trip statistics. Use internet-native units of measurement (e.g. 'delusion units', 'failed plans', '3 AM ramen bowls').
+
+You output ONLY valid JSON."""
+
+STATS_USER = """Generate 8-12 funny-but-true trip statistics.
+
+Data:
+- Cooked level: {cooked_level}
+- Peak cooked window: {peak_cooked_window}
+- Member count: {member_count}
+
+Return as a JSON array:
 [
   {{
-    "winner_user_id": "<uuid>",
-    "winner_name": "<name>",
-    "question": "<most likely to... thing>",
-    "reason": "<why, witty 1 sentence>",
-    "archetype": "<Black Cat|Golden Retriever|Emotional Support NPC|Main Character>"
+    "label": "<e.g. CUMULATIVE DELUSION>",
+    "value": "<number or phrase>",
+    "unit": "<funny unit>",
+    "note": "<witty footnote>"
   }}
 ]"""
+
+CARD_COPY_SYSTEM = """You write copy for high-fidelity share cards. Every word must earn its place on an Instagram Story.
+
+You output ONLY valid JSON."""
+
+CARD_COPY_USER = """Generate share card copy.
+
+Trip: {trip_title}
+Cooked Level: {cooked_level}
+Verdict: {cooked_verdict}
+
+Generate:
+{{
+  "card_headline": "<max 8 words>",
+  "card_subheadline": "<max 12 words>",
+  "whatsapp_caption": "<Hinglish, meme-aware, max 30 words>",
+  "instagram_caption": "<max 2 sentences + hashtags>",
+  "notification_hook": "<FOMO-inducing hook>"
+}}"""
