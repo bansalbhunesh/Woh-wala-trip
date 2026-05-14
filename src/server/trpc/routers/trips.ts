@@ -33,7 +33,7 @@ export const tripsRouter = router({
         console.error('trip create failed', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Could not create trip',
+          message: 'Lore creation failed—our historian is a bit overwhelmed.',
         });
       }
 
@@ -97,9 +97,9 @@ export const tripsRouter = router({
       const res = data as any;
       if (res?.error) {
         const errorMap: Record<string, string> = {
-          invalid_or_expired_code: 'This invite code is invalid or expired',
+          invalid_or_expired_code: 'Yaar this code is literally not working (invalid or expired).',
           free_tier_member_limit_reached:
-            'This trip is at its 6-member limit. The creator can upgrade to digital tier for unlimited members.',
+            'This trip is at its 6-member limit. Upgrade to Digital Tier to let the whole group join the lore.',
           not_authenticated: 'Please sign in first',
         };
         throw new TRPCError({
@@ -165,7 +165,7 @@ export const tripsRouter = router({
       if ((trip.total_photos || 0) < 5) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Need at least 5 photos to generate lore',
+          message: 'Need at least 5 photos to generate lore—we cant write history without receipts.',
         });
       }
 

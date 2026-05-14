@@ -23,6 +23,7 @@ export function CardFrame({
         flexDirection: 'column',
         padding: `${CARD_PADDING_TOP}px ${CARD_PADDING_X}px ${CARD_PADDING_BOTTOM}px`,
         background: palette.bg,
+        backgroundImage: `radial-gradient(circle at 0% 0%, ${palette.accent}08 0%, transparent 50%), radial-gradient(circle at 100% 100%, ${palette.accent}08 0%, transparent 50%)`,
         fontFamily: 'Inter',
         color: palette.ink,
         position: 'relative',
@@ -44,8 +45,9 @@ export function Eyebrow({
     <div
       style={{
         fontSize: 30,
+        fontFamily: 'Space Grotesk',
         color: palette.inkSoft,
-        letterSpacing: 4,
+        letterSpacing: 6,
         textTransform: 'uppercase',
         fontWeight: 500,
         marginBottom: 56,
@@ -71,12 +73,13 @@ export function Title({
       style={{
         fontSize,
         fontWeight: 500,
+        fontFamily: 'Lora',
         color: palette.ink,
-        lineHeight: 1.05,
-        letterSpacing: -1.5,
+        lineHeight: 0.9,
+        letterSpacing: -3,
         display: 'flex',
-        flexWrap: 'wrap',
-        marginBottom: 36,
+        flexDirection: 'column',
+        marginBottom: 48,
       }}
     >
       {children}
@@ -94,11 +97,11 @@ export function Tagline({
   return (
     <div
       style={{
-        fontSize: 40,
+        fontSize: 48,
         fontFamily: 'Lora',
         fontStyle: 'italic',
         color: palette.inkSoft,
-        lineHeight: 1.35,
+        lineHeight: 1.2,
         marginBottom: 'auto',
         maxWidth: 880,
       }}
@@ -129,11 +132,12 @@ export function CookedLevel({
     >
       <div
         style={{
-          fontSize: 220,
-          fontWeight: 500,
+          fontSize: 260,
+          fontFamily: 'Space Grotesk',
+          fontWeight: 700,
           color: palette.accent,
-          lineHeight: 0.95,
-          letterSpacing: -6,
+          lineHeight: 0.85,
+          letterSpacing: -12,
         }}
       >
         {level}
@@ -191,27 +195,32 @@ export function CardFooter({
     <div
       style={{
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'space-between',
         marginTop: 60,
+        paddingTop: 60,
+        borderTop: `1px solid ${palette.ink}15`,
       }}
     >
-      <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-        <img src={qrDataUrl} width={140} height={140} alt="" />
+      <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+        <img src={qrDataUrl} width={160} height={160} style={{ borderRadius: 24 }} alt="" />
         {qrLabel && (
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              fontSize: 22,
-              color: palette.inkMuted,
+              fontSize: 24,
+              fontFamily: 'Space Grotesk',
+              color: palette.inkSoft,
               lineHeight: 1.3,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
             }}
           >
-            <span style={{ fontWeight: 500, color: palette.inkSoft }}>
-              Scan to join
+            <span style={{ fontWeight: 600, color: palette.ink }}>
+              Join the lore
             </span>
-            <span>or read the full lore</span>
+            <span style={{ opacity: 0.6 }}>Woh Wala Trip</span>
           </div>
         )}
       </div>
@@ -219,13 +228,16 @@ export function CardFooter({
       {showWatermark && (
         <div
           style={{
-            fontSize: 22,
+            fontSize: 24,
+            fontFamily: 'Space Grotesk',
             color: palette.watermark,
-            fontWeight: 500,
-            letterSpacing: 1,
+            fontWeight: 600,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            opacity: 0.8,
           }}
         >
-          wohwalatrip.app
+          wwt.app
         </div>
       )}
     </div>

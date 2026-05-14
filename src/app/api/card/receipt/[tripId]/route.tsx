@@ -48,84 +48,52 @@ export async function GET(
       <div
         style={{
           background: '#fff',
-          padding: '60px 40px',
+          padding: '80px 60px',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
-          borderRadius: 8,
-          border: '1px solid #e0e0e0',
+          boxShadow: '0 40px 100px rgba(0,0,0,0.1)',
+          borderRadius: 48,
+          border: '1px solid #eef0f2',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 48,
-            fontWeight: 500,
-            marginBottom: 8,
-            fontFamily: 'monospace',
-          }}
-        >
-          WOH WALA TRIP
-        </div>
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 24,
-            marginBottom: 40,
-            fontFamily: 'monospace',
-          }}
-        >
-          *** ORDER #{(t.id as string).slice(0, 8).toUpperCase()} ***
+        {/* Subtle Stripe-style accent bar */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 12, background: palette.accent }} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 60 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 40, fontFamily: 'Space Grotesk', fontWeight: 700, color: palette.ink, letterSpacing: -1 }}>WWT LORE</div>
+            <div style={{ fontSize: 24, fontFamily: 'Space Grotesk', color: palette.inkSoft, textTransform: 'uppercase', letterSpacing: 2 }}>Receipt of Downfall</div>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: 24, fontFamily: 'Space Grotesk', color: palette.inkSoft }}>
+            #{ (t.id as string).slice(0, 8).toUpperCase() }
+          </div>
         </div>
 
-        <DashedDivider />
-        <div
-          style={{
-            padding: '20px 0',
-            fontSize: 32,
-            fontWeight: 500,
-            fontFamily: 'monospace',
-          }}
-        >
-          {t.name.toUpperCase()}
-        </div>
-        <DashedDivider />
-
-        <div style={{ display: 'flex', flexDirection: 'column', margin: '20px 0' }}>
-          {stats.map((s: any, i: number) => (
-            <ReceiptRow key={i} label={s.label.toUpperCase()} value={s.value} />
-          ))}
+        <div style={{ height: 1, background: '#eee', margin: '20px 0' }} />
+        
+        <div style={{ padding: '40px 0', display: 'flex', flexDirection: 'column', gap: 40 }}>
+           {stats.map((s: any, i: number) => (
+             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <div style={{ fontSize: 28, fontFamily: 'Space Grotesk', color: palette.inkSoft, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
+               <div style={{ fontSize: 32, fontFamily: 'Space Grotesk', fontWeight: 600, color: palette.ink }}>{s.value}</div>
+             </div>
+           ))}
         </div>
 
-        <DashedDivider />
-        <ReceiptRow label="CHAOS SCORE" value={t.chaos_score || 0} emphasis />
-        <DashedDivider />
+        <div style={{ height: 1, background: '#eee', margin: '20px 0' }} />
 
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 24,
-            marginTop: 40,
-            fontFamily: 'monospace',
-            color: '#666',
-          }}
-        >
-          THANK YOU FOR THE CHAOS
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 40 }}>
+           <div style={{ fontSize: 36, fontFamily: 'Space Grotesk', fontWeight: 700, color: palette.ink }}>CHAOS TOTAL</div>
+           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 80, fontFamily: 'Space Grotesk', fontWeight: 800, color: palette.accent, letterSpacing: -4 }}>{t.chaos_score || 0}</div>
+              <div style={{ fontSize: 32, fontFamily: 'Space Grotesk', color: palette.inkSoft }}>/100</div>
+           </div>
         </div>
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 20,
-            marginTop: 8,
-            fontFamily: 'monospace',
-            color: '#999',
-          }}
-        >
-          {new Date().toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          })}
+
+        <div style={{ marginTop: 80, textAlign: 'center', fontSize: 20, fontFamily: 'Space Grotesk', color: palette.inkSoft, textTransform: 'uppercase', letterSpacing: 4 }}>
+           Issued on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
       </div>
 

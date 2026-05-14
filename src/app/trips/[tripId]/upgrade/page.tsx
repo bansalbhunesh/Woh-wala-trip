@@ -55,10 +55,13 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
         ← Back
       </button>
 
-      <h1 className="text-2xl font-medium mb-2">Upgrade your trip</h1>
-      <p className="text-sm text-gray-500 mb-8">
-        Free trips expire in 7 days. Upgrade to keep your archive forever.
-      </p>
+      <header className="pt-12 pb-10 text-center space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-vibe">The Final Recut</p>
+        <h1 className="text-5xl font-cinematic font-medium text-cooked-bg leading-tight">Seal the Lore</h1>
+        <p className="text-sm text-gray-400 font-data font-light max-w-xs mx-auto">
+          Free trips are transient. Upgrade to keep the group&apos;s downfall permanent.
+        </p>
+      </header>
 
       <div className="space-y-4">
         <Plan
@@ -106,24 +109,33 @@ function Plan({
   featured?: boolean;
 }) {
   return (
-    <div className={`border-2 rounded-2xl p-6 ${featured ? 'border-black' : 'border-gray-200'}`}>
-      <div className="flex justify-between items-baseline mb-4">
-        <h3 className="font-medium">{name}</h3>
-        <p className="text-2xl font-medium">{price}</p>
+    <div className={`relative overflow-hidden rounded-[2.5rem] p-8 transition-all duration-500 ${featured ? 'bg-cooked-bg text-white shadow-2xl shadow-cooked-bg/20' : 'bg-gray-50 border border-gray-100 text-gray-800'}`}>
+      <div className="flex justify-between items-baseline mb-6">
+        <h3 className="text-2xl font-cinematic italic">{name}</h3>
+        <p className="text-3xl font-vibe font-bold">{price}</p>
       </div>
-      <ul className="text-sm text-gray-600 space-y-1 mb-6">
+      <ul className="text-sm space-y-3 mb-10 font-data font-light opacity-90">
         {features.map((f, i) => (
-          <li key={i}>· {f}</li>
+          <li key={i} className="flex items-center gap-3">
+             <span className={`w-1.5 h-1.5 rounded-full ${featured ? 'bg-chill-accent' : 'bg-gray-300'}`} />
+             {f}
+          </li>
         ))}
       </ul>
       <button
         onClick={onClick}
-        className={`w-full py-3 rounded-xl font-medium ${
-          featured ? 'bg-black text-white' : 'border border-gray-300'
+        className={`w-full py-5 rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] ${
+          featured ? 'bg-white text-cooked-bg' : 'bg-cooked-bg text-white'
         }`}
       >
         Choose {name}
       </button>
+
+      {featured && (
+         <div className="absolute top-4 right-4 bg-chill-accent text-white text-[8px] px-3 py-1 rounded-full font-vibe uppercase tracking-widest">
+            Best for Lore
+         </div>
+      )}
     </div>
   );
 }

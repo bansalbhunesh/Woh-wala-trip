@@ -41,58 +41,82 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
-      <div className="w-full max-w-sm">
-        <h1 className="text-3xl font-medium mb-2">Woh Wala Trip</h1>
-        <p className="text-sm text-gray-500 mb-8">Your trips, narrated.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white selection:bg-cooked-bg selection:text-white">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+           <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-vibe">The Gateway</p>
+           <h1 className="text-5xl font-cinematic font-medium text-cooked-bg leading-none">Woh Wala Trip</h1>
+           <p className="text-sm text-gray-400 font-data font-light">Your friendships, narrated.</p>
+        </div>
 
         {step === 'phone' ? (
           <>
-            <label className="block text-xs text-gray-500 mb-1">Phone number</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full border-b border-gray-300 py-3 text-lg focus:outline-none focus:border-black"
-              placeholder="+91 98765 43210"
-              autoFocus
-            />
-            <button
-              onClick={sendOtp}
-              disabled={loading || phone.length < 10}
-              className="w-full mt-8 py-4 bg-black text-white rounded-xl disabled:opacity-30 text-base font-medium"
-            >
-              {loading ? 'Sending...' : 'Send OTP'}
-            </button>
+            <div className="space-y-4">
+              <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe ml-1">Phone number</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full bg-gray-50/50 border border-gray-100 rounded-2xl px-6 py-5 text-xl font-data focus:outline-none focus:ring-2 focus:ring-cooked-accent/20 focus:bg-white transition-all"
+                placeholder="+91 98765 43210"
+                autoFocus
+              />
+              <button
+                onClick={sendOtp}
+                disabled={loading || phone.length < 10}
+                className="w-full py-5 bg-cooked-bg text-white rounded-full disabled:opacity-30 text-[10px] uppercase tracking-[0.3em] font-vibe font-bold shadow-xl shadow-cooked-bg/20 hover:scale-[1.02] transition-all"
+              >
+                {loading ? 'Sending...' : 'Send OTP'}
+              </button>
+            </div>
           </>
         ) : (
           <>
-            <label className="block text-xs text-gray-500 mb-1">Enter the 6-digit code</label>
-            <input
-              type="number"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.slice(0, 6))}
-              className="w-full border-b border-gray-300 py-3 text-2xl tracking-widest focus:outline-none focus:border-black"
-              placeholder="123456"
-              autoFocus
-            />
-            <button
-              onClick={verifyOtp}
-              disabled={loading || otp.length !== 6}
-              className="w-full mt-8 py-4 bg-black text-white rounded-xl disabled:opacity-30 text-base font-medium"
-            >
-              {loading ? 'Verifying...' : 'Continue'}
-            </button>
-            <button
-              onClick={() => setStep('phone')}
-              className="w-full mt-4 py-3 text-sm text-gray-500"
-            >
-              Change number
-            </button>
+            <div className="space-y-4">
+              <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe ml-1">The Lore Key (OTP)</label>
+              <input
+                type="number"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.slice(0, 6))}
+                className="w-full bg-gray-50/50 border border-gray-100 rounded-2xl px-6 py-5 text-3xl font-vibe tracking-[0.5em] text-center focus:outline-none focus:ring-2 focus:ring-cooked-accent/20 focus:bg-white transition-all"
+                placeholder="000000"
+                autoFocus
+              />
+              <button
+                onClick={verifyOtp}
+                disabled={loading || otp.length !== 6}
+                className="w-full py-5 bg-cooked-bg text-white rounded-full disabled:opacity-30 text-[10px] uppercase tracking-[0.3em] font-vibe font-bold shadow-xl shadow-cooked-bg/20 hover:scale-[1.02] transition-all"
+              >
+                {loading ? 'Verifying...' : 'Continue'}
+              </button>
+              <button
+                onClick={() => setStep('phone')}
+                className="w-full py-3 text-[10px] uppercase tracking-[0.1em] text-gray-400 font-vibe hover:text-cooked-bg transition-colors"
+              >
+                Change number
+              </button>
+            </div>
           </>
         )}
 
-        {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+        {error && (
+          <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-2xl animate-slide-up">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-red-400 font-vibe mb-1 font-bold">Access Denied</p>
+            <p className="text-sm text-red-600 font-data font-medium leading-snug">{error}</p>
+          </div>
+        )}
+
+        {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
+           <div className="pt-10 border-t border-gray-50 text-center space-y-4">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-300 font-vibe">Developer Tools</p>
+              <button 
+                onClick={() => router.push('/trips')}
+                className="text-[10px] uppercase tracking-widest font-vibe font-bold text-gray-400 hover:text-cooked-bg transition-colors"
+              >
+                Skip to Archive →
+              </button>
+           </div>
+        )}
       </div>
     </div>
   );

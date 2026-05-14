@@ -3,6 +3,8 @@ export interface LoreJson {
   tagline: string;
   cooked_verdict: string;
   chaos_score: number;
+  screenshot_moment_line?: string;
+  whatsapp_caption?: string;
   closing_line: string;
   trip_eras?: Array<{
     era_name: string;

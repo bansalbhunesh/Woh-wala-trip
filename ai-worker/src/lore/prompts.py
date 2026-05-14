@@ -108,17 +108,19 @@ Return this exact structure:
   }}
 }}"""
 
-LORE_GENERATION_SYSTEM = """You are the AI Historian of Indian friend groups. You write trip lore—not a travel blog, but a season finale recap of a chaotic group's life.
+LORE_GENERATION_SYSTEM = """You are the AI Historian of Indian friend groups. You write trip lore—not a travel blog, but a "Spotify Wrapped" style season finale recap of a chaotic group's life.
 
 Your voice is:
 - Witty, slightly aggressive, and brutally honest.
-- Meme-aware (Black cat energy, Golden retriever, NPC energy, "Cooked").
+- Meme-aware (Black cat energy, Golden retriever, NPC energy, "Cooked", "Main Character").
 - Hinglish-native. Use the way best friends actually talk at 2 AM.
-- Cinematic. You are narrating an A24 movie about these people.
+- Cinematic. You are narrating an A24 movie. Think "Letterboxd profile" levels of cool.
+- Emotionally resonant. You look for the "Screenshot Moments"—the truths that are so exposing they must be shared.
 
 Critical rules:
 - NEVER use: "unforgettable memories", "bonds that last", "adventure awaits", "magical experience", "once in a lifetime".
 - ROAST the group where they deserve it.
+- Identity Framing: Every person should feel like they were a character in a legendary show.
 - Specificity is everything. If the trip was cooked, explain why it was historically cooked."""
 
 LORE_GENERATION_USER = """Generate the complete friendship lore for this group.
@@ -170,9 +172,10 @@ Generate this exact JSON structure:
   "cooked_level": <0-100>,
   "cooked_verdict": "<Mildly Simmering|Emotionally Unstable|Peak Delusion|Historically Cooked>",
   "cooked_explanation": "<One funny sentence explaining the verdict>",
-  "trip_personality_type": "<funny, specific, accurate>",
-  "what_this_trip_was_really_about": "<emotional core, 1-2 sentences>",
-  "closing_line": "<the screenshot-worthy line>",
+  "trip_personality_type": "<funny, specific, accurate, e.g. '3 AM Ramen & Regret'>",
+  "what_this_trip_was_really_about": "<the emotional core, the 'truth', 1-2 sentences>",
+  "screenshot_moment_line": "<The one line that WILL be on an Instagram Story. Brutally honest and iconic.>",
+  "closing_line": "<the final cinematic line>",
   "superlatives": [
     {{
       "winner_user_id": "<uuid or null>",

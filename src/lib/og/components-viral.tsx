@@ -78,21 +78,22 @@ export function MetricBlock({
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, marginBottom: 24 }}>
       <div
         style={{
-          fontSize: 180,
-          fontWeight: 500,
+          fontSize: 220,
+          fontFamily: 'Space Grotesk',
+          fontWeight: 700,
           color: palette.accent,
-          lineHeight: 0.95,
-          letterSpacing: -4,
+          lineHeight: 0.85,
+          letterSpacing: -12,
         }}
       >
         {value}
         {outOf && (
-          <span style={{ fontSize: 80, color: palette.inkMuted, fontWeight: 400 }}>
+          <span style={{ fontSize: 100, color: palette.inkMuted, fontWeight: 500, letterSpacing: -4 }}>
             /{outOf}
           </span>
         )}
       </div>
-      <div style={{ paddingBottom: 24, fontSize: 28, color: palette.inkSoft }}>
+      <div style={{ paddingBottom: 24, fontSize: 32, fontFamily: 'Space Grotesk', fontWeight: 500, color: palette.inkSoft, textTransform: 'uppercase', letterSpacing: 4 }}>
         {label}
       </div>
     </div>

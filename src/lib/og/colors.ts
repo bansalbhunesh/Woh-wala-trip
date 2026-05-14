@@ -9,17 +9,17 @@ export interface CardPalette {
 }
 
 export const PALETTES: Record<string, CardPalette> = {
-  // Mildly Simmering (0-25) - Soft, chill, green/teal
+  // Mildly Simmering (0-25) - Unfold "Quiet Luxury" Beige
   chill: {
-    bg: '#F4FBF9',
-    ink: '#1A2F2B',
-    inkSoft: '#4D6661',
-    inkMuted: '#99B2AD',
+    bg: '#FAF1E4',
+    ink: '#1A1A1A',
+    inkSoft: '#5F5E5A',
+    inkMuted: '#888780',
     accent: '#2D9E8B',
-    border: '#D1E6E1',
-    watermark: '#99B2AD',
+    border: '#E8E4D8',
+    watermark: '#888780',
   },
-  // Emotionally Unstable (26-50) - Warm, slightly tense, amber
+  // Emotionally Unstable (26-50) - Warm & Tense
   unstable: {
     bg: '#FFFBF2',
     ink: '#2F271A',
@@ -29,7 +29,7 @@ export const PALETTES: Record<string, CardPalette> = {
     border: '#E6DCC1',
     watermark: '#B2A599',
   },
-  // Peak Delusion (51-75) - Intense, vibrant, orange/red
+  // Peak Delusion (51-75) - Intense & Vibrant
   delusional: {
     bg: '#FFF5F2',
     ink: '#2F1A1A',
@@ -39,17 +39,17 @@ export const PALETTES: Record<string, CardPalette> = {
     border: '#E6C1C1',
     watermark: '#B29999',
   },
-  // Historically Cooked (76-100) - Dark, dramatic, deep red/black
+  // Historically Cooked (76-100) - Letterboxd Cinematic Dark
   cooked: {
-    bg: '#1A0D0D',
+    bg: '#14181C',
     ink: '#FFFFFF',
-    inkSoft: '#B29999',
-    inkMuted: '#664D4D',
+    inkSoft: '#99B2AD',
+    inkMuted: '#5F5E5A',
     accent: '#FF4D4D',
-    border: '#4D1A1A',
-    watermark: '#664D4D',
+    border: '#2F1A1A',
+    watermark: '#5F5E5A',
   },
-  // Chaos (Legacy/Alert) - High alert red
+  // Chaos / Inferno - Legacy
   chaos: {
     bg: '#FFFFFF',
     ink: '#000000',
@@ -58,16 +58,6 @@ export const PALETTES: Record<string, CardPalette> = {
     accent: '#FF0000',
     border: '#FF0000',
     watermark: '#888888',
-  },
-  // Inferno - High stakes black/orange
-  inferno: {
-    bg: '#000000',
-    ink: '#FFFFFF',
-    inkSoft: '#FFA500',
-    inkMuted: '#666666',
-    accent: '#FF4500',
-    border: '#FF4500',
-    watermark: '#444444',
   },
 };
 

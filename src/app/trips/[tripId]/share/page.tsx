@@ -60,13 +60,13 @@ export default function SharePage({ params }: { params: Promise<{ tripId: string
 
 function Header({ tripName, onBack }: { tripName?: string; onBack: () => void }) {
   return (
-    <div className="px-6 pt-8 pb-2 flex items-center gap-3">
-      <button onClick={onBack} className="text-sm text-gray-500" aria-label="Back to trip">
+    <div className="px-6 pt-8 pb-2 flex items-center gap-4">
+      <button onClick={onBack} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:text-black transition-colors" aria-label="Back to trip">
         ←
       </button>
       <div className="flex-1">
-        <p className="text-xs uppercase tracking-widest text-gray-400">Lore ready</p>
-        <p className="text-sm font-medium">{tripName}</p>
+        <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-vibe">Lore Archive</p>
+        <p className="text-sm font-data font-medium text-gray-700">{tripName}</p>
       </div>
     </div>
   );
@@ -74,10 +74,10 @@ function Header({ tripName, onBack }: { tripName?: string; onBack: () => void })
 
 function SubHeader({ cardCount }: { cardCount: number }) {
   return (
-    <div className="px-6 pt-6 pb-2">
-      <h1 className="text-2xl font-medium leading-tight">Pick your card to share</h1>
-      <p className="text-sm text-gray-500 mt-1">
-        {cardCount} cards generated from this trip · swipe to browse
+    <div className="px-6 pt-8 pb-2">
+      <h1 className="text-4xl font-cinematic font-medium leading-tight text-cooked-bg">Pick your lore</h1>
+      <p className="text-sm text-gray-400 font-data font-light mt-2">
+        {cardCount} receipt cards · swipe to choose your identity
       </p>
     </div>
   );
@@ -130,40 +130,42 @@ function CarouselThumb({
     <button
       onClick={onClick}
       className={`
-        shrink-0 w-28 h-44 rounded-xl snap-start
-        flex flex-col items-center justify-center p-2 gap-1
-        transition-all
-        ${selected ? 'ring-2 ring-black scale-105' : 'ring-1 ring-gray-200 opacity-75'}
+        shrink-0 w-32 h-52 rounded-[2rem] snap-start
+        flex flex-col items-center justify-center p-4 gap-2
+        transition-all duration-500
+        ${selected ? 'ring-4 ring-black/5 scale-105 shadow-2xl shadow-black/10 z-10' : 'ring-1 ring-gray-100 opacity-60 hover:opacity-100 scale-95'}
       `}
       style={{ background: palette.bg }}
     >
       <span
-        className="text-[9px] uppercase tracking-wider font-medium"
+        className="text-[8px] uppercase tracking-[0.2em] font-vibe font-bold"
         style={{ color: palette.eyebrow }}
       >
         {thumbEyebrow(card)}
       </span>
       <span
-        className="text-[11px] font-medium leading-tight text-center px-1 line-clamp-3"
+        className="text-xs font-cinematic font-medium leading-tight text-center px-1 line-clamp-3"
         style={{ color: palette.ink }}
       >
         {card.label}
       </span>
       {card.sublabel && (
         <span
-          className="text-[10px] text-center px-1 line-clamp-1"
+          className="text-[9px] font-data font-light text-center px-1 line-clamp-1 opacity-70"
           style={{ color: palette.muted }}
         >
           {card.sublabel}
         </span>
       )}
       {card.isYours && (
-        <span
-          className="text-[9px] font-medium uppercase tracking-wider mt-1"
-          style={{ color: palette.eyebrow }}
-        >
-          You
-        </span>
+        <div className="mt-2 px-2 py-0.5 rounded-full bg-white/50 backdrop-blur-sm border border-white/20 shadow-sm">
+           <span
+             className="text-[8px] font-vibe font-bold uppercase tracking-wider"
+             style={{ color: palette.eyebrow }}
+           >
+             You
+           </span>
+        </div>
       )}
     </button>
   );
@@ -185,13 +187,13 @@ function thumbEyebrow(card: CardEntry): string {
 function thumbPalette(type: CardEntry['type']) {
   switch (type) {
     case 'trip':
-      return { bg: '#FAF1E4', ink: '#1a1a1a', eyebrow: '#BA7517', muted: '#888780' };
+      return { bg: '#FAF1E4', ink: '#1a1a1a', eyebrow: '#BA7517', muted: '#888780' }; // Cooked Gold
     case 'character':
-      return { bg: '#FBEAF0', ink: '#4B1528', eyebrow: '#D4537E', muted: '#993556' };
+      return { bg: '#FBEAF0', ink: '#4B1528', eyebrow: '#D4537E', muted: '#993556' }; // Unstable Pink
     case 'superlative':
-      return { bg: '#F1EFE8', ink: '#1a1a1a', eyebrow: '#5F5E5A', muted: '#888780' };
+      return { bg: '#F1EFE8', ink: '#1a1a1a', eyebrow: '#5F5E5A', muted: '#888780' }; // Chill Gray
     case 'receipt':
-      return { bg: '#FAF7EF', ink: '#1a1a1a', eyebrow: '#D85A30', muted: '#888780' };
+      return { bg: '#FAF7EF', ink: '#1a1a1a', eyebrow: '#D85A30', muted: '#888780' }; // Delusional Orange
   }
 }
 

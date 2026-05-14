@@ -15,6 +15,7 @@ export async function loadCardFonts(origin?: string | null): Promise<Font[]> {
       { name: 'Inter', weight: 500, style: 'normal', path: '/fonts/Inter-Medium.ttf' },
       { name: 'Inter', weight: 400, style: 'normal', path: '/fonts/Inter-Regular.ttf' },
       { name: 'Lora', weight: 400, style: 'italic', path: '/fonts/Lora-Italic.ttf' },
+      { name: 'Space Grotesk', weight: 500, style: 'normal', path: '/fonts/SpaceGrotesk-Medium.ttf' },
     ];
 
     const fontData = await Promise.all(

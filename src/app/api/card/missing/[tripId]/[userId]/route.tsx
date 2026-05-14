@@ -44,43 +44,78 @@ export async function GET(
     <CardFrame palette={palette}>
       <div
         style={{
-          border: `20px solid ${palette.accent}`,
+          border: `2px dashed ${palette.accent}60`,
+          borderRadius: 48,
           padding: 60,
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
+          position: 'relative',
         }}
       >
+        {/* Caution Tape Style Header */}
         <div
           style={{
             background: palette.accent,
-            color: '#fff',
-            fontSize: 120,
-            fontWeight: 500,
+            color: palette.bg,
+            fontSize: 140,
+            fontFamily: 'Space Grotesk',
+            fontWeight: 800,
             textAlign: 'center',
-            padding: '20px 0',
-            marginBottom: 60,
-            letterSpacing: 10,
+            padding: '40px 0',
+            margin: '-60px -60px 80px -60px',
+            borderTopLeftRadius: 40,
+            borderTopRightRadius: 40,
+            letterSpacing: -4,
           }}
         >
-          MISSING
+          MISSING IN LORE
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 60 }}>
-          <MemberInitial palette={palette} name={displayName} size={400} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 40 }}>
+           <div style={{ position: 'relative' }}>
+              <MemberInitial palette={palette} name={displayName} size={480} />
+              <div style={{ 
+                position: 'absolute', 
+                bottom: -20, 
+                right: -20, 
+                background: '#fff', 
+                border: `4px solid ${palette.accent}`,
+                borderRadius: 20,
+                padding: '12px 24px',
+                fontSize: 32,
+                fontFamily: 'Space Grotesk',
+                fontWeight: 700,
+                color: palette.accent
+              }}>
+                FOMO LEVEL: 100%
+              </div>
+           </div>
+           
+           <div style={{ textAlign: 'center', marginTop: 40 }}>
+              <div style={{ fontSize: 40, fontFamily: 'Lora', fontStyle: 'italic', color: palette.inkSoft, marginBottom: 16 }}>
+                Wanted for ghosting the group at
+              </div>
+              <div style={{ fontSize: 96, fontFamily: 'Lora', fontWeight: 600, color: palette.ink, lineHeight: 1, letterSpacing: -2 }}>
+                {trip.name}
+              </div>
+           </div>
         </div>
 
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 40, color: palette.inkSoft, marginBottom: 16 }}>
-            Last seen thinking about
+        <div style={{ marginTop: 'auto', paddingTop: 60 }}>
+          <div style={{ 
+            fontSize: 36, 
+            fontFamily: 'Space Grotesk', 
+            color: palette.inkSoft, 
+            marginBottom: 24,
+            padding: '24px 32px',
+            background: `${palette.accent}10`,
+            borderRadius: 24,
+            borderLeft: `8px solid ${palette.accent}`,
+            lineHeight: 1.4
+          }}>
+            &ldquo;{m.absence_reason || 'Officially missing out on the best season of the lore.'}&rdquo;
           </div>
-          <Title palette={palette}>{trip.name}</Title>
-        </div>
-
-        <div style={{ marginTop: 'auto' }}>
-          <SignatureMove palette={palette}>
-            Reason for absence: {m.absence_reason || 'Skill issue / FOMO'}
-          </SignatureMove>
 
           <CardFooter
             palette={palette}

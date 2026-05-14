@@ -7,8 +7,9 @@ export default function TripsListPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="px-6 pt-12 pb-6">
-        <h1 className="text-2xl font-medium">Your trips</h1>
+      <header className="px-6 pt-20 pb-10">
+        <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-vibe mb-2">The Archive</p>
+        <h1 className="text-5xl font-cinematic font-medium text-cooked-bg">Your Seasons</h1>
       </header>
 
       <main className="px-6 space-y-3">
@@ -22,18 +23,31 @@ export default function TripsListPage() {
               <Link
                 key={trip.id}
                 href={`/trips/${trip.id}`}
-                className="block border border-gray-200 rounded-xl p-4"
+                className="group block relative overflow-hidden rounded-[2.5rem] bg-gray-50 border border-gray-100 p-8 hover:bg-white hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <h2 className="font-medium text-base">{trip.name}</h2>
+                <div className="flex justify-between items-start mb-6">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe">Season {trip.total_photos > 50 ? 'Finale' : 'Premiere'}</p>
+                    <h2 className="text-3xl font-cinematic font-medium text-cooked-bg leading-none group-hover:text-chill-accent transition-colors">{trip.name}</h2>
+                  </div>
                   <StatusBadge status={trip.lore_status} />
                 </div>
-                <div className="text-sm text-gray-500 space-y-1">
-                  <p>
-                    {trip.destination} · {trip.member_count} people · {trip.total_photos} photos
-                  </p>
-                  {trip.chaos_score !== null && <p>Chaos: {trip.chaos_score}/100</p>}
+                
+                <div className="flex items-center gap-4 text-[10px] font-vibe uppercase tracking-widest text-gray-400">
+                  <span>{trip.destination}</span>
+                  <span className="w-1 h-1 rounded-full bg-gray-200" />
+                  <span>{trip.member_count} Cast Members</span>
                 </div>
+
+                {trip.chaos_score !== null && (
+                   <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
+                      <div className="flex items-baseline gap-2">
+                         <span className="text-2xl font-vibe font-bold text-cooked-accent leading-none">{trip.chaos_score}</span>
+                         <span className="text-[8px] text-gray-400 uppercase tracking-widest">Chaos Rating</span>
+                      </div>
+                      <span className="text-[10px] italic font-cinematic text-gray-400">Open Archive →</span>
+                   </div>
+                )}
               </Link>
             )
         )}
@@ -72,16 +86,17 @@ function EmptyState() {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending: 'bg-gray-100 text-gray-600',
-    processing: 'bg-amber-50 text-amber-700',
-    ready: 'bg-green-50 text-green-700',
-    failed: 'bg-red-50 text-red-700',
-    regenerating: 'bg-amber-50 text-amber-700',
+  const styles: Record<string, { bg: string; text: string; label: string }> = {
+    pending: { bg: 'bg-gray-100', text: 'text-gray-500', label: 'Empty' },
+    processing: { bg: 'bg-amber-50', text: 'text-amber-600', label: 'Archiving...' },
+    ready: { bg: 'bg-green-50', text: 'text-green-600', label: 'Ready' },
+    failed: { bg: 'bg-red-50', text: 'text-red-600', label: 'Error' },
+    regenerating: { bg: 'bg-amber-50', text: 'text-amber-600', label: 'Recutting...' },
   };
+  const config = styles[status] || styles.pending;
   return (
-    <span className={`text-xs px-2 py-1 rounded-full ${styles[status] || styles.pending}`}>
-      {status}
+    <span className={`text-[8px] uppercase tracking-[0.2em] font-vibe font-bold px-3 py-1.5 rounded-full ${config.bg} ${config.text}`}>
+      {config.label}
     </span>
   );
 }

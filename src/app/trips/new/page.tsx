@@ -18,23 +18,26 @@ export default function NewTripPage() {
 
   return (
     <div className="min-h-screen bg-white p-6">
-      <header className="mb-8 pt-6">
-        <button onClick={() => router.back()} className="text-sm text-gray-500 mb-4">
-          ← Back
+      <header className="px-6 pt-20 pb-10">
+        <button onClick={() => router.back()} className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-vibe mb-4 hover:text-black transition-colors">
+          ← Cancel
         </button>
-        <h1 className="text-2xl font-medium">New trip</h1>
+        <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-vibe mb-2">The Setup</p>
+        <h1 className="text-5xl font-cinematic font-medium text-cooked-bg">New Season</h1>
       </header>
 
-      <div className="space-y-6">
-        <Field label="Trip name" value={name} onChange={setName} placeholder="Goa 2024" />
+      <main className="px-6 space-y-10">
+        <Field label="Season Title" value={name} onChange={setName} placeholder="The Goa Downfall" />
         <Field
-          label="Destination"
+          label="Location"
           value={destination}
           onChange={setDestination}
-          placeholder="Goa"
+          placeholder="Goa, India"
         />
-        <Field label="Start date" value={startDate} onChange={setStartDate} type="date" />
-        <Field label="End date" value={endDate} onChange={setEndDate} type="date" />
+        <div className="grid grid-cols-2 gap-6">
+          <Field label="Premiere" value={startDate} onChange={setStartDate} type="date" />
+          <Field label="Finale" value={endDate} onChange={setEndDate} type="date" />
+        </div>
 
         <button
           onClick={() =>
@@ -46,13 +49,13 @@ export default function NewTripPage() {
             })
           }
           disabled={!name || !startDate || !endDate || createTrip.isPending}
-          className="w-full py-4 bg-black text-white rounded-xl disabled:opacity-30 font-medium mt-12"
+          className="w-full py-6 bg-cooked-bg text-white rounded-full text-[10px] uppercase tracking-[0.3em] font-vibe font-bold shadow-2xl shadow-cooked-bg/20 hover:scale-[1.02] transition-all disabled:opacity-20"
         >
-          {createTrip.isPending ? 'Creating...' : 'Create trip'}
+          {createTrip.isPending ? 'Preparing Archive...' : 'Start the Season'}
         </button>
 
-        {createTrip.error && <p className="text-sm text-red-500">{createTrip.error.message}</p>}
-      </div>
+        {createTrip.error && <p className="text-center text-[10px] uppercase tracking-widest text-red-500 font-vibe">{createTrip.error.message}</p>}
+      </main>
     </div>
   );
 }
@@ -71,14 +74,14 @@ function Field({
   type?: string;
 }) {
   return (
-    <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+    <div className="space-y-2">
+      <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe ml-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full border-b border-gray-300 py-3 text-base focus:outline-none focus:border-black"
+        className="w-full bg-gray-50/50 border border-gray-100 rounded-2xl px-6 py-5 text-lg font-data focus:outline-none focus:ring-2 focus:ring-cooked-accent/20 focus:bg-white transition-all"
       />
     </div>
   );

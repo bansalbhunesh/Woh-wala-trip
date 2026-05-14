@@ -200,26 +200,36 @@ function LoreView({
   const router = useRouter();
 
   return (
-    <div className="px-6 py-8 space-y-10">
-      <section>
-        <p className="text-xs uppercase tracking-wider text-gray-400 mb-3">Trip title</p>
-        <h2 className="text-3xl font-medium leading-tight mb-3">{lore.trip_title}</h2>
-        <p className="text-base text-gray-600 italic">{lore.tagline}</p>
+    <div className="px-6 py-8 space-y-12">
+      <section className="text-center space-y-4">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-vibe">The Official Archive</p>
+        <h2 className="text-5xl font-cinematic font-medium leading-tight text-cooked-bg">{lore.trip_title}</h2>
+        <p className="text-lg text-chill-accent italic font-cinematic">&ldquo;{lore.tagline}&rdquo;</p>
       </section>
 
-      <section>
-        <p className="text-xs uppercase tracking-wider text-gray-400 mb-3">The story</p>
-        <p className="text-base leading-relaxed">{lore.storyline?.full_narrative}</p>
+      <section className="bg-gray-50/50 p-8 rounded-[2rem] border border-gray-100/50">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe mb-4">The Season Recap</p>
+        <p className="text-xl leading-relaxed font-data font-light text-gray-700">
+          {lore.storyline?.full_narrative || lore.season_recap?.full_narrative}
+        </p>
       </section>
 
-      <section>
-        <p className="text-xs uppercase tracking-wider text-gray-400 mb-3">Cooked level</p>
-        <div className="flex items-baseline gap-3">
-          <span className="text-5xl font-medium">{lore.cooked_level || lore.chaos_score}</span>
-          <span className="text-gray-400">/ 100</span>
+      <section className="py-8">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe mb-6">Collective Energy</p>
+        <div className="flex items-center gap-6">
+          <div className="text-9xl font-vibe font-bold tracking-tighter text-cooked-accent leading-none">
+            {lore.cooked_level || lore.chaos_score}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xl font-vibe font-medium uppercase tracking-tight text-cooked-accent">
+              {lore.cooked_verdict}
+            </span>
+            <span className="text-sm text-gray-400 font-data">How cooked? / 100</span>
+          </div>
         </div>
-        <p className="text-sm font-medium text-red-500 mt-2">{lore.cooked_verdict}</p>
-        <p className="text-sm text-gray-600 mt-1">{lore.cooked_explanation || lore.chaos_verdict}</p>
+        <p className="text-lg text-gray-600 font-data font-light mt-6 leading-relaxed border-l-2 border-gray-100 pl-6">
+          {lore.cooked_explanation || lore.chaos_verdict}
+        </p>
       </section>
 
       {lore.season_recap && (
@@ -264,24 +274,27 @@ function LoreView({
       )}
 
       <section>
-        <p className="text-xs uppercase tracking-wider text-gray-400 mb-4">Character roles</p>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe mb-8 text-center">Character Roles</p>
         <div className="space-y-4">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {members.map((m: any) => (
-            <div key={m.user_id} className="border border-gray-200 rounded-xl p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="text-sm text-gray-500">{m.display_name}</p>
-                  <h3 className="font-medium mt-0.5">{m.role_title || 'Role pending...'}</h3>
+            <div key={m.user_id} className="group p-6 rounded-[2rem] bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-xl transition-all duration-500">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-vibe text-sm">
+                      {m.display_name[0]}
+                   </div>
+                   <p className="text-sm font-data font-medium text-gray-500">{m.display_name}</p>
                 </div>
                 {m.role_chaos_rating !== null && (
-                  <span className="text-xs px-2 py-0.5 bg-red-50 text-red-700 rounded-full">
+                  <span className="text-[10px] px-3 py-1 bg-cooked-accent/10 text-cooked-accent rounded-full font-vibe font-bold uppercase tracking-wider">
                     Chaos {m.role_chaos_rating}/10
                   </span>
                 )}
               </div>
+              <h3 className="text-2xl font-cinematic font-medium text-cooked-bg">{m.role_title || 'Role pending...'}</h3>
               {m.role_description && (
-                <p className="text-sm text-gray-700 mt-2">{m.role_description}</p>
+                <p className="text-base text-gray-500 font-data font-light mt-3 leading-snug">{m.role_description}</p>
               )}
             </div>
           ))}
@@ -290,39 +303,58 @@ function LoreView({
 
       {stats.length > 0 && (
         <section>
-          <p className="text-xs uppercase tracking-wider text-gray-400 mb-4">Trip stats</p>
-          <div className="grid grid-cols-2 gap-3">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe mb-8 text-center">Data Receipts</p>
+          <div className="grid grid-cols-2 gap-4">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {stats.map((s: any) => (
-              <div key={s.id} className="border border-gray-200 rounded-xl p-3">
-                <p className="text-xl font-medium">{s.value}</p>
-                <p className="text-xs text-gray-500">{s.unit}</p>
-                <p className="text-xs text-gray-700 mt-1">{s.label}</p>
-                {s.note && <p className="text-xs text-gray-400 italic mt-1">{s.note}</p>}
+              <div key={s.id} className="bg-gray-50/30 p-6 rounded-[2rem] border border-gray-100/50 hover:bg-white transition-colors">
+                <p className="text-3xl font-vibe font-bold tracking-tighter text-cooked-bg leading-none">{s.value}</p>
+                <p className="text-[10px] text-chill-accent font-vibe uppercase tracking-widest mt-1">{s.unit}</p>
+                <p className="text-xs text-gray-400 font-data font-medium mt-3 uppercase tracking-wider">{s.label}</p>
+                {s.note && <p className="text-[10px] text-gray-400 italic font-data mt-2 opacity-60">&ldquo;{s.note}&rdquo;</p>}
               </div>
             ))}
           </div>
         </section>
       )}
 
-      <section className="text-center py-8 border-t border-gray-100">
-        <p className="text-base text-gray-700 italic leading-relaxed">
-          &ldquo;{lore.closing_line}&rdquo;
-        </p>
+      <section className="text-center py-20 bg-cooked-bg text-white rounded-[3rem] px-10 space-y-6">
+         <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
+         <p className="text-2xl md:text-3xl font-cinematic italic leading-relaxed text-white/90">
+           &ldquo;{lore.closing_line}&rdquo;
+         </p>
+         <div className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">The Final Verdict</div>
       </section>
 
-      <div className="fixed bottom-6 left-6 right-6 flex gap-3">
+      <section className="group relative overflow-hidden bg-white border border-gray-100 rounded-[2.5rem] p-10 hover:shadow-2xl transition-all duration-500">
+         <div className="absolute top-0 right-0 w-32 h-32 bg-cooked-accent/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+         <div className="relative z-10 space-y-6">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-vibe">Arena</p>
+            <h3 className="text-3xl font-cinematic font-medium text-cooked-bg">Think your trip was worse?</h3>
+            <p className="text-sm text-gray-500 font-data font-light leading-relaxed max-w-sm">
+               Challenge another friend group to a **Chaos Clash**. The AI judge will decide who actually had the most cooked season.
+            </p>
+            <button 
+               className="px-8 py-4 bg-cooked-bg text-white rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-105 transition-transform shadow-xl shadow-cooked-bg/20"
+               onClick={() => alert('Battle System Coming Soon - Invite your rival group link to start.')}
+            >
+               Challenge a Group
+            </button>
+         </div>
+      </section>
+
+      <div className="fixed bottom-6 left-6 right-6 flex gap-3 z-50">
         <button
           onClick={() => router.push(`/trips/${tripId}/share`)}
-          className="flex-1 py-4 bg-black text-white rounded-xl font-medium"
+          className="flex-[2] py-5 bg-cooked-bg text-white rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] shadow-2xl shadow-cooked-bg/20 hover:scale-[1.02] transition-transform"
         >
-          Share your cards
+          Export Identity
         </button>
         <button
           onClick={() => router.push(`/trips/${tripId}/upgrade`)}
-          className="py-4 px-5 border border-gray-300 rounded-xl font-medium"
+          className="flex-1 py-5 bg-white border border-gray-100 text-cooked-bg rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] shadow-xl hover:bg-gray-50 transition-all"
         >
-          ₹299
+          Seal Lore
         </button>
       </div>
     </div>
