@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseServiceClient } from '@/lib/supabase/server';
-import { loadCardFonts } from '@/lib/og/fonts';
-import { paletteFor } from '@/lib/og/colors';
-import { qrDataUrl } from '@/lib/og/qr';
-import { renderCard, errorImage } from '@/lib/og/render';
+import { createSupabaseServiceClient } from '../../../../lib/supabase/server';
+import { loadCardFonts } from '../../../../lib/og/fonts';
+import { paletteFor } from '../../../../lib/og/colors';
+import { qrDataUrl } from '../../../../lib/og/qr';
+import { renderCard, errorImage } from '../../../../lib/og/render';
 import {
   CardFrame,
   Eyebrow,
@@ -12,7 +12,7 @@ import {
   CookedLevel,
   Closing,
   CardFooter,
-} from '@/lib/og/components';
+} from '../../../../lib/og/components';
 
 export const runtime = 'edge';
 

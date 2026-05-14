@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseServiceClient } from '@/lib/supabase/server';
-import { loadCardFonts } from '@/lib/og/fonts';
-import { PALETTES } from '@/lib/og/colors';
-import { qrDataUrl } from '@/lib/og/qr';
-import { renderCard, errorImage } from '@/lib/og/render';
-import { CardFrame, Eyebrow, Title, CardFooter } from '@/lib/og/components';
-import { MemberInitial, SignatureMove } from '@/lib/og/components-viral';
+import { createSupabaseServiceClient } from '../../../../../../lib/supabase/server';
+import { loadCardFonts } from '../../../../../../lib/og/fonts';
+import { PALETTES } from '../../../../../../lib/og/colors';
+import { qrDataUrl } from '../../../../../../lib/og/qr';
+import { renderCard, errorImage } from '../../../../../../lib/og/render';
+import { CardFrame, Eyebrow, Title, CardFooter } from '../../../../../../lib/og/components';
+import { MemberInitial, SignatureMove } from '../../../../../../lib/og/components-viral';
 
 export const runtime = 'edge';
 
