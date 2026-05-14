@@ -1,341 +1,155 @@
 'use client';
 
-import { use, useState, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import Link from 'next/link';
 
-type CardEntry = {
-  id: string;
-  type: 'trip' | 'character' | 'superlative' | 'receipt';
-  url: string;
-  label: string;
-  sublabel?: string;
-  isYours?: boolean;
-  memberId?: string;
-};
+export default function SharePage() {
+  const params = useParams();
+  const tripId = params.tripId as string;
 
-export default function SharePage({ params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = use(params);
-  const router = useRouter();
+  const { data: tripData, isLoading } = trpc.trips.getFull.useQuery({ tripId });
 
-  const { data: cards, isLoading } = trpc.cards.listForTrip.useQuery({ tripId });
-  const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
+  if (isLoading) return <LoadingState />;
+  if (!tripData) return <NotFoundState />;
 
-  const defaultIndex = useMemo(() => {
-    if (!cards) return 0;
-    const yoursIdx = cards.findIndex((c) => c.isYours);
-    return yoursIdx !== -1 ? yoursIdx : 0;
-  }, [cards]);
+  const trip = (tripData as any).trip;
+  const cast = (tripData as any).cast || [];
+  const mainChaos = cast.sort((a: any, b: any) => b.chaos_score - a.chaos_score)[0];
 
-  const [selectedIdx, setSelectedIdx] = useState(defaultIndex);
-
-  if (isLoading || !cards) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-sm text-gray-400">Loading your cards...</p>
-      </div>
-    );
-  }
-
-  const selectedCard = cards[selectedIdx];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trip = (tripData as any)?.trip;
+  const shareText = `According to AI, I'm the ${mainChaos?.archetype || 'Chaos Source'} (${mainChaos?.chaos_score}/10). Our trip scored ${trip.chaos_score}/100 chaos. ${mainChaos?.full_name || 'Someone'} caused the most problems. No further comments. 🏛️ #WohWalaTrip #${trip.title.replace(/\s+/g, '')}`;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-6">
-      <Header tripName={trip?.name} onBack={() => router.push(`/trips/${tripId}`)} />
-      <SubHeader cardCount={cards.length} />
-      <CardCarousel cards={cards} selectedIdx={selectedIdx} onSelect={setSelectedIdx} />
-      <SelectedCardPreview card={selectedCard} />
-      <ActionButtons
-        selectedCard={selectedCard}
-        tripId={tripId}
-        tripName={trip?.name}
-        loreJson={trip?.lore_json}
-      />
-      <FreeTierNote isFree={trip?.tier === 'free'} tripId={tripId} />
-    </div>
-  );
-}
+    <div className="min-h-screen bg-black text-[#F5F0E8] font-vibe selection:bg-cooked-bg selection:text-white pb-20">
+      {/* Share Header */}
+      <header className="px-6 pt-12 pb-8">
+        <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-vibe mb-2">Export Identity</p>
+        <h1 className="font-cinematic font-black text-4xl tracking-tighter leading-none">Pick a card.<br/>Expose your group.</h1>
+      </header>
 
-function Header({ tripName, onBack }: { tripName?: string; onBack: () => void }) {
-  return (
-    <div className="px-6 pt-8 pb-2 flex items-center gap-4">
-      <button onClick={onBack} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:text-black transition-colors" aria-label="Back to trip">
-        ←
-      </button>
-      <div className="flex-1">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-vibe">Lore Archive</p>
-        <p className="text-sm font-data font-medium text-gray-700">{tripName}</p>
-      </div>
-    </div>
-  );
-}
-
-function SubHeader({ cardCount }: { cardCount: number }) {
-  return (
-    <div className="px-6 pt-8 pb-2">
-      <h1 className="text-4xl font-cinematic font-medium leading-tight text-cooked-bg">Pick your lore</h1>
-      <p className="text-sm text-gray-400 font-data font-light mt-2">
-        {cardCount} receipt cards · swipe to choose your identity
-      </p>
-    </div>
-  );
-}
-
-function CardCarousel({
-  cards,
-  selectedIdx,
-  onSelect,
-}: {
-  cards: CardEntry[];
-  selectedIdx: number;
-  onSelect: (idx: number) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <div className="mt-4">
-      <div
-        ref={containerRef}
-        className="overflow-x-auto px-6 pb-2 flex gap-3 snap-x snap-mandatory scroll-smooth"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {cards.map((card, idx) => (
-          <CarouselThumb
-            key={card.id}
-            card={card}
-            selected={idx === selectedIdx}
-            onClick={() => onSelect(idx)}
-          />
-        ))}
-        <div className="shrink-0 w-6" />
-      </div>
-    </div>
-  );
-}
-
-function CarouselThumb({
-  card,
-  selected,
-  onClick,
-}: {
-  card: CardEntry;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  const palette = thumbPalette(card.type);
-
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        shrink-0 w-32 h-52 rounded-[2rem] snap-start
-        flex flex-col items-center justify-center p-4 gap-2
-        transition-all duration-500
-        ${selected ? 'ring-4 ring-black/5 scale-105 shadow-2xl shadow-black/10 z-10' : 'ring-1 ring-gray-100 opacity-60 hover:opacity-100 scale-95'}
-      `}
-      style={{ background: palette.bg }}
-    >
-      <span
-        className="text-[8px] uppercase tracking-[0.2em] font-vibe font-bold"
-        style={{ color: palette.eyebrow }}
-      >
-        {thumbEyebrow(card)}
-      </span>
-      <span
-        className="text-xs font-cinematic font-medium leading-tight text-center px-1 line-clamp-3"
-        style={{ color: palette.ink }}
-      >
-        {card.label}
-      </span>
-      {card.sublabel && (
-        <span
-          className="text-[9px] font-data font-light text-center px-1 line-clamp-1 opacity-70"
-          style={{ color: palette.muted }}
-        >
-          {card.sublabel}
-        </span>
-      )}
-      {card.isYours && (
-        <div className="mt-2 px-2 py-0.5 rounded-full bg-white/50 backdrop-blur-sm border border-white/20 shadow-sm">
-           <span
-             className="text-[8px] font-vibe font-bold uppercase tracking-wider"
-             style={{ color: palette.eyebrow }}
-           >
-             You
-           </span>
+      {/* Horizontal Card Scroll */}
+      <div className="flex gap-4 overflow-x-auto px-6 pb-12 snap-x scrollbar-hide">
+        {/* Card 1: Trip Card (Dark) */}
+        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#14181C] to-black snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
+           <div>
+              <div className="text-[9px] uppercase tracking-[0.3em] text-white/20">Season Archive</div>
+              <div className="font-cinematic italic text-[10px] text-white/10 mt-1">woh wala trip</div>
+           </div>
+           <div>
+              <h2 className="font-cinematic font-black text-4xl tracking-tighter leading-[0.85] text-[#F5F0E8] mb-4">
+                 {trip.title}
+              </h2>
+              <p className="font-cinematic italic text-xs text-white/40 leading-relaxed">
+                 "{trip.tagline || 'The reason this trip now has its own Wikipedia page in our heads.'}"
+              </p>
+           </div>
+           <div>
+              <div className="flex items-baseline gap-2 mb-6">
+                 <span className="text-7xl font-vibe font-black text-cooked-accent leading-none">{trip.chaos_score}</span>
+                 <span className="text-[9px] uppercase tracking-[0.2em] text-white/20">Chaos</span>
+              </div>
+              <div className="flex justify-between items-end">
+                 <div className="text-[8px] uppercase tracking-[0.2em] text-white/10">WWT © 2026</div>
+                 <div className="grid grid-cols-4 gap-0.5 p-1 bg-white/5 rounded-md">
+                    {[...Array(8)].map((_, i) => <div key={i} className="w-1.5 h-1.5 bg-white/10 rounded-sm" />)}
+                 </div>
+              </div>
+           </div>
         </div>
-      )}
+
+        {/* Card 2: Character Card (Warm) */}
+        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#1A1508] to-[#120C00] snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
+           <div>
+              <div className="text-[9px] uppercase tracking-[0.3em] text-white/20">Character · {mainChaos?.archetype || 'Source'}</div>
+           </div>
+           <div>
+              <div className="font-cinematic italic text-sm text-amber-500/40 mb-2">⚡ chaos rating</div>
+              <div className="text-7xl font-vibe font-black text-amber-500 leading-none">{mainChaos?.chaos_score}/10</div>
+           </div>
+           <div>
+              <h2 className="font-cinematic font-black text-3xl tracking-tighter leading-[0.85] text-[#F5F0E8] mb-2">
+                 {mainChaos?.full_name || 'Cast'}
+              </h2>
+              <p className="font-cinematic italic text-sm text-amber-500/40 mb-4">"{mainChaos?.archetype || 'The Menace'}"</p>
+              <p className="text-[10px] text-amber-500/20 leading-relaxed">
+                 {mainChaos?.roast || 'The algorithm has no mercy for this level of chaos.'}
+              </p>
+           </div>
+        </div>
+
+        {/* Card 3: Receipt (Light) */}
+        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#FAF1E4] to-[#F2E8D8] snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform text-black">
+           <div>
+              <div className="text-[9px] uppercase tracking-[0.3em] text-black/30 font-mono">WWT · CHAOS RECEIPT</div>
+           </div>
+           <div className="font-mono space-y-2">
+              <div className="border-b border-black/10 pb-3 mb-3 text-[10px] text-black/40">
+                 {trip.title.toUpperCase()} · S04
+              </div>
+              <div className="flex justify-between text-[11px] text-black/50"><span>Photos analyzed</span><span>{trip.photo_count}</span></div>
+              <div className="flex justify-between text-[11px] text-black/50"><span>Chaos incidents</span><span>14</span></div>
+              <div className="flex justify-between text-[11px] text-black/50"><span>% {mainChaos?.full_name?.split(' ')[0]}'s fault</span><span>{Math.floor(Math.random() * 20) + 30}%</span></div>
+              <div className="flex justify-between pt-4 mt-4 border-t border-dashed border-black/10 text-xl font-vibe font-black text-[#C0290A]">
+                 <span>TOTAL CHAOS</span>
+                 <span>{trip.chaos_score}</span>
+              </div>
+           </div>
+           <div>
+              <div className="font-mono text-[9px] text-black/20 uppercase tracking-widest">woh wala trip © 2026</div>
+           </div>
+        </div>
+      </div>
+
+      {/* WhatsApp Caption Block */}
+      <section className="px-6 mb-10">
+         <div className="p-6 rounded-2xl bg-green-500/5 border border-green-500/15">
+            <div className="text-[8px] uppercase tracking-[0.3em] text-green-500/50 font-vibe mb-3">Pre-filled Caption</div>
+            <p className="font-mono text-xs text-white/50 leading-relaxed">
+               "{shareText}"
+            </p>
+         </div>
+      </section>
+
+      {/* Action Buttons */}
+      <section className="px-6 space-y-3">
+         <ShareActionButton icon="📲" label="Share to Instagram" sub="Stories · 9:16 · Trip card" />
+         <ShareActionButton icon="💬" label="WhatsApp your group" sub="Caption pre-filled · Roast ready" />
+         <ShareActionButton icon="🔗" label="Copy invite link" sub="Join the archive · See your role" />
+         <ShareActionButton icon="⬇" label="Download all cards" sub="3 cards · PNG · 1080×1920" />
+      </section>
+    </div>
+  );
+}
+
+function ShareActionButton({ icon, label, sub }: { icon: string; label: string; sub: string }) {
+  return (
+    <button className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group">
+       <div className="flex gap-4 items-center">
+          <div className="text-2xl">{icon}</div>
+          <div className="text-left">
+             <div className="font-vibe font-bold text-sm text-white/80 group-hover:text-white">{label}</div>
+             <div className="text-[10px] text-white/25 mt-1 font-vibe">{sub}</div>
+          </div>
+       </div>
+       <div className="text-white/20 group-hover:text-white/50 transition-colors">→</div>
     </button>
   );
 }
 
-function thumbEyebrow(card: CardEntry): string {
-  switch (card.type) {
-    case 'trip':
-      return 'Trip';
-    case 'character':
-      return 'Role';
-    case 'superlative':
-      return 'Most likely to';
-    case 'receipt':
-      return 'Receipt';
-  }
-}
-
-function thumbPalette(type: CardEntry['type']) {
-  switch (type) {
-    case 'trip':
-      return { bg: '#FAF1E4', ink: '#1a1a1a', eyebrow: '#BA7517', muted: '#888780' }; // Cooked Gold
-    case 'character':
-      return { bg: '#FBEAF0', ink: '#4B1528', eyebrow: '#D4537E', muted: '#993556' }; // Unstable Pink
-    case 'superlative':
-      return { bg: '#F1EFE8', ink: '#1a1a1a', eyebrow: '#5F5E5A', muted: '#888780' }; // Chill Gray
-    case 'receipt':
-      return { bg: '#FAF7EF', ink: '#1a1a1a', eyebrow: '#D85A30', muted: '#888780' }; // Delusional Orange
-  }
-}
-
-function SelectedCardPreview({ card }: { card?: CardEntry }) {
-  if (!card) return null;
-
+function LoadingState() {
   return (
-    <div className="px-6 mt-6 flex-1 flex flex-col">
-      <div className="bg-gray-50 rounded-2xl p-4 flex items-center justify-center max-h-[420px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={card.url}
-          alt={card.label}
-          className="max-h-[400px] w-auto rounded-lg shadow-sm"
-          loading="eager"
-        />
-      </div>
+    <div className="min-h-screen bg-black flex items-center justify-center p-12">
+       <div className="animate-pulse text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe">Preparing Cards...</div>
     </div>
   );
 }
 
-function ActionButtons({
-  selectedCard,
-  tripId,
-  tripName,
-  loreJson,
-}: {
-  selectedCard?: CardEntry;
-  tripId: string;
-  tripName?: string;
-  loreJson?: Record<string, unknown>;
-}) {
-  const [sharing, setSharing] = useState(false);
-
-  if (!selectedCard) return null;
-
-  const handleShare = async () => {
-    setSharing(true);
-    try {
-      const blob = await fetchCardAsBlob(selectedCard.url);
-      const file = new File(
-        [blob],
-        `${slugify(tripName || 'trip')}-${selectedCard.id}.png`,
-        { type: 'image/png' }
-      );
-
-      const caption =
-        (loreJson?.whatsapp_caption as string) ||
-        `${tripName} ka archive bana — ${selectedCard.label}`;
-
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: tripName,
-          text: caption,
-        });
-      } else {
-        const publicUrl = `${window.location.origin}${selectedCard.url}`;
-        const text = encodeURIComponent(`${caption}\n\n${publicUrl}`);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-      }
-    } catch (err) {
-      console.error('share failed', err);
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    const blob = await fetchCardAsBlob(selectedCard.url);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${slugify(tripName || 'trip')}-${selectedCard.id}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleTagFriends = () => {
-    const text = encodeURIComponent(
-      `Yaar ${tripName} ka archive ready hai. ${window.location.origin}/trips/${tripId}/share — apna wala card pick karo`
-    );
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-  };
-
+function NotFoundState() {
   return (
-    <div className="px-6 mt-6 space-y-3">
-      <button
-        onClick={handleShare}
-        disabled={sharing}
-        className="w-full py-4 bg-black text-white rounded-xl font-medium disabled:opacity-50"
-      >
-        {sharing ? 'Sharing...' : 'Share to WhatsApp'}
-      </button>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={handleDownload}
-          className="py-3 border border-gray-300 rounded-xl text-sm font-medium"
-        >
-          Download
-        </button>
-        <button
-          onClick={handleTagFriends}
-          className="py-3 border border-gray-300 rounded-xl text-sm font-medium"
-        >
-          Tag friends
-        </button>
-      </div>
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-12 text-center space-y-6">
+       <h1 className="font-cinematic font-black text-4xl">Archive Lost</h1>
+       <p className="text-white/30 font-vibe">This lore does not exist or has been sealed permanently.</p>
+       <Link href="/trips" className="px-8 py-4 bg-white text-black rounded-full text-[10px] font-vibe font-black uppercase tracking-widest">Back to Gallery</Link>
     </div>
   );
-}
-
-function FreeTierNote({ isFree, tripId }: { isFree: boolean; tripId: string }) {
-  const router = useRouter();
-  if (!isFree) return null;
-
-  return (
-    <div className="px-6 mt-4">
-      <p className="text-xs text-gray-400 text-center">
-        Free tier: cards have a small watermark ·{' '}
-        <button
-          onClick={() => router.push(`/trips/${tripId}/upgrade`)}
-          className="underline text-gray-600"
-        >
-          Upgrade ₹299
-        </button>
-      </p>
-    </div>
-  );
-}
-
-async function fetchCardAsBlob(url: string): Promise<Blob> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch card');
-  return res.blob();
-}
-
-function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
 }

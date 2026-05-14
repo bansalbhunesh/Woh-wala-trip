@@ -1,19 +1,7 @@
 'use client';
-import { use, useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
+import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import type { LoreJson } from '@/lib/types';
-
-export default function TripRoomPage({ params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = use(params);
-  const router = useRouter();
-
-  const { data: tripData, refetch } = trpc.trips.getFull.useQuery({ tripId });
-  const { data: photos, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
-
-  const trip = (tripData as any)?.trip;
-  const members = (tripData as any)?.members || [];
-  const eras = (tripData as any)?.eras || [];
   const stats = (tripData as any)?.stats || [];
 
   // Redirect to generating screen if currently processing

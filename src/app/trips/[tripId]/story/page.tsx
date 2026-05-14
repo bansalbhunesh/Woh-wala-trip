@@ -23,27 +23,15 @@ function buildSlides(tripId: string, lore: LoreJson, members: any[]): Slide[] {
   (lore.trip_eras || []).slice(0, 3).forEach((_, i) => slides.push({ type: 'era', lore, idx: i }));
   members.filter(m => m.role_title).forEach(m => slides.push({ type: 'character', member: m }));
   (lore.superlatives || []).slice(0, 3).forEach((sup, i) => slides.push({ type: 'superlative', sup, idx: i, lore }));
-  slides.push({ type: 'verdict', lore });
-  slides.push({ type: 'share', tripId });
-  return slides;
-}
+import Link from 'next/link';
 
-export default function StoryPage({ params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = use(params);
+export default function StoryPage() {
   const router = useRouter();
-  const [idx, setIdx] = useState(0);
-  const touchStart = useRef<number | null>(null);
+  const params = useParams();
+  const tripId = params.tripId as string;
+  const [index, setIndex] = useState(0);
 
   const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
-  const lore = (tripData as any)?.trip?.lore_json as LoreJson | null;
-  const members = (tripData as any)?.members || [];
-
-  const advance = useCallback(() => setIdx(i => Math.min(i + 1, slides.length - 1)), []);
-  const retreat = useCallback(() => setIdx(i => Math.max(i - 1, 0)), []);
-
-  if (!lore) {
-    return (
-      <div className="min-h-screen bg-cooked-bg flex items-center justify-center">
         <p className="text-white/40 font-vibe text-sm uppercase tracking-wider">Loading the lore...</p>
       </div>
     );

@@ -1,102 +1,105 @@
 'use client';
-import { trpc } from '@/lib/trpc/client';
-import Link from 'next/link';
 
-export default function TripsListPage() {
-  const { data: trips, isLoading } = trpc.trips.listMine.useQuery();
+import Link from 'next/link';
+import { trpc } from '@/lib/trpc/client';
+
+export default function TripsPage() {
+  const { data: trips, isLoading } = trpc.trips.list.useQuery();
+
+  if (isLoading) return <LoadingState />;
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="px-6 pt-20 pb-10">
-        <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-vibe mb-2">The Archive</p>
-        <h1 className="text-5xl font-cinematic font-medium text-cooked-bg">Your Seasons</h1>
+    <div className="min-h-screen bg-black text-[#F5F0E8] font-vibe selection:bg-cooked-bg selection:text-white pb-32">
+      {/* Archive Header */}
+      <header className="px-6 pt-12 pb-8">
+        <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-vibe mb-2">Your Archive</p>
+        <h1 className="font-cinematic font-black text-6xl tracking-tighter leading-none">The<br/>Seasons</h1>
       </header>
 
-      <main className="px-6 space-y-3">
-        {isLoading && <div className="text-sm text-gray-400">Loading...</div>}
-
-        {trips?.length === 0 && <EmptyState />}
-
-        {trips?.map(
-          (trip) =>
-            trip && (
-              <Link
-                key={trip.id}
-                href={`/trips/${trip.id}`}
-                className="group block relative overflow-hidden rounded-[2.5rem] bg-gray-50 border border-gray-100 p-8 hover:bg-white hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-vibe">Season {trip.total_photos > 50 ? 'Finale' : 'Premiere'}</p>
-                    <h2 className="text-3xl font-cinematic font-medium text-cooked-bg leading-none group-hover:text-chill-accent transition-colors">{trip.name}</h2>
-                  </div>
-                  <StatusBadge status={trip.lore_status} />
-                </div>
-                
-                <div className="flex items-center gap-4 text-[10px] font-vibe uppercase tracking-widest text-gray-400">
-                  <span>{trip.destination}</span>
-                  <span className="w-1 h-1 rounded-full bg-gray-200" />
-                  <span>{trip.member_count} Cast Members</span>
-                </div>
-
-                {trip.chaos_score !== null && (
-                   <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
-                      <div className="flex items-baseline gap-2">
-                         <span className="text-2xl font-vibe font-bold text-cooked-accent leading-none">{trip.chaos_score}</span>
-                         <span className="text-[8px] text-gray-400 uppercase tracking-widest">Chaos Rating</span>
-                      </div>
-                      <span className="text-[10px] italic font-cinematic text-gray-400">Open Archive →</span>
-                   </div>
-                )}
-              </Link>
-            )
+      {/* Trip List */}
+      <div className="px-6 space-y-4">
+        {trips?.map((trip) => (
+          <TripCard key={trip.id} trip={trip} />
+        ))}
+        {trips?.length === 0 && (
+          <div className="py-20 text-center border border-dashed border-white/10 rounded-[32px]">
+             <p className="text-white/20 text-sm italic font-cinematic">Your archive is currently empty.</p>
+          </div>
         )}
-      </main>
+      </div>
 
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3">
-        <Link
-          href="/trips/join"
-          className="w-14 h-14 rounded-full border border-gray-300 bg-white flex items-center justify-center"
-        >
-          <span className="text-xl">↗</span>
-        </Link>
-        <Link
+      {/* FABs */}
+      <div className="fixed bottom-8 right-6 flex flex-col gap-3 z-50">
+        <Link 
           href="/trips/new"
-          className="w-14 h-14 rounded-full bg-black text-white flex items-center justify-center"
+          className="w-14 h-14 bg-[#F5F0E8] text-black rounded-full flex items-center justify-center text-2xl shadow-3xl hover:scale-110 active:scale-95 transition-all"
         >
-          <span className="text-2xl">+</span>
+          +
         </Link>
       </div>
     </div>
   );
 }
 
-function EmptyState() {
+function TripCard({ trip }: { trip: any }) {
+  const isCooked = trip.chaos_score >= 80;
+  const isUnstable = trip.chaos_score >= 50 && trip.chaos_score < 80;
+  
+  const bgGradient = isCooked 
+    ? 'bg-gradient-to-br from-[#14181C] to-[#1A0505] border-cooked-accent/20' 
+    : isUnstable 
+    ? 'bg-gradient-to-br from-[#1A1508] to-[#1E1200] border-amber-500/20'
+    : 'bg-gradient-to-br from-[#0A130F] to-[#0E1A14] border-chill-accent/15';
+
+  const badgeColor = isCooked ? 'bg-cooked-accent/15 text-cooked-accent border-cooked-accent/30' : isUnstable ? 'bg-amber-500/15 text-amber-500 border-amber-500/30' : 'bg-chill-accent/15 text-chill-accent border-chill-accent/30';
+  const scoreColor = isCooked ? 'text-cooked-accent' : isUnstable ? 'text-amber-500' : 'text-chill-accent';
+
   return (
-    <div className="py-12 text-center">
-      <p className="text-gray-400 text-sm mb-4">No trips yet</p>
-      <Link
-        href="/trips/new"
-        className="inline-block py-3 px-6 bg-black text-white rounded-xl text-sm"
-      >
-        Create your first trip
-      </Link>
-    </div>
+    <Link 
+      href={`/trips/${trip.id}`}
+      className={`block relative overflow-hidden rounded-[2.5rem] border ${bgGradient} transition-all hover:scale-[1.01] active:scale-[0.99] group`}
+    >
+      {/* Ghost Number */}
+      <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 font-vibe font-black text-[35vw] md:text-[20vw] text-white opacity-[0.04] leading-none select-none pointer-events-none">
+        {trip.chaos_score}
+      </div>
+
+      <div className="relative z-10 p-8 space-y-6">
+        <div>
+          <div className="text-[8px] uppercase tracking-[0.35em] text-white/20 mb-3">
+             Season {new Date(trip.created_at).getMonth() + 1} · {trip.location || 'Unknown'}
+          </div>
+          <h3 className="font-cinematic font-black text-3xl md:text-4xl text-[#F5F0E8] tracking-tighter leading-tight">
+            {trip.title}
+          </h3>
+        </div>
+
+        <div className={`inline-block px-4 py-1 rounded-full border text-[8px] font-vibe font-bold uppercase tracking-[0.2em] ${badgeColor}`}>
+           {isCooked ? 'Historically Cooked' : isUnstable ? 'Peak Delusion' : 'Mildly Simmering'}
+        </div>
+
+        <p className="text-[11px] text-white/35 italic font-cinematic leading-relaxed max-w-xs">
+          "{trip.tagline || 'Analyzing trip dynamics...'}"
+        </p>
+
+        <div className="flex justify-between items-end pt-4 border-t border-white/[0.06]">
+          <div className="flex items-baseline gap-2">
+            <span className={`text-4xl font-vibe font-black leading-none ${scoreColor}`}>{trip.chaos_score}</span>
+            <span className="text-[8px] uppercase tracking-[0.2em] text-white/20">Chaos</span>
+          </div>
+          <div className="text-[9px] uppercase tracking-[0.2em] text-white/25 group-hover:text-white transition-colors">
+            Open Archive →
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, { bg: string; text: string; label: string }> = {
-    pending: { bg: 'bg-gray-100', text: 'text-gray-500', label: 'Empty' },
-    processing: { bg: 'bg-amber-50', text: 'text-amber-600', label: 'Archiving...' },
-    ready: { bg: 'bg-green-50', text: 'text-green-600', label: 'Ready' },
-    failed: { bg: 'bg-red-50', text: 'text-red-600', label: 'Error' },
-    regenerating: { bg: 'bg-amber-50', text: 'text-amber-600', label: 'Recutting...' },
-  };
-  const config = styles[status] || styles.pending;
+function LoadingState() {
   return (
-    <span className={`text-[8px] uppercase tracking-[0.2em] font-vibe font-bold px-3 py-1.5 rounded-full ${config.bg} ${config.text}`}>
-      {config.label}
-    </span>
+    <div className="min-h-screen bg-black flex items-center justify-center p-12">
+       <div className="animate-pulse text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe">Opening Archives...</div>
+    </div>
   );
 }

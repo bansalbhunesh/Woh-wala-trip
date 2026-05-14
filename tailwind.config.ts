@@ -36,9 +36,9 @@ const config: Config = {
       },
       fontFamily: {
         // Semantic names → CSS vars set by next/font/google in layout.tsx
-        cinematic: ["var(--font-lora)", "Georgia", "serif"],
+        cinematic: ["var(--font-playfair-display)", "Georgia", "serif"],
         data: ["var(--font-inter)", "system-ui", "sans-serif"],
-        vibe: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
+        vibe: ["var(--font-syne)", "system-ui", "sans-serif"],
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       borderRadius: {
@@ -48,15 +48,46 @@ const config: Config = {
       keyframes: {
         marquee: {
           '0%': { transform: 'translateX(0%)' },
-          '100%': { transform: 'translateX(-50%)' },
+          '100%': { transform: 'translateX(-100%)' },
         },
         'fade-in': {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
         'slide-up': {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'slide-in': {
+          '0%': { opacity: '0', transform: 'scale(0.97)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        floatA: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(3%, 5%) scale(1.08)' },
+        },
+        floatB: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(-4%, -3%) scale(1.06)' },
+        },
+        floatC: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(2%, -4%) scale(1.05)' },
+        },
+        ringFill: {
+          to: { strokeDashoffset: '0' },
+        },
+        grain: {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '10%': { transform: 'translate(-2%, -3%)' },
+          '20%': { transform: 'translate(3%, 2%)' },
+          '30%': { transform: 'translate(-1%, 3%)' },
+          '40%': { transform: 'translate(2%, -1%)' },
+          '50%': { transform: 'translate(-3%, 1%)' },
+          '60%': { transform: 'translate(1%, 3%)' },
+          '70%': { transform: 'translate(-2%, -1%)' },
+          '80%': { transform: 'translate(3%, -2%)' },
+          '90%': { transform: 'translate(-1%, 2%)' },
         },
         'pulse-soft': {
           '0%, 100%': { opacity: '1' },

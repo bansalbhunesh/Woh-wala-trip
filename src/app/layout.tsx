@@ -16,9 +16,14 @@ const lora = Lora({
 });
 
 const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  variable: "--font-dm-mono",
+  weight: ["300", "400", "500"],
 });
 
 export const metadata = {
@@ -41,8 +46,11 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${lora.variable} ${spaceGrotesk.variable}`}>
-      <body className="antialiased">
+    <html lang="en" className={`${playfair.variable} ${syne.variable} ${inter.variable} ${dmMono.variable}`}>
+      <body className="bg-black text-white overflow-x-hidden selection:bg-cooked-bg selection:text-white">
+        {/* Cinematic Film Grain Overlay */}
+        <div className="fixed inset-0 z-[9999] pointer-events-none opacity-[0.045] mix-blend-overlay animate-grain bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27noise%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.9%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23noise)%27/%3E%3C/svg%3E')] bg-[length:180px_180px]" />
+        
         <TRPCProvider>{children}</TRPCProvider>
       </body>
     </html>
