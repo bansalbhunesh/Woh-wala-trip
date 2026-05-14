@@ -125,6 +125,7 @@ export const tripsRouter = router({
           trip_start_date,
           trip_end_date,
           lore_status,
+          lore_json,
           chaos_score,
           member_count,
           total_photos,

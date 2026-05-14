@@ -5,237 +5,284 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CinematicText, AtmosphericBlob } from '@/components/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Save, Share2, Play, Mic, Shield, Star, Zap, Info, ChevronRight, X } from 'lucide-react';
+import { Play, Plus, X, ChevronRight, Zap, Star, Shield, Share2, Download } from 'lucide-react';
 
-/* --- ARCHIVE NAVBAR --- */
+// ─────────────────────────────────────────────────────────────────────────────
+// ARCHIVE NAVBAR
+// ─────────────────────────────────────────────────────────────────────────────
 export function ArchiveNavbar({ trip }: { trip: any }) {
+  const cookedLevel = trip?.lore_json?.cooked_level ?? trip?.chaos_score ?? '—';
+  const verdict = trip?.lore_json?.cooked_verdict ?? 'Processing...';
+
   return (
-    <nav className="sticky top-0 z-[100] w-full px-6 py-4 bg-black/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between">
+    <nav className="sticky top-0 z-[100] w-full px-6 py-4 bg-[#060604]/90 backdrop-blur-2xl border-b border-white/[0.06] flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <Link href="/trips" className="w-8 h-8 bg-cooked-accent rounded-lg flex items-center justify-center font-black text-xs text-white">W</Link>
-        <div className="hidden md:block h-8 w-px bg-white/10 mx-2" />
+        <Link href="/trips" className="w-8 h-8 bg-cooked-accent rounded-lg flex items-center justify-center font-vibe font-black text-xs text-white hover:scale-110 transition-transform">
+          W
+        </Link>
+        <div className="hidden md:block h-6 w-px bg-white/10" />
         <div className="hidden md:flex flex-col">
-          <span className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-black">Current File</span>
-          <span className="text-sm font-cinematic font-black tracking-tight text-[#F5F0E8]">Season 2 – {trip.title}</span>
+          <span className="text-[8px] uppercase tracking-[0.3em] text-white/25 font-vibe font-black">Current Archive</span>
+          <span className="text-sm font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none mt-0.5">
+            {trip?.name || 'Loading...'}
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden lg:flex items-center gap-6 mr-6">
-           <div className="flex flex-col items-end">
-             <span className="text-[8px] uppercase tracking-widest text-white/20 font-black">Archive Health</span>
-             <span className="text-[10px] font-black text-chill-accent uppercase tracking-widest">Stable</span>
-           </div>
-           <div className="flex flex-col items-end">
-             <span className="text-[8px] uppercase tracking-widest text-white/20 font-black">Lore Density</span>
-             <span className="text-[10px] font-black text-cooked-accent uppercase tracking-widest">Critical</span>
-           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <button className="px-5 py-2.5 bg-cooked-accent text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,59,47,0.2)]">Render Poster</button>
-          <button className="px-5 py-2.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Share O.G.</button>
-        </div>
-        
-        <div className="h-8 w-px bg-white/10 mx-2" />
-        
-        <div className="flex items-center gap-3">
-          <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold hidden sm:block">AI Story Mode</span>
-          <div className="w-10 h-5 bg-cooked-accent/20 rounded-full relative cursor-pointer border border-cooked-accent/30">
-            <div className="absolute right-1 top-1 w-3 h-3 bg-cooked-accent rounded-full shadow-[0_0_10px_rgba(255,59,47,0.5)]" />
+      <div className="flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-6 mr-4 pr-6 border-r border-white/[0.06]">
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] uppercase tracking-widest text-white/20 font-black">Cooked</span>
+            <span className="text-sm font-vibe font-black text-cooked-accent">{cookedLevel}/100</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] uppercase tracking-widest text-white/20 font-black">Verdict</span>
+            <span className="text-[10px] font-vibe font-black text-white/60 uppercase tracking-wider">{verdict}</span>
           </div>
         </div>
+
+        <Link
+          href={`/trips/${trip?.id}/share`}
+          className="px-5 py-2.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow-red"
+        >
+          Export
+        </Link>
+        <Link
+          href={`/trips/${trip?.id}/story`}
+          className="px-5 py-2.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+        >
+          Story Mode
+        </Link>
       </div>
     </nav>
   );
 }
 
-/* --- ARCHIVE HERO (Dossier Style) --- */
+// ─────────────────────────────────────────────────────────────────────────────
+// ARCHIVE HERO — Matches reference image layout
+// ─────────────────────────────────────────────────────────────────────────────
 export function ArchiveHero({ trip }: { trip: any }) {
+  const lore = trip?.lore_json;
+  const cookedLevel = lore?.cooked_level ?? trip?.chaos_score ?? 0;
+  const tagline = lore?.tagline || 'The lore is still being written...';
+  const name = trip?.name || 'Untitled Season';
+  const destination = trip?.destination || '';
+  const verdict = lore?.cooked_verdict || '';
+
+  // Palette based on cooked level
+  const isCooked = cookedLevel >= 76;
+  const isPeak = cookedLevel >= 51;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Left Main Block: The Story */}
-      <motion.div 
+      {/* LEFT: Main story block */}
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-7 relative rounded-[3rem] bg-[#14181C] border border-white/5 overflow-hidden flex flex-col"
+        className="lg:col-span-7 relative rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] overflow-hidden flex flex-col"
       >
-        <div className="h-[300px] relative">
-          <img 
-            src="https://images.unsplash.com/photo-1544620347-c4fd403d5957?q=80&w=2069" 
-            alt="" 
-            className="w-full h-full object-cover grayscale opacity-60 contrast-125" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#14181C] via-[#14181C]/40 to-transparent" />
-          
-          <div className="absolute top-8 left-8 flex gap-3">
-            <span className="px-3 py-1.5 rounded-full bg-cooked-accent text-white text-[8px] font-black uppercase tracking-[0.2em]">Chaos 12%</span>
-            <span className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white/60 text-[8px] font-black uppercase tracking-[0.2em]">Inside Joke Detected</span>
-            <span className="px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-500 text-[8px] font-black uppercase tracking-[0.2em] border border-amber-500/20">Trip Villain: Kev</span>
+        {/* Cover image with overlay */}
+        <div className="h-[280px] relative overflow-hidden">
+          {trip?.cover_photo ? (
+            <img
+              src={trip.cover_photo}
+              alt=""
+              className="w-full h-full object-cover grayscale opacity-50 contrast-125 scale-105"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-cooked-accent/10 via-transparent to-lore-accent/5" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0C] via-[#0E0E0C]/30 to-transparent" />
+
+          {/* Floating badges */}
+          <div className="absolute top-6 left-6 flex gap-2 flex-wrap">
+            {verdict && (
+              <span className="px-3 py-1.5 rounded-full bg-cooked-accent text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]">
+                {verdict}
+              </span>
+            )}
+            {destination && (
+              <span className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white/60 text-[8px] font-vibe font-black uppercase tracking-[0.2em]">
+                {destination}
+              </span>
+            )}
+            <span className="px-3 py-1.5 rounded-full bg-[#0E0E0C]/60 backdrop-blur-md text-white/40 text-[8px] font-vibe font-black uppercase tracking-[0.2em] border border-white/10">
+              {trip?.member_count || 0} cast members
+            </span>
           </div>
         </div>
 
-        <div className="p-12 space-y-8 flex-1">
-          <div className="space-y-4">
-            <h1 className="text-6xl md:text-8xl font-cinematic font-black tracking-tighter leading-[0.85] text-[#F5F0E8] uppercase">
-              Season 2: <br />
-              {trip.title}
+        {/* Content */}
+        <div className="p-10 space-y-6 flex-1">
+          <div className="space-y-3">
+            <h1 className="text-5xl md:text-7xl font-cinematic font-black tracking-tighter leading-[0.85] text-[#F5F0E8] uppercase">
+              {name}
             </h1>
-            <p className="text-xl text-white/30 font-cinematic italic max-w-lg leading-relaxed">
-              "{trip.tagline || 'Documenting the missed transfers and off-brand hotels.'}"
+            <p className="text-lg text-white/35 font-cinematic italic max-w-lg leading-relaxed">
+              &ldquo;{tagline}&rdquo;
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-4 pt-4">
-            <button className="px-8 py-4 bg-cooked-accent text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-xl">
-              Save as Poster
-            </button>
-            <button className="px-8 py-4 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all">
-              Save Lore Card
-            </button>
-            <button className="px-8 py-4 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all flex items-center gap-2">
-              <Play size={14} fill="currentColor" /> Watch the Mini-Doc
-            </button>
+          {/* Narrative excerpt */}
+          {lore?.season_recap?.full_narrative && (
+            <p className="text-sm text-white/40 font-data font-light leading-relaxed line-clamp-3 border-l-2 border-white/10 pl-4">
+              {lore.season_recap.full_narrative}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link
+              href={`/trips/${trip?.id}/share`}
+              className="flex items-center gap-2 px-7 py-3.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow-red"
+            >
+              <Download size={14} /> Save Poster
+            </Link>
+            <Link
+              href={`/trips/${trip?.id}/story`}
+              className="flex items-center gap-2 px-7 py-3.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+            >
+              <Play size={14} fill="currentColor" /> Story Mode
+            </Link>
+            <Link
+              href={`/trips/${trip?.id}/share`}
+              className="flex items-center gap-2 px-7 py-3.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+            >
+              <Share2 size={14} /> Share O.G.
+            </Link>
           </div>
         </div>
       </motion.div>
 
-      {/* Right Column: Stats & Plot Twist */}
-      <div className="lg:col-span-5 space-y-6">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-6 h-1/2">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-            className="p-8 rounded-[2.5rem] bg-[#14181C] border border-white/5 flex flex-col justify-between"
-          >
+      {/* RIGHT: Stats column */}
+      <div className="lg:col-span-5 space-y-5">
+        {/* Delusion Index */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] flex flex-col justify-between gap-4"
+        >
+          <div className="flex justify-between items-start">
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-white/20 font-black block mb-2">Delusion Index</span>
-              <div className="text-6xl font-black font-vibe text-white">{trip.chaos_score}</div>
+              <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block mb-3">Delusion Index</span>
+              <div className="text-8xl font-vibe font-black leading-none" style={{
+                color: isCooked ? '#FF4D4D' : isPeak ? '#D49E2D' : '#2D9E8B'
+              }}>
+                {cookedLevel}
+              </div>
             </div>
-            <p className="text-[10px] text-white/30 leading-relaxed italic">
-              Why this hurts: your group genuinely believes a conspiracy theory about the bus' emotions.
-            </p>
-          </motion.div>
+            <div className="w-12 h-12 rounded-2xl bg-cooked-accent/10 flex items-center justify-center">
+              <Zap size={20} className="text-cooked-accent" />
+            </div>
+          </div>
+          <p className="text-[11px] text-white/30 font-data leading-relaxed italic">
+            {lore?.cooked_explanation || 'The AI historian is still processing the evidence.'}
+          </p>
+        </motion.div>
 
-          <motion.div 
+        {/* Emotional Damage */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15 }}
+          className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-4"
+        >
+          <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">Emotional Damage</span>
+          <div className="flex items-baseline gap-3">
+            <span className="text-5xl font-vibe font-black text-unstable-accent">
+              {trip?.total_photos || 0}
+            </span>
+            <span className="text-[10px] uppercase tracking-widest text-white/20 font-vibe font-black">photos archived</span>
+          </div>
+          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-chill-accent to-cooked-accent rounded-full transition-all duration-1000"
+              style={{ width: `${Math.min(100, (trip?.total_photos || 0) / 2)}%` }}
+            />
+          </div>
+        </motion.div>
+
+        {/* Plot Twist block */}
+        {lore?.season_recap?.act_2 && (
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="p-8 rounded-[2.5rem] bg-[#14181C] border border-white/5 flex flex-col justify-between"
+            className="p-8 rounded-[2.5rem] border border-cooked-accent/20 bg-cooked-accent/5 space-y-3"
           >
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-white/20 font-black block mb-2">Emotional Damage</span>
-              <div className="text-6xl font-black font-vibe text-cooked-accent">9/10</div>
-            </div>
-            <p className="text-[10px] text-white/30 leading-relaxed italic">
-              Top source: Midnight Confessions – unasked and deeply cinematic.
+            <span className="text-[9px] uppercase tracking-[0.3em] text-cooked-accent/60 font-vibe font-black">Plot Twist</span>
+            <p className="text-sm text-white/60 font-data font-light leading-relaxed italic">
+              &ldquo;{lore.season_recap.act_2.slice(0, 120)}...&rdquo;
             </p>
+            <div className="flex gap-2 pt-2">
+              <button className="px-5 py-2 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 text-cooked-accent text-[9px] font-vibe font-black uppercase tracking-widest hover:bg-cooked-accent/20 transition-all">
+                Group Therapy Hours
+              </button>
+              <button className="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-white/40 text-[9px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                Save as Lore
+              </button>
+            </div>
           </motion.div>
-        </div>
-
-        {/* Plot Twist Block */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="p-10 rounded-[3rem] bg-cooked-accent/5 border border-cooked-accent/10 space-y-6"
-        >
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase tracking-widest text-cooked-accent font-black block">Plot Twist</span>
-              <h3 className="text-2xl font-cinematic font-black text-white italic">The Bus Had Feelings</h3>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-cooked-accent/20 flex items-center justify-center">
-              <Info size={16} className="text-cooked-accent" />
-            </div>
-          </div>
-          
-          <p className="text-[12px] text-white/50 leading-relaxed font-medium">
-            Kev convinced the group the bus operator was 'emotionally unavailable' and needed space. Lying scored him extra legroom, stability, and the window seat.
-          </p>
-          
-          <div className="flex gap-3 pt-2">
-            <button className="px-6 py-3 bg-cooked-accent text-white rounded-full text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all">Expose the Voicemail</button>
-            <button className="px-6 py-3 bg-white/5 text-white/40 rounded-full text-[9px] font-black uppercase tracking-widest hover:text-white transition-all">Blur for Privacy</button>
-          </div>
-          
-          <div className="pt-4 border-t border-white/5">
-            <span className="text-[9px] text-white/20 italic uppercase tracking-widest">This feels like a mini-documentary. Screenshot worthy.</span>
-          </div>
-        </motion.div>
+        )}
       </div>
     </div>
   );
 }
 
-/* --- ARCHIVE REVEAL CARD --- */
-export function ArchiveReveal({ 
-  category, 
-  name, 
-  description, 
-  revealTitle, 
-  revealBody, 
-  image, 
-  color = "#FF3B2F",
-  actions = []
-}: {
-  category: string;
-  name: string;
-  description: string;
-  revealTitle: string;
-  revealBody: string;
-  image: string;
-  color?: string;
-  actions?: { label: string; icon?: React.ReactNode }[];
+// ─────────────────────────────────────────────────────────────────────────────
+// ARCHIVE REVEAL — MVP / Villain / Inside Joke cards
+// ─────────────────────────────────────────────────────────────────────────────
+export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCta, color = '#FF4D4D', imageUrl }: {
+  category: string; name: string; subtitle?: string; desc?: string;
+  cta?: string; challengeCta?: string; color?: string; imageUrl?: string;
 }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="group relative rounded-[3rem] bg-[#14181C] border border-white/5 overflow-hidden flex flex-col md:flex-row h-auto md:h-[450px] shadow-2xl"
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="group relative flex gap-6 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] overflow-hidden hover:border-white/10 transition-all duration-500"
     >
-      <div className="w-full md:w-[45%] relative overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110"
-          style={{ backgroundImage: `url(${image})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-[#14181C]" />
+      {/* Image */}
+      <div className="w-[160px] md:w-[200px] flex-shrink-0 relative overflow-hidden">
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className="w-full h-full object-cover grayscale contrast-125 group-hover:scale-105 transition-transform duration-700" />
+        ) : (
+          <div className="w-full h-full min-h-[180px] flex items-center justify-center" style={{ background: `${color}08` }}>
+            <span className="text-5xl opacity-40">
+              {category.includes('MVP') ? '⭐' : category.includes('Villain') ? '🔪' : '🎵'}
+            </span>
+          </div>
+        )}
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to right, transparent, #0E0E0C)` }} />
       </div>
 
-      <div className="w-full md:w-[55%] p-10 md:p-16 flex flex-col justify-center space-y-8">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-             <span className="text-[11px] uppercase tracking-[0.3em] text-white/30 font-black">{category} – {name}</span>
-          </div>
-          <p className="text-base text-white/50 leading-relaxed font-cinematic italic">
-            "{description}"
+      {/* Content */}
+      <div className="flex-1 py-8 pr-8 space-y-3">
+        <span className="text-[9px] uppercase tracking-[0.3em] font-vibe font-black" style={{ color: `${color}80` }}>
+          {category}
+        </span>
+        <h3 className="text-3xl font-cinematic font-black tracking-tight text-[#F5F0E8] leading-tight">
+          {name}
+        </h3>
+        {subtitle && (
+          <p className="text-[10px] uppercase tracking-[0.2em] font-vibe font-black text-white/30">{subtitle}</p>
+        )}
+        {desc && (
+          <p className="text-sm text-white/40 font-data font-light leading-relaxed italic max-w-md">
+            &ldquo;{desc}&rdquo;
           </p>
-        </div>
-
-        <div className="space-y-3 p-6 rounded-3xl bg-white/[0.02] border border-white/5">
-          <span className="text-[10px] uppercase tracking-[0.4em] font-black block" style={{ color }}>{revealTitle}</span>
-          <p className="text-sm text-[#F5F0E8] leading-relaxed font-cinematic font-black uppercase tracking-tight">
-            {revealBody}
-          </p>
-        </div>
-
-        <div className="flex gap-4 pt-4">
-          {actions.length > 0 ? actions.map((a, i) => (
-             <button key={i} className={cn(
-               "px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
-               i === 0 ? "bg-white text-black hover:scale-105" : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
-             )}>
-               {a.label}
-             </button>
-          )) : (
-            <>
-              <button className="px-8 py-4 bg-cooked-accent text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">Expose Her</button>
-              <button className="px-8 py-4 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Make Poster</button>
-            </>
+        )}
+        <div className="flex gap-3 pt-2">
+          {cta && (
+            <button className="px-5 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-widest border transition-all hover:scale-105"
+              style={{ borderColor: `${color}30`, color, background: `${color}10` }}>
+              {cta}
+            </button>
+          )}
+          {challengeCta && (
+            <button className="px-5 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-widest border border-white/10 text-white/40 hover:bg-white/5 transition-all">
+              {challengeCta}
+            </button>
           )}
         </div>
       </div>
@@ -243,226 +290,268 @@ export function ArchiveReveal({
   );
 }
 
-/* --- SIDEBAR WIDGETS --- */
-export function ProducerWidget({ cast }: { cast: any[] }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// SIDEBAR WIDGETS
+// ─────────────────────────────────────────────────────────────────────────────
+export function ProducerWidget({ trip }: { trip: any }) {
+  const members = trip?.members || [];
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#14181C] border border-white/5 space-y-8">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-black">Producers</span>
-        <div className="h-px w-12 bg-white/10" />
-      </div>
-      <div className="space-y-8">
-        {cast.slice(0, 3).map((member, i) => (
-          <div key={i} className="flex items-center justify-between group">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/5 group-hover:border-cooked-accent transition-all">
-                <img src={member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.full_name}`} alt="" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-black text-[#F5F0E8]">{member.full_name}</span>
-                <span className="text-[9px] text-white/20 italic leading-tight max-w-[120px] line-clamp-1">"{member.tagline || 'Emotional triage and emergency snacks.'}"</span>
-              </div>
+    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">The Cast</span>
+      <div className="space-y-4">
+        {members.slice(0, 4).map((m: any, i: number) => (
+          <div key={m.user_id || i} className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-vibe font-black text-cooked-accent">
+                {(m.display_name || '?')[0].toUpperCase()}
+              </span>
             </div>
-            <div className="text-right">
-               <span className="text-[8px] uppercase tracking-widest text-white/20 font-black block">Influence</span>
-               <span className="text-xs font-black font-vibe text-white/60">{Math.floor(Math.random() * 50) + 50}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-vibe font-black text-white/80 truncate">{m.display_name}</p>
+              <p className="text-[9px] text-white/25 font-data uppercase tracking-wider truncate">
+                {m.role_title || 'Role pending...'}
+              </p>
             </div>
+            {m.role_chaos_rating !== null && m.role_chaos_rating !== undefined && (
+              <span className="text-[10px] font-vibe font-black text-cooked-accent flex-shrink-0">
+                {m.role_chaos_rating}/10
+              </span>
+            )}
           </div>
         ))}
+        {members.length === 0 && (
+          <p className="text-[11px] text-white/20 italic font-cinematic">Cast list processing...</p>
+        )}
       </div>
     </div>
   );
 }
 
-export function ChaosChartWidget() {
+export function ChaosChartWidget({ trip }: { trip: any }) {
+  const stats = trip?.stats || [];
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#14181C] border border-white/5 space-y-8 h-[400px] flex flex-col">
-      <span className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-black block">Chaos Breakdown</span>
-      
-      <div className="flex-1 relative flex items-center justify-center">
-        <div className="w-48 h-48 rounded-full border-[20px] border-white/5 relative">
-          <div className="absolute inset-[-20px] rounded-full border-[20px] border-cooked-accent border-t-transparent border-l-transparent rotate-45" />
-          <div className="absolute inset-[-20px] rounded-full border-[20px] border-white/40 border-b-transparent border-r-transparent -rotate-12" />
-        </div>
-        <div className="absolute flex flex-col items-center">
-          <span className="text-4xl font-black font-vibe text-white">84%</span>
-          <span className="text-[9px] uppercase font-black text-white/20 tracking-widest">Indicted</span>
-        </div>
-      </div>
-
-      <div className="space-y-3 pt-6 border-t border-white/5">
-        <p className="text-[10px] text-white/40 leading-relaxed italic">
-          This chart is an indictment and a compliment. Group chat density: Extreme.
-        </p>
+    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">Data Receipts</span>
+      <div className="space-y-4">
+        {stats.slice(0, 4).map((s: any, i: number) => (
+          <div key={s.id || i} className="flex justify-between items-end border-b border-white/[0.04] pb-3">
+            <div>
+              <p className="text-[9px] uppercase tracking-wider text-white/20 font-vibe font-black mb-1">{s.label}</p>
+              <p className="text-xl font-vibe font-black text-[#F5F0E8]">{s.value}</p>
+            </div>
+            {s.unit && <span className="text-[9px] text-white/20 font-mono">{s.unit}</span>}
+          </div>
+        ))}
+        {stats.length === 0 && (
+          <p className="text-[11px] text-white/20 italic font-cinematic">Stats generating...</p>
+        )}
       </div>
     </div>
   );
 }
 
-export function SchematicWidget() {
+export function SchematicWidget({ trip }: { trip: any }) {
+  const lore = trip?.lore_json;
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#14181C] border border-white/5 space-y-6">
-       <span className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-black block">Memory Schematic</span>
-       <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 group relative">
-         <img src="https://images.unsplash.com/photo-1544620347-c4fd403d5957?q=80&w=2069" alt="" className="w-full h-full object-cover grayscale contrast-125 group-hover:scale-105 transition-transform duration-700" />
-         <div className="absolute inset-0 bg-cooked-accent/10 opacity-40 mix-blend-overlay" />
-       </div>
-       <p className="text-[10px] text-white/30 italic leading-relaxed">
-         Archive No. 8912 – Peak Midnight Confessions. Lore Battery died during cliff scene. Annotation: "Kev cried louder than the tide."
-       </p>
+    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">Inside Jokes Detected</span>
+      <div className="relative h-[160px] flex items-center justify-center">
+        {lore ? (
+          <div className="space-y-3 w-full">
+            <div className="flex gap-2 flex-wrap">
+              {['Peak Delusion', 'The 3AM Phase', 'Blame Kev', 'Food Evidence', 'Group Lore'].map((tag, i) => (
+                <span key={i} className="px-3 py-1.5 rounded-full border border-white/10 text-[9px] font-vibe font-black text-white/30 uppercase tracking-wider hover:border-white/20 hover:text-white/50 transition-all cursor-default">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <p className="text-[10px] text-white/15 font-data italic">
+              Archive No. {trip?.id?.slice(0, 6) || '???'} – AI annotation active.
+            </p>
+          </div>
+        ) : (
+          <div className="w-full h-full border border-dashed border-white/10 rounded-2xl flex items-center justify-center">
+            <p className="text-[10px] text-white/15 italic font-cinematic">Schematic pending...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-/* --- CINEMATIC GALLERY CARD --- */
+// ─────────────────────────────────────────────────────────────────────────────
+// GALLERY CARD (Trips list)
+// ─────────────────────────────────────────────────────────────────────────────
 export function CinematicGalleryCard({ trip }: { trip: any }) {
-  const isCooked = trip.chaos_score >= 80;
-  const isUnstable = trip.chaos_score >= 50 && trip.chaos_score < 80;
-  
+  const cookedLevel = trip?.lore_json?.cooked_level ?? trip?.chaos_score ?? 0;
+  const isCooked = cookedLevel >= 80;
+  const isUnstable = cookedLevel >= 50 && cookedLevel < 80;
   const statusLabel = isCooked ? 'Historically Cooked' : isUnstable ? 'Peak Delusion' : 'Stable Archive';
-  const statusColor = isCooked ? 'text-cooked-accent' : isUnstable ? 'text-amber-500' : 'text-chill-accent';
-  const borderColor = isCooked ? 'border-cooked-accent/20' : isUnstable ? 'border-amber-500/20' : 'border-white/10';
+  const statusColor = isCooked ? 'text-cooked-accent' : isUnstable ? 'text-unstable-accent' : 'text-chill-accent';
+  const borderColor = isCooked ? 'border-cooked-accent/15' : isUnstable ? 'border-unstable-accent/15' : 'border-white/[0.06]';
 
   return (
-    <Link 
+    <Link
       href={`/trips/${trip.id}`}
       className={cn(
-        "group relative block aspect-[4/5] rounded-[3rem] bg-[#14181C] border overflow-hidden transition-all duration-500 hover:scale-[1.02] shadow-2xl",
+        "group relative block aspect-[3/4] rounded-[2.5rem] bg-[#0E0E0C] border overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl",
         borderColor
       )}
     >
-      <div className="absolute inset-0 grayscale contrast-125 opacity-40 group-hover:opacity-60 transition-opacity duration-700">
-        <img 
-          src="https://images.unsplash.com/photo-1544620347-c4fd403d5957?q=80&w=2069" 
-          alt="" 
-          className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110"
-        />
+      {/* Background */}
+      <div className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-700">
+        {trip?.lore_json?.cooked_level ? (
+          <div className="w-full h-full" style={{
+            background: `radial-gradient(ellipse at top, ${isCooked ? '#FF4D4D15' : isUnstable ? '#D49E2D10' : '#2D9E8B10'}, transparent 70%)`
+          }} />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-b from-white/[0.02] to-transparent" />
+        )}
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-      
-      <div className="absolute inset-x-8 bottom-10 space-y-4">
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+
+      <div className="absolute inset-x-6 bottom-8 space-y-4">
         <div className="flex items-center gap-2">
-          <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isCooked ? 'bg-cooked-accent' : 'bg-white/40')} />
-          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40">{statusLabel}</span>
+          <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isCooked ? 'bg-cooked-accent' : 'bg-white/30')} />
+          <span className={cn("text-[8px] font-vibe font-black uppercase tracking-[0.3em]", statusColor)}>
+            {trip.lore_status === 'ready' ? statusLabel : trip.lore_status === 'processing' ? 'Generating Lore...' : 'No Lore Yet'}
+          </span>
         </div>
-        
+
         <div className="space-y-1">
-          <span className="text-[9px] uppercase tracking-widest text-white/20 font-black block">Archive No. {trip.id.slice(0,4)}</span>
-          <h3 className="text-3xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] group-hover:text-cooked-accent transition-colors uppercase">
-            {trip.title}
+          <span className="text-[8px] uppercase tracking-widest text-white/15 font-vibe font-black block">
+            Archive {trip.id.slice(0, 4).toUpperCase()}
+          </span>
+          <h3 className="text-3xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] group-hover:text-cooked-accent transition-colors duration-300 uppercase">
+            {trip.name}
           </h3>
         </div>
 
-        <p className="text-[11px] text-white/40 italic font-cinematic leading-relaxed line-clamp-2">
-          "{trip.tagline || 'Documenting the missed transfers and off-brand hotels.'}"
+        <p className="text-[11px] text-white/35 italic font-cinematic leading-relaxed line-clamp-2">
+          &ldquo;{trip.lore_json?.tagline || trip.destination || 'No tagline yet.'}&rdquo;
         </p>
 
-        <div className="flex justify-between items-end pt-4 border-t border-white/5">
+        <div className="flex justify-between items-end pt-3 border-t border-white/[0.06]">
           <div className="flex items-baseline gap-2">
-            <span className={cn("text-4xl font-vibe font-black", statusColor)}>{trip.chaos_score}</span>
-            <span className="text-[8px] uppercase tracking-[0.2em] text-white/20 font-black">Chaos</span>
+            <span className={cn("text-4xl font-vibe font-black", statusColor)}>
+              {cookedLevel || '—'}
+            </span>
+            <span className="text-[8px] uppercase tracking-wider text-white/20 font-vibe font-black">Cooked</span>
           </div>
-          <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/20 group-hover:border-white/40 group-hover:text-white transition-all">
-            <Play size={16} fill="currentColor" className="ml-1" />
+          <div className="w-10 h-10 rounded-full border border-white/[0.08] flex items-center justify-center text-white/20 group-hover:border-white/30 group-hover:text-white transition-all">
+            <Play size={14} fill="currentColor" className="ml-0.5" />
           </div>
         </div>
       </div>
 
-      <div className="absolute top-8 right-8 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-        <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Season {new Date(trip.created_at).getMonth() + 1}</span>
+      <div className="absolute top-6 right-6 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+        <span className="text-[8px] font-vibe font-black uppercase tracking-widest text-white/50">
+          {trip.member_count || 0} cast
+        </span>
       </div>
     </Link>
   );
 }
 
-/* --- SPOTIFY WRAPPED STYLE WRAPPER --- */
+// ─────────────────────────────────────────────────────────────────────────────
+// LORE WRAPPED — Spotify-wrapped style reveal
+// ─────────────────────────────────────────────────────────────────────────────
 export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => void }) {
   const [step, setStep] = React.useState(0);
-  
+  const lore = trip?.lore_json;
+
   const slides = [
     {
-      title: "The Lore Begins",
-      body: `You survived Season 2: ${trip.title}`,
-      accent: "#FF3B2F",
-      stat: "84 Chaos Score",
-      desc: "This is objectively higher than 92% of your previous trips."
+      eyebrow: 'Season Begins',
+      title: trip?.name || 'Untitled Season',
+      body: `${trip?.member_count || 0} people. ${trip?.total_photos || 0} photos. One chaotic truth.`,
+      accent: '#FF4D4D',
+      stat: lore?.cooked_level ? `${lore.cooked_level}/100` : '??',
+      statLabel: 'Cooked',
     },
     {
-      title: "Top Archetype",
-      body: "Zara became the group's Emotional Triage.",
-      accent: "#1FA882",
-      stat: "99 Influence",
-      desc: "She single-handedly kept the vibes above sea level."
+      eyebrow: 'The Verdict',
+      title: lore?.cooked_verdict || 'Processing...',
+      body: lore?.cooked_explanation || 'The AI historian is reviewing the evidence.',
+      accent: '#D49E2D',
+      stat: lore?.trip_eras?.length ? `${lore.trip_eras.length} eras` : '—',
+      statLabel: 'Timeline',
     },
     {
-      title: "The Critical Moment",
-      body: "The Bus That Betrayed Us",
-      accent: "#D49E2D",
-      stat: "3:00 AM",
-      desc: "The exact moment Kev convinced you all the bus had 'feelings'."
-    }
+      eyebrow: 'The Closing Line',
+      title: 'Enter the Archive',
+      body: lore?.closing_line || `"${trip?.name} happened. The rest is mythology."`,
+      accent: '#2D9E8B',
+      stat: 'Archived',
+      statLabel: 'Status',
+    },
   ];
 
   const current = slides[step];
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center p-8 overflow-hidden"
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="fixed inset-0 z-[200] bg-[#060604] flex flex-col items-center justify-center p-8 overflow-hidden"
     >
-      <AtmosphericBlob color={current.accent} className="w-[80vw] h-[80vw] opacity-30 animate-pulse" />
-      
-      <button 
+      {/* Ambient */}
+      <div
+        className="absolute inset-0 opacity-15 blur-[200px] transition-colors duration-1000 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse at center, ${current.accent}, transparent 70%)` }}
+      />
+
+      {/* Film grain */}
+      <div className="fixed inset-0 z-[100] pointer-events-none opacity-[0.04] mix-blend-overlay animate-grain bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27noise%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.9%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23noise)%27/%3E%3C/svg%3E')] bg-[length:180px_180px]" />
+
+      <button
         onClick={onFinish}
-        className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all z-50"
+        className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all z-50"
       >
         <X size={20} />
       </button>
 
-      <div className="relative z-10 max-w-2xl w-full space-y-12 text-center">
-        <motion.div
-          key={step + 'title'}
-          initial={{ y: 40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="space-y-4"
-        >
-          <span className="text-[12px] uppercase tracking-[0.5em] text-white/30 font-black">{current.title}</span>
-          <h2 className="text-6xl md:text-8xl font-black font-cinematic tracking-tighter leading-none text-[#F5F0E8] uppercase italic">
-            {current.body}
-          </h2>
-        </motion.div>
-
-        <motion.div
-          key={step + 'stat'}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-6"
-        >
-          <div className="text-[15vw] font-black font-vibe tracking-tighter leading-none" style={{ color: current.accent }}>
-            {current.stat}
-          </div>
-          <p className="text-xl text-white/40 font-cinematic italic max-w-sm mx-auto">
-            "{current.desc}"
-          </p>
-        </motion.div>
+      <div className="relative z-10 max-w-2xl w-full space-y-16 text-center">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step + 'content'}
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -40, opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-8"
+          >
+            <span className="text-[10px] uppercase tracking-[0.5em] text-white/25 font-vibe font-black">
+              {current.eyebrow}
+            </span>
+            <h2 className="text-6xl md:text-8xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] uppercase italic">
+              {current.title}
+            </h2>
+            <div className="text-[18vw] md:text-[12vw] font-vibe font-black tracking-tighter leading-none" style={{ color: current.accent }}>
+              {current.stat}
+            </div>
+            <p className="text-xl text-white/35 font-cinematic italic max-w-md mx-auto leading-relaxed">
+              &ldquo;{current.body}&rdquo;
+            </p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-12 inset-x-8 flex items-center justify-between max-w-2xl mx-auto">
+      {/* Progress + CTA */}
+      <div className="absolute bottom-12 inset-x-8 flex items-center justify-between max-w-2xl mx-auto left-1/2 -translate-x-1/2 w-full px-8">
         <div className="flex gap-2">
           {slides.map((_, i) => (
             <div key={i} className={cn(
               "h-1 rounded-full transition-all duration-500",
-              i === step ? "w-12 bg-white" : "w-4 bg-white/10"
+              i === step ? "w-12 bg-white" : i < step ? "w-4 bg-white/40" : "w-4 bg-white/10"
             )} />
           ))}
         </div>
-        
-        <button 
+
+        <button
           onClick={() => step < slides.length - 1 ? setStep(step + 1) : onFinish()}
-          className="px-10 py-5 bg-[#F5F0E8] text-black rounded-full text-[11px] font-black uppercase tracking-widest flex items-center gap-3 group"
+          className="flex items-center gap-3 px-10 py-5 bg-[#F5F0E8] text-black rounded-full text-[11px] font-vibe font-black uppercase tracking-widest group hover:scale-105 transition-all"
         >
           {step < slides.length - 1 ? 'Next File' : 'Enter Archive'}
           <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -472,32 +561,38 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
   );
 }
 
-/* --- ARCHIVE FOOTER --- */
+// ─────────────────────────────────────────────────────────────────────────────
+// ARCHIVE FOOTER
+// ─────────────────────────────────────────────────────────────────────────────
 export function ArchiveFooter() {
   return (
-    <footer className="mt-40 border-t border-white/5 pt-24 pb-48 px-6 bg-white/[0.01]">
+    <footer className="mt-40 border-t border-white/[0.04] pt-24 pb-48 px-6">
       <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-16">
-        <div className="col-span-1 md:col-span-2 space-y-8">
-          <span className="text-[11px] uppercase tracking-[0.5em] text-white/30 font-black block">Theatrical Credits</span>
-          <p className="text-sm text-white/20 leading-relaxed font-cinematic max-w-md italic">
-            Rendered by OG Poster Engine • Lore Pipeline v.2 • All inside joke detection active. Featuring Zara (Catalyst), Kev (Accidental Antagonist), Tom (Orchestrator). Under supervision by SAS ROFL.
+        <div className="col-span-1 md:col-span-2 space-y-6">
+          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Theatrical Credits</span>
+          <p className="text-sm text-white/15 leading-relaxed font-cinematic max-w-md italic">
+            Rendered by Lore Pipeline v2.0 · AI vision model active · All inside joke detection armed.
           </p>
         </div>
-        
-        <div className="space-y-8">
-          <span className="text-[11px] uppercase tracking-[0.5em] text-white/30 font-black block">Share the Season</span>
-          <div className="flex flex-col gap-4 items-start">
-            <button className="px-10 py-4 bg-cooked-accent text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-xl">Share Poster</button>
-            <button className="px-10 py-4 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all">Copy O.G. Link</button>
+
+        <div className="space-y-6">
+          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Share the Season</span>
+          <div className="flex flex-col gap-3">
+            <button className="px-8 py-3.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all w-fit">
+              Share Poster
+            </button>
+            <button className="px-8 py-3.5 bg-white/5 border border-white/10 text-white/40 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all w-fit">
+              Copy O.G. Link
+            </button>
           </div>
         </div>
 
-        <div className="space-y-8 text-right">
-          <span className="text-[11px] uppercase tracking-[0.5em] text-white/30 font-black block">Micro-Lore Links</span>
+        <div className="space-y-6 md:text-right">
+          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Micro-Lore Links</span>
           <div className="flex flex-col gap-3">
-            <a href="#" className="text-[12px] text-white/20 hover:text-white transition-colors font-medium">Privacy Policy</a>
-            <a href="#" className="text-[12px] text-white/20 hover:text-white transition-colors font-medium">Terms of Archive</a>
-            <a href="#" className="text-[12px] text-white/20 hover:text-white transition-colors font-medium">Report a Trip</a>
+            {['Privacy Policy', 'Terms of Archive', 'Report a Trip'].map(l => (
+              <a key={l} href="#" className="text-[11px] text-white/15 hover:text-white/40 transition-colors font-data">{l}</a>
+            ))}
           </div>
         </div>
       </div>
