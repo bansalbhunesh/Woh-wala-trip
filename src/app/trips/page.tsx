@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
+import { FilmGrain, AtmosphericBlob, CinematicText } from '@/components/ui/atoms';
+import { CinematicGalleryCard, ArchiveFooter } from '@/components/cinematic/ArchiveRoom';
+import { Plus, Search, Filter } from 'lucide-react';
 
 export default function TripsPage() {
   const { data: trips, isLoading } = trpc.trips.listMine.useQuery();
@@ -9,96 +12,70 @@ export default function TripsPage() {
   if (isLoading) return <LoadingState />;
 
   return (
-    <div className="min-h-screen bg-black text-[#F5F0E8] font-vibe selection:bg-cooked-bg selection:text-white pb-32">
-      {/* Archive Header */}
-      <header className="px-6 pt-12 pb-8">
-        <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-vibe mb-2">Your Archive</p>
-        <h1 className="font-cinematic font-black text-6xl tracking-tighter leading-none">The<br/>Seasons</h1>
+    <div className="min-h-screen bg-black text-[#F5F0E8] font-cinematic selection:bg-cooked-accent selection:text-white pb-32 overflow-hidden relative">
+      <FilmGrain />
+      <AtmosphericBlob color="#FF3B2F" className="top-[-10%] right-[-10%] w-[500px] h-[500px] opacity-20" />
+      <AtmosphericBlob color="#D49E2D" className="bottom-[10%] left-[-10%] w-[400px] h-[400px] opacity-10" />
+
+      {/* Archive Room Header */}
+      <header className="max-w-[1600px] mx-auto px-6 pt-24 pb-16 relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div className="space-y-4">
+          <CinematicText variant="eyebrow" className="text-white/40">The Dossier</CinematicText>
+          <h1 className="text-7xl md:text-[10vw] font-black tracking-tighter leading-[0.8] font-cinematic">
+            The<br />
+            <span className="italic text-cooked-accent">Seasons</span>
+          </h1>
+        </div>
+
+        <div className="flex flex-col gap-6 md:text-right">
+          <p className="text-lg text-white/40 italic max-w-xs md:ml-auto">
+            "A collection of questionable decisions, missed buses, and historically cooked hotels."
+          </p>
+          <div className="flex gap-3 md:justify-end">
+             <button className="p-4 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                <Search size={20} />
+             </button>
+             <button className="p-4 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                <Filter size={20} />
+             </button>
+             <Link 
+                href="/trips/new"
+                className="flex items-center gap-3 px-8 py-4 bg-cooked-accent text-white rounded-full text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_40px_rgba(255,59,47,0.2)]"
+              >
+                <Plus size={16} /> New Season
+              </Link>
+          </div>
+        </div>
       </header>
 
-      {/* Trip List */}
-      <div className="px-6 space-y-4">
-        {trips?.map((trip) => (
-          <TripCard key={trip.id} trip={trip} />
-        ))}
-        {trips?.length === 0 && (
-          <div className="py-20 text-center border border-dashed border-white/10 rounded-[32px]">
-             <p className="text-white/20 text-sm italic font-cinematic">Your archive is currently empty.</p>
-          </div>
-        )}
-      </div>
+      {/* Archive Grid */}
+      <section className="max-w-[1600px] mx-auto px-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {trips?.map((trip) => (
+            <CinematicGalleryCard key={trip.id} trip={trip} />
+          ))}
+          
+          {trips?.length === 0 && (
+            <div className="col-span-full py-40 text-center rounded-[3rem] border border-dashed border-white/5 bg-white/[0.02]">
+               <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                 <Plus size={32} className="text-white/20" />
+               </div>
+               <p className="text-white/20 text-sm italic font-cinematic">Your archive is currently empty. No lore detected.</p>
+               <Link href="/trips/new" className="inline-block mt-8 text-[10px] font-black uppercase tracking-[0.3em] text-cooked-accent hover:underline">Start First Season</Link>
+            </div>
+          )}
+        </div>
+      </section>
 
-      {/* FABs */}
-      <div className="fixed bottom-8 right-6 flex flex-col gap-3 z-50">
-        <Link 
-          href="/trips/new"
-          className="w-14 h-14 bg-[#F5F0E8] text-black rounded-full flex items-center justify-center text-2xl shadow-3xl hover:scale-110 active:scale-95 transition-all"
-        >
-          +
-        </Link>
-      </div>
+      <ArchiveFooter />
     </div>
-  );
-}
-
-function TripCard({ trip }: { trip: any }) {
-  const isCooked = trip.chaos_score >= 80;
-  const isUnstable = trip.chaos_score >= 50 && trip.chaos_score < 80;
-  
-  const bgGradient = isCooked 
-    ? 'bg-gradient-to-br from-[#14181C] to-[#1A0505] border-cooked-accent/20' 
-    : isUnstable 
-    ? 'bg-gradient-to-br from-[#1A1508] to-[#1E1200] border-amber-500/20'
-    : 'bg-gradient-to-br from-[#0A130F] to-[#0E1A14] border-chill-accent/15';
-
-  const badgeColor = isCooked ? 'bg-cooked-accent/15 text-cooked-accent border-cooked-accent/30' : isUnstable ? 'bg-amber-500/15 text-amber-500 border-amber-500/30' : 'bg-chill-accent/15 text-chill-accent border-chill-accent/30';
-  const scoreColor = isCooked ? 'text-cooked-accent' : isUnstable ? 'text-amber-500' : 'text-chill-accent';
-
-  return (
-    <Link 
-      href={`/trips/${trip.id}`}
-      className={`block relative overflow-hidden rounded-[2.5rem] border ${bgGradient} transition-all hover:scale-[1.01] active:scale-[0.99] group`}
-    >
-      {/* Ghost Number */}
-      <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 font-vibe font-black text-[35vw] md:text-[20vw] text-white opacity-[0.04] leading-none select-none pointer-events-none">
-        {trip.chaos_score}
-      </div>
-
-      <div className="relative z-10 p-8 space-y-6">
-        <div>
-          <div className="text-[8px] uppercase tracking-[0.35em] text-white/20 mb-3">
-             Season {new Date(trip.created_at).getMonth() + 1} · {trip.location || 'Unknown'}
-          </div>
-          <h3 className="font-cinematic font-black text-3xl md:text-4xl text-[#F5F0E8] tracking-tighter leading-tight">
-            {trip.title}
-          </h3>
-        </div>
-
-        <div className={`inline-block px-4 py-1 rounded-full border text-[8px] font-vibe font-bold uppercase tracking-[0.2em] ${badgeColor}`}>
-           {isCooked ? 'Historically Cooked' : isUnstable ? 'Peak Delusion' : 'Mildly Simmering'}
-        </div>
-
-        <p className="text-[11px] text-white/35 italic font-cinematic leading-relaxed max-w-xs">
-          "{trip.tagline || 'Analyzing trip dynamics...'}"
-        </p>
-
-        <div className="flex justify-between items-end pt-4 border-t border-white/[0.06]">
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-vibe font-black leading-none ${scoreColor}`}>{trip.chaos_score}</span>
-            <span className="text-[8px] uppercase tracking-[0.2em] text-white/20">Chaos</span>
-          </div>
-          <div className="text-[9px] uppercase tracking-[0.2em] text-white/25 group-hover:text-white transition-colors">
-            Open Archive →
-          </div>
-        </div>
-      </div>
-    </Link>
   );
 }
 
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-12">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-12 gap-6">
+       <div className="w-12 h-12 border-2 border-cooked-accent/20 border-t-cooked-accent rounded-full animate-spin" />
        <div className="animate-pulse text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe">Opening Archives...</div>
     </div>
   );
