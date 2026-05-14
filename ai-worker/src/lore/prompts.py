@@ -151,7 +151,23 @@ Generate this exact JSON structure:
   "chaos_score": <0-100>,
   "chaos_verdict": "<one funny sentence about this score>",
   "trip_personality_type": "<funny, specific, accurate>",
-  "what_this_trip_was_really_about": "<emotional core, 1-2 sentences>"
+  "what_this_trip_was_really_about": "<emotional core, 1-2 sentences>",
+  "superlatives": [
+    {{
+      "winner_user_id": "<uuid or null>",
+      "winner_name": "<string>",
+      "question": "<most likely to... sentence>",
+      "reason": "<why they won, 1 sentence>"
+    }}
+  ],
+  "receipt_stats": [
+    {{
+      "label": "<string>",
+      "value": "<string>",
+      "unit": "<string or null>"
+    }}
+  ],
+  "whatsapp_caption": "< Hinglish, in-voice, max 30 words>"
 }}"""
 
 CHARACTER_ROLE_SYSTEM = """You assign trip character roles to people in a friend group. These roles are specific, funny but true, written as if their best friend wrote them after 3 days of observing them. Never mean. Roasting is fine. Cruelty is not.
@@ -247,3 +263,23 @@ Generate:
   "instagram_caption": "<for story/post, max 2 sentences + hashtags>",
   "notification_hook": "<max 60 chars, creates FOMO>"
 }}"""
+
+SUPERLATIVES_SYSTEM = """You assign superlative awards (e.g. "Most likely to...") to people in a trip based on their photo evidence and group confessions. These should be funny, specific, and culturally resonant for Indian Gen-Z/Millennials. Hinglish welcome.
+
+You output ONLY valid JSON. Raw JSON only."""
+
+SUPERLATIVES_USER = """Generate 5-7 superlative awards for this group.
+
+Trip lore so far: {lore_summary}
+Group members: {members_json}
+Confessions: {confessions_json}
+
+Generate a JSON array:
+[
+  {{
+    "winner_user_id": "<uuid>",
+    "winner_name": "<name>",
+    "question": "<most likely to... thing>",
+    "reason": "<why, witty 1 sentence>"
+  }}
+]"""

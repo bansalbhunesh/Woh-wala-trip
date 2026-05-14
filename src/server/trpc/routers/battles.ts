@@ -4,41 +4,43 @@ import { TRPCError } from '@trpc/server';
 
 export const battlesRouter = router({
   challenge: protectedProcedure
-    .input(z.object({
-      myTripId: z.string().uuid(),
-      opponentTripId: z.string().uuid(),
-    }))
+    .input(
+      z.object({
+        myTripId: z.string().uuid(),
+        opponentTripId: z.string().uuid(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const { data: myTrip } = await ctx.supabase
         .from('trips')
         .select('creator_id, lore_status')
         .eq('id', input.myTripId)
         .single();
-      
+
       if (!myTrip || myTrip.creator_id !== ctx.user.id) {
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
-      
+
       if (myTrip.lore_status !== 'ready') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Generate lore for your trip first before challenging',
         });
       }
-      
+
       const { data: oppTrip } = await ctx.supabase
         .from('trips')
         .select('lore_status')
         .eq('id', input.opponentTripId)
         .single();
-      
+
       if (!oppTrip || oppTrip.lore_status !== 'ready') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Opponent trip must have lore generated',
         });
       }
-      
+
       const { data: battle, error } = await ctx.supabase
         .from('trip_vs_trip')
         .insert({
@@ -49,21 +51,25 @@ export const battlesRouter = router({
         })
         .select()
         .single();
-      
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
-      
+
+      if (error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message,
+        });
+
       await fetch(`${process.env.AI_WORKER_URL}/judge-battle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.AI_WORKER_SECRET}`,
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET}`,
         },
         body: JSON.stringify({ battle_id: battle.id }),
       });
-      
+
       return battle;
     }),
-  
+
   get: publicProcedure
     .input(z.object({ battleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
@@ -76,31 +82,36 @@ export const battlesRouter = router({
         `)
         .eq('id', input.battleId)
         .single();
-      
+
       if (error || !data) {
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
-      
+
       return data;
     }),
-  
+
   vote: publicProcedure
-    .input(z.object({
-      battleId: z.string().uuid(),
-      votedForTripId: z.string().uuid(),
-      fingerprint: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        battleId: z.string().uuid(),
+        votedForTripId: z.string().uuid(),
+        fingerprint: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const { data, error } = await ctx.supabase.rpc('cast_vs_vote', {
         p_battle_id: input.battleId,
         p_voted_for_trip_id: input.votedForTripId,
         p_fingerprint: input.fingerprint || null,
       });
-      
+
       if (error || data?.error) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: data?.error || error?.message });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: data?.error || error?.message,
+        });
       }
-      
+
       return { success: true };
     }),
 });

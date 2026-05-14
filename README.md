@@ -85,6 +85,28 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
+
+---
+
+## 🌍 Deployment & Edge Runtime
+
+The **Viral Share Layer** is optimized for high-performance rendering using **Vercel Edge Functions**.
+
+### 1. Edge Configuration
+All OG card routes in `src/app/api/card/` use `export const runtime = 'edge'`. This ensures:
+- **Low Latency**: Images render at the edge in <250ms.
+- **Dynamic Palettes**: Real-time styling based on database state.
+- **Cache Efficiency**: Leverages `s-maxage` for CDN caching.
+
+### 2. Font Management
+Fonts are loaded dynamically from `/public/fonts/`. Ensure the following files are present before deploying:
+- `Inter-Medium.ttf`
+- `Inter-Regular.ttf`
+- `Lora-Italic.ttf`
+
+> [!TIP]
+> If your fonts are not loading in production, verify that `VERCEL_URL` is correctly set in your environment variables so the edge function can resolve the absolute URL for the fetch call.
+
 ---
 
 <p align="center">
