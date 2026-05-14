@@ -12,7 +12,8 @@ export const photosRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data: member } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data: member } = await supabase
         .from('trip_members')
         .select('id')
         .eq('trip_id', input.tripId)
@@ -26,7 +27,7 @@ export const photosRouter = router({
         });
       }
 
-      const { data: trip } = await ctx.supabase
+      const { data: trip } = await supabase
         .from('trips')
         .select('tier, total_photos')
         .eq('id', input.tripId)
@@ -42,7 +43,7 @@ export const photosRouter = router({
       const ext = input.fileName.split('.').pop() || 'jpg';
       const storagePath = `${input.tripId}/${ctx.user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-      const { data, error } = await ctx.supabase.storage
+      const { data, error } = await supabase.storage
         .from('trip-photos')
         .createSignedUploadUrl(storagePath);
 
@@ -73,7 +74,8 @@ export const photosRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase
         .from('photos')
         .insert({
           trip_id: input.tripId,
@@ -95,11 +97,11 @@ export const photosRouter = router({
         });
       }
 
-      await fetch(`${process.env.AI_WORKER_URL}/generate-thumbnail`, {
+      await fetch(`${process.env.AI_WORKER_URL!}/generate-thumbnail`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET}`,
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
         },
         body: JSON.stringify({ photo_id: data.id }),
       });
@@ -110,7 +112,8 @@ export const photosRouter = router({
   list: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase
         .from('photos')
         .select('*')
         .eq('trip_id', input.tripId)
@@ -123,13 +126,13 @@ export const photosRouter = router({
         });
 
       const photosWithUrls = await Promise.all(
-        data.map(async (photo) => {
-          const { data: urlData } = await ctx.supabase.storage
+        (data as any[] || []).map(async (photo) => {
+          const { data: urlData } = await supabase.storage
             .from('trip-photos')
             .createSignedUrl(photo.storage_path, 3600);
 
           const { data: thumbData } = photo.thumbnail_path
-            ? await ctx.supabase.storage
+            ? await supabase.storage
                 .from('trip-photos')
                 .createSignedUrl(photo.thumbnail_path, 3600)
             : { data: null };

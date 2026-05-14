@@ -9,7 +9,8 @@ export const cardsRouter = router({
   listForTrip: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data: trip, error } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data: trip, error } = await supabase
         .from('trips')
         .select('id, lore_json, lore_status')
         .eq('id', input.tripId)
@@ -26,7 +27,7 @@ export const cardsRouter = router({
         });
       }
 
-      const { data: members } = await ctx.supabase
+      const { data: members } = await supabase
         .from('trip_members')
         .select('user_id, role_title, role_chaos_rating, profiles:user_id(display_name)')
         .eq('trip_id', input.tripId);
@@ -60,14 +61,14 @@ export const cardsRouter = router({
         sublabel: 'The main one',
       });
 
-      for (const m of members || []) {
+      for (const m of (members as any[] || [])) {
         if (!m.role_title) continue;
         cards.push({
           id: `character-${m.user_id}`,
           type: 'character',
           url: `/api/card/character/${input.tripId}/${m.user_id}`,
           label: m.role_title,
-          sublabel: (m.profiles as { display_name: string } | null)?.display_name,
+          sublabel: m.profiles?.display_name,
           isYours: m.user_id === ctx.user.id,
           memberId: m.user_id,
         });

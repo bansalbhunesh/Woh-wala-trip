@@ -13,10 +13,10 @@ export async function createSupabaseServerClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: any) {
+        setAll(cookiesToSet: any[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+            cookiesToSet.forEach((c) =>
+              cookieStore.set(c.name, c.value, c.options)
             );
           } catch {
             // Server Component context — ignore

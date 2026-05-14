@@ -11,7 +11,8 @@ export const battlesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data: myTrip } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data: myTrip } = await supabase
         .from('trips')
         .select('creator_id, lore_status')
         .eq('id', input.myTripId)
@@ -28,7 +29,7 @@ export const battlesRouter = router({
         });
       }
 
-      const { data: oppTrip } = await ctx.supabase
+      const { data: oppTrip } = await supabase
         .from('trips')
         .select('lore_status')
         .eq('id', input.opponentTripId)
@@ -41,7 +42,7 @@ export const battlesRouter = router({
         });
       }
 
-      const { data: battle, error } = await ctx.supabase
+      const { data: battle, error } = await supabase
         .from('trip_vs_trip')
         .insert({
           trip_a_id: input.myTripId,
@@ -58,11 +59,11 @@ export const battlesRouter = router({
           message: error.message,
         });
 
-      await fetch(`${process.env.AI_WORKER_URL}/judge-battle`, {
+      await fetch(`${process.env.AI_WORKER_URL!}/judge-battle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET}`,
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
         },
         body: JSON.stringify({ battle_id: battle.id }),
       });
@@ -73,7 +74,8 @@ export const battlesRouter = router({
   get: publicProcedure
     .input(z.object({ battleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase
         .from('trip_vs_trip')
         .select(`
           *,
@@ -99,16 +101,18 @@ export const battlesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('cast_vs_vote', {
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase.rpc('cast_vs_vote', {
         p_battle_id: input.battleId,
         p_voted_for_trip_id: input.votedForTripId,
         p_fingerprint: input.fingerprint || null,
       });
 
-      if (error || data?.error) {
+      const res = data as any;
+      if (error || res?.error) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: data?.error || error?.message,
+          message: res?.error || error?.message,
         });
       }
 
