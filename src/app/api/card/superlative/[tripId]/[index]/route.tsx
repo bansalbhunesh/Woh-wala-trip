@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server';
 import { createSupabaseServiceClient } from '../../../../../../lib/supabase/server';
+import type { Database } from '../../../../../../lib/database.types';
+
+type Trip = Database['public']['Tables']['trips']['Row'];
 import { loadCardFonts } from '../../../../../../lib/og/fonts';
 import { paletteFor } from '../../../../../../lib/og/colors';
+import { LoreJson } from '../../../../../../lib/types';
 import { qrDataUrl } from '../../../../../../lib/og/qr';
 import { renderCard, errorImage } from '../../../../../../lib/og/render';
 import { CardFrame, Eyebrow, CardFooter } from '../../../../../../lib/og/components';
@@ -17,17 +21,19 @@ export async function GET(
   const idx = parseInt(index);
   const supabase = createSupabaseServiceClient();
 
-  const { data: trip, error } = await supabase
+  const { data, error } = await supabase
     .from('trips')
     .select('*')
     .eq('id', tripId)
     .single();
 
+  const trip = data as Trip | null;
+
   if (error || !trip || !trip.lore_json) {
     return errorImage('Trip lore not ready');
   }
 
-  const lore = trip.lore_json as any;
+  const lore = trip.lore_json as unknown as LoreJson;
   const superlative = lore.superlatives?.[idx];
 
   if (!superlative) {

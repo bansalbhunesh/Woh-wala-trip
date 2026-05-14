@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server';
 import { createSupabaseServiceClient } from '../../../../lib/supabase/server';
+import type { Database } from '../../../../lib/database.types';
+
+type Trip = Database['public']['Tables']['trips']['Row'];
 import { loadCardFonts } from '../../../../lib/og/fonts';
 import { paletteFor } from '../../../../lib/og/colors';
+import { LoreJson } from '../../../../lib/types';
 import { qrDataUrl } from '../../../../lib/og/qr';
 import { renderCard, errorImage } from '../../../../lib/og/render';
 import {
@@ -20,47 +24,59 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
 ) {
-  const { tripId } = await params;
-  const supabase = createSupabaseServiceClient();
+  try {
+    const { tripId } = await params;
+    const supabase = createSupabaseServiceClient();
+    
+    // 1. Parallelize initial data and font loading
+    const origin = req.headers.get('origin') || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    
+    const [tripResult, fonts] = await Promise.all([
+      supabase.from('trips').select('*').eq('id', tripId).single(),
+      loadCardFonts(origin).catch(() => null)
+    ]);
 
-  const { data: trip, error } = await supabase
-    .from('trips')
-    .select('*')
-    .eq('id', tripId)
-    .single();
+    const { data, error: tripError } = tripResult;
+    const trip = data as Trip | null;
 
-  if (error || !trip || !trip.lore_json) {
-    return errorImage('Trip not found or lore not ready');
-  }
+    if (tripError || !trip || !trip.lore_json) {
+      return errorImage('Trip lore not ready or missing');
+    }
 
-  const lore = trip.lore_json as any;
-  const palette = paletteFor(trip.chaos_score || 50);
-  const origin = req.headers.get('origin');
-  const [fonts, qr] = await Promise.all([
-    loadCardFonts(origin),
-    qrDataUrl(`${origin}/join/${trip.invite_code}`, {
+    if (!fonts) {
+      return errorImage('Failed to load design assets');
+    }
+
+    const lore = trip.lore_json as unknown as LoreJson;
+    const palette = paletteFor(trip.chaos_score || 50);
+
+    // 2. Fetch QR code (depends on trip data)
+    const qr = await qrDataUrl(`${origin}/join/${trip.invite_code}`, {
       dark: palette.ink,
-    }),
-  ]);
+    });
 
-  return renderCard(
-    <CardFrame palette={palette}>
-      <Eyebrow palette={palette}>Woh Wala Trip</Eyebrow>
-      <Title palette={palette}>{lore.trip_title}</Title>
-      <Tagline palette={palette}>{lore.tagline}</Tagline>
-      <CookedLevel 
-        palette={palette} 
-        level={trip.chaos_score || 0} 
-        verdict={lore.cooked_verdict}
-      />
-      <Closing palette={palette}>{lore.closing_line}</Closing>
-      <CardFooter
-        palette={palette}
-        qrDataUrl={qr}
-        showWatermark={trip.tier === 'free'}
-        qrLabel="Scan to join"
-      />
-    </CardFrame>,
-    { fonts }
-  );
+    return renderCard(
+      <CardFrame palette={palette}>
+        <Eyebrow palette={palette}>Woh Wala Trip</Eyebrow>
+        <Title palette={palette}>{lore.trip_title}</Title>
+        <Tagline palette={palette}>{lore.tagline}</Tagline>
+        <CookedLevel 
+          palette={palette} 
+          level={trip.chaos_score || 0} 
+          verdict={lore.cooked_verdict}
+        />
+        <Closing palette={palette}>{lore.closing_line}</Closing>
+        <CardFooter
+          palette={palette}
+          qrDataUrl={qr}
+          showWatermark={trip.tier === 'free'}
+          qrLabel="Scan to join"
+        />
+      </CardFrame>,
+      { fonts }
+    );
+  } catch (err) {
+    console.error('OG Route Error:', err);
+    return errorImage('Critical render failure');
+  }
 }

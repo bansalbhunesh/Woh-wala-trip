@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
 import { createSupabaseServiceClient } from '../../../../../../lib/supabase/server';
+import type { Database } from '../../../../../../lib/database.types';
+
+type Member = Database['public']['Tables']['trip_members']['Row'];
+type Trip = Database['public']['Tables']['trips']['Row'];
 import { loadCardFonts } from '../../../../../../lib/og/fonts';
 import { paletteFor } from '../../../../../../lib/og/colors';
 import { qrDataUrl } from '../../../../../../lib/og/qr';
@@ -15,24 +19,26 @@ export async function GET(
 ) {
   const { tripId, memberId } = await params;
   const supabase = createSupabaseServiceClient();
-
-  const { data: member, error } = await supabase
+  const query = supabase
     .from('trip_members')
     .select('*, profiles:user_id(display_name), trips(*)')
     .eq('trip_id', tripId)
     .eq('user_id', memberId)
     .single();
 
+  const { data, error } = await query;
+  const member = data as (Member & { trips: Trip; profiles: { display_name: string } }) | null;
+
   if (error || !member || !member.role_title) {
     return errorImage('Member role not found');
   }
 
-  const trip = member.trips as any;
-  const palette = paletteFor(trip.chaos_score || 50);
+  const trip = member.trips as any; // Cast for the join
+  const palette = paletteFor(trip?.chaos_score || 50);
   const origin = req.headers.get('origin');
   const [fonts, qr] = await Promise.all([
     loadCardFonts(origin),
-    qrDataUrl(`${origin}/join/${trip.invite_code}`, {
+    qrDataUrl(`${origin}/join/${trip?.invite_code || ''}`, {
       dark: palette.ink,
     }),
   ]);

@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str
     AI_WORKER_SECRET: str
     
-    CLAUDE_MODEL: str = "claude-3-5-sonnet-20241022"
+    CLAUDE_MODEL: str = "anthropic/claude-3.5-sonnet"
     
     MAX_PHOTOS_PER_VISION_CALL: int = 20
     MAX_LORE_RETRIES: int = 3

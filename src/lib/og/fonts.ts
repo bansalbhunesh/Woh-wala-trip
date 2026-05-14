@@ -8,19 +8,32 @@ export type Font = {
 };
 
 export async function loadCardFonts(origin?: string | null): Promise<Font[]> {
-  const baseUrl = origin || process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:3000';
+  const baseUrl = origin || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-  const [interMedium, interRegular, loraItalic] = await Promise.all([
-    fetch(new URL('/fonts/Inter-Medium.ttf', baseUrl)).then((res) => res.arrayBuffer()),
-    fetch(new URL('/fonts/Inter-Regular.ttf', baseUrl)).then((res) => res.arrayBuffer()),
-    fetch(new URL('/fonts/Lora-Italic.ttf', baseUrl)).then((res) => res.arrayBuffer()),
-  ]);
+  try {
+    const fontUrls = [
+      { name: 'Inter', weight: 500, style: 'normal', path: '/fonts/Inter-Medium.ttf' },
+      { name: 'Inter', weight: 400, style: 'normal', path: '/fonts/Inter-Regular.ttf' },
+      { name: 'Lora', weight: 400, style: 'italic', path: '/fonts/Lora-Italic.ttf' },
+    ];
 
-  return [
-    { name: 'Inter', data: interMedium, weight: 500, style: 'normal' },
-    { name: 'Inter', data: interRegular, weight: 400, style: 'normal' },
-    { name: 'Lora', data: loraItalic, weight: 400, style: 'italic' },
-  ];
+    const fontData = await Promise.all(
+      fontUrls.map(async (f) => {
+        const res = await fetch(new URL(f.path, baseUrl));
+        if (!res.ok) throw new Error(`Failed to load font: ${f.path}`);
+        return res.arrayBuffer();
+      })
+    );
+
+    return fontUrls.map((f, i) => ({
+      name: f.name,
+      data: fontData[i],
+      weight: f.weight as any,
+      style: f.style as any,
+    }));
+  } catch (err) {
+    console.error('Font loading failed:', err);
+    // Fallback to empty array or throw - route will handle it
+    throw err;
+  }
 }

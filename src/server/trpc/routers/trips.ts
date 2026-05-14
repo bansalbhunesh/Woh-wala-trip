@@ -13,7 +13,8 @@ export const tripsRouter = router({
   create: protectedProcedure
     .input(TripCreateInput)
     .mutation(async ({ ctx, input }) => {
-      const { data: trip, error } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase
         .from('trips')
         .insert({
           name: input.name,
@@ -26,6 +27,8 @@ export const tripsRouter = router({
         .select()
         .single();
 
+      const trip = data as any;
+
       if (error) {
         console.error('trip create failed', error);
         throw new TRPCError({
@@ -34,7 +37,14 @@ export const tripsRouter = router({
         });
       }
 
-      await ctx.supabase.from('trip_members').insert({
+      if (!trip) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Trip creation returned no data',
+        });
+      }
+
+      await supabase.from('trip_members').insert({
         trip_id: trip.id,
         user_id: ctx.user.id,
         status: 'joined',
@@ -46,7 +56,8 @@ export const tripsRouter = router({
   getFull: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('get_trip_full', {
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase.rpc('get_trip_full', {
         p_trip_id: input.tripId,
       });
 
@@ -57,20 +68,22 @@ export const tripsRouter = router({
         });
       }
 
-      if (data && typeof data === 'object' && 'error' in data) {
+      const res = data as any;
+      if (res && typeof res === 'object' && 'error' in res) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Trip not found or not a member',
         });
       }
 
-      return data;
+      return res;
     }),
 
   joinByCode: protectedProcedure
     .input(z.object({ inviteCode: z.string().min(6).max(8) }))
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('join_trip_by_code', {
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase.rpc('join_trip_by_code', {
         p_invite_code: input.inviteCode.toUpperCase(),
       });
 
@@ -81,7 +94,8 @@ export const tripsRouter = router({
         });
       }
 
-      if (data?.error) {
+      const res = data as any;
+      if (res?.error) {
         const errorMap: Record<string, string> = {
           invalid_or_expired_code: 'This invite code is invalid or expired',
           free_tier_member_limit_reached:
@@ -90,15 +104,16 @@ export const tripsRouter = router({
         };
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: errorMap[data.error] || data.error,
+          message: errorMap[res.error] || res.error,
         });
       }
 
-      return { tripId: data.trip_id };
+      return { tripId: res.trip_id };
     }),
 
   listMine: protectedProcedure.query(async ({ ctx }) => {
-    const { data, error } = await ctx.supabase
+    const supabase = ctx.supabase as any;
+    const { data, error } = await supabase
       .from('trip_members')
       .select(`
         trip_id,
@@ -125,17 +140,20 @@ export const tripsRouter = router({
         message: error.message,
       });
 
-    return data.map((row) => row.trips).filter(Boolean);
+    return (data as any[] || []).map((row) => row.trips).filter(Boolean);
   }),
 
   generateLore: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const { data: trip } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data } = await supabase
         .from('trips')
         .select('creator_id, total_photos')
         .eq('id', input.tripId)
         .single();
+
+      const trip = data as any;
 
       if (!trip || trip.creator_id !== ctx.user.id) {
         throw new TRPCError({
@@ -144,23 +162,23 @@ export const tripsRouter = router({
         });
       }
 
-      if (trip.total_photos < 5) {
+      if ((trip.total_photos || 0) < 5) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Need at least 5 photos to generate lore',
         });
       }
 
-      await ctx.supabase
+      await supabase
         .from('trips')
         .update({ lore_status: 'processing' })
         .eq('id', input.tripId);
 
-      await fetch(`${process.env.AI_WORKER_URL}/generate-lore`, {
+      await fetch(`${process.env.AI_WORKER_URL!}/generate-lore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET}`,
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
         },
         body: JSON.stringify({ trip_id: input.tripId }),
       });
@@ -176,15 +194,17 @@ export const tripsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('submit_confession', {
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase.rpc('submit_confession', {
         p_trip_id: input.tripId,
         p_confession: input.confession,
       });
 
-      if (error || data?.error) {
+      const res = data as any;
+      if (error || res?.error) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: data?.error || error?.message || 'Failed',
+          message: res?.error || error?.message || 'Failed',
         });
       }
 
@@ -200,17 +220,20 @@ export const tripsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data: trip } = await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { data } = await supabase
         .from('trips')
         .select('creator_id')
         .eq('id', input.tripId)
         .single();
 
+      const trip = data as any;
+
       if (!trip || trip.creator_id !== ctx.user.id) {
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
-      await ctx.supabase
+      await supabase
         .from('trip_members')
         .update({
           status: 'absent',
@@ -219,11 +242,11 @@ export const tripsRouter = router({
         .eq('trip_id', input.tripId)
         .eq('user_id', input.userId);
 
-      await fetch(`${process.env.AI_WORKER_URL}/generate-missing-person-card`, {
+      await fetch(`${process.env.AI_WORKER_URL!}/generate-missing-person-card`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET}`,
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
         },
         body: JSON.stringify({
           trip_id: input.tripId,
@@ -243,15 +266,18 @@ export const tripsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.supabase
+      const supabase = ctx.supabase as any;
+      const { error } = await supabase
         .from('trips')
         .update({
           tier: input.tier,
           payment_id: input.paymentId,
           expires_at: null,
-        })
+        } as any)
         .eq('id', input.tripId)
         .eq('creator_id', ctx.user.id);
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
 
       return { success: true };
     }),

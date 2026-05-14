@@ -6,7 +6,7 @@ from typing import Optional
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from ..clients import supabase, anthropic_client
+from ..clients import supabase, openai_client
 from ..config import settings
 from . import prompts
 from .validators import validate_lore_json, scan_forbidden_phrases
@@ -98,14 +98,16 @@ class LoreOrchestrator:
             confessions_json=json.dumps(confessions),
         )
         
-        response = anthropic_client.messages.create(
+        response = openai_client.chat.completions.create(
             model=settings.CLAUDE_MODEL,
             max_tokens=2000,
-            system=system,
-            messages=[{"role": "user", "content": user_prompt}]
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_prompt}
+            ]
         )
         
-        return self._parse_json_response(response.content[0].text)
+        return self._parse_json_response(response.choices[0].message.content)
 
     def _parse_json_response(self, raw: str) -> dict:
         cleaned = raw.strip()
