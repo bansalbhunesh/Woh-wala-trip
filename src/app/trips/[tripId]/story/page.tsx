@@ -1,28 +1,8 @@
 'use client';
 
-import { use, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import type { LoreJson } from '@/lib/types';
-
-type Slide =
-  | { type: 'title'; lore: LoreJson }
-  | { type: 'cooked'; lore: LoreJson }
-  | { type: 'recap'; lore: LoreJson }
-  | { type: 'era'; lore: LoreJson; idx: number }
-  | { type: 'character'; member: any }
-  | { type: 'superlative'; sup: any; idx: number; lore: LoreJson }
-  | { type: 'verdict'; lore: LoreJson }
-  | { type: 'share'; tripId: string };
-
-function buildSlides(tripId: string, lore: LoreJson, members: any[]): Slide[] {
-  const slides: Slide[] = [];
-  slides.push({ type: 'title', lore });
-  slides.push({ type: 'cooked', lore });
-  if (lore.season_recap?.full_narrative) slides.push({ type: 'recap', lore });
-  (lore.trip_eras || []).slice(0, 3).forEach((_, i) => slides.push({ type: 'era', lore, idx: i }));
-  members.filter(m => m.role_title).forEach(m => slides.push({ type: 'character', member: m }));
-  (lore.superlatives || []).slice(0, 3).forEach((sup, i) => slides.push({ type: 'superlative', sup, idx: i, lore }));
 import Link from 'next/link';
 
 export default function StoryPage() {
@@ -32,225 +12,174 @@ export default function StoryPage() {
   const [index, setIndex] = useState(0);
 
   const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
-        <p className="text-white/40 font-vibe text-sm uppercase tracking-wider">Loading the lore...</p>
-      </div>
-    );
-  }
+  const trip = (tripData as any)?.trip;
+  const cast = (tripData as any)?.cast || [];
 
-  const slides = buildSlides(tripId, lore, members);
-  const current = slides[idx];
-  const isFirst = idx === 0;
+  const slides = [
+    {
+      type: 'title',
+      eyebrow: 'The Official Archive',
+      title: trip?.title || 'Loading...',
+      italic: trip?.tagline || 'Analyzing your trip data...',
+      body: `Season ${new Date().getFullYear()} · ${cast.length} Cast Members · ${trip?.photo_count || 0} Photos`,
+    },
+    {
+      type: 'chaos',
+      eyebrow: 'How Cooked?',
+      score: trip?.chaos_score || 0,
+      verdict: trip?.verdict || 'Processing...',
+      body: 'The algorithm has analyzed every incident. There is no appeal process.',
+    },
+    {
+      type: 'recap',
+      eyebrow: 'Season Recap',
+      title: 'Act I → Act II → Act III',
+      body: trip?.recap || 'Generating narrative...',
+    },
+    ...cast.slice(0, 3).map((member: any) => ({
+      type: 'character',
+      eyebrow: 'Character Role',
+      name: member.full_name || 'Cast Member',
+      avatar: (member.full_name || '??').split(' ').map((n: string) => n[0]).join(''),
+      role: member.archetype || '??',
+      tag: member.archetype || '??',
+      body: member.roast || 'The algorithm is still processing this persona.',
+      score: member.chaos_score || 0,
+    })),
+    {
+      type: 'final',
+      eyebrow: 'The Lore is Sealed',
+      title: 'Share the Chaos',
+      body: 'Screenshot this. Tag your group. Let them defend themselves.',
+    },
+  ];
 
   const handleTap = (e: React.MouseEvent) => {
     const x = e.clientX;
     const w = window.innerWidth;
-    if (x < w * 0.33) retreat();
-    else advance();
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStart.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStart.current;
-    if (Math.abs(dx) > 50) {
-      dx < 0 ? advance() : retreat();
+    if (x < w * 0.33) {
+      setIndex((i) => Math.max(i - 1, 0));
+    } else {
+      if (index === slides.length - 1) {
+         router.push(`/trips/${tripId}`);
+      } else {
+         setIndex((i) => i + 1);
+      }
     }
-    touchStart.current = null;
   };
+
+  const slide = slides[index];
+
+  if (!trip) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+       <div className="animate-pulse text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe">Opening Archive...</div>
+    </div>
+  );
 
   return (
-    <div
-      className="min-h-screen bg-cooked-bg overflow-hidden relative select-none"
-      onClick={handleTap}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Progress bars — Stories style */}
-      <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-safe pt-4">
+    <div className="h-screen bg-black text-[#F5F0E8] overflow-hidden select-none touch-none flex flex-col relative">
+      {/* Progress Bars */}
+      <div className="flex gap-1.5 p-4 pt-6 z-50">
         {slides.map((_, i) => (
-          <div key={i} className="flex-1 h-0.5 bg-white/15 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white/70 rounded-full transition-all duration-300"
-              style={{ width: i < idx ? '100%' : i === idx ? '50%' : '0%' }}
+          <div key={i} className="flex-1 h-0.5 bg-white/10 rounded-full overflow-hidden">
+            <div 
+              className={`h-full bg-[#F5F0E8] transition-all duration-300 ${i <= index ? 'w-full' : 'w-0'}`}
+              style={{ opacity: i === index ? 1 : i < index ? 0.3 : 0 }}
             />
           </div>
         ))}
       </div>
 
-      {/* Back button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); router.push(`/trips/${tripId}`); }}
-        className="absolute top-10 right-4 z-50 text-white/30 text-xs font-vibe uppercase tracking-wider hover:text-white/60 transition-colors"
+      {/* Exit Button */}
+      <button 
+        onClick={() => router.push(`/trips/${tripId}`)}
+        className="absolute top-4 right-4 z-50 text-[10px] font-vibe font-bold uppercase tracking-[0.2em] text-white/20 hover:text-white"
       >
         Exit
       </button>
 
-      {/* Slide content */}
-      <div className="min-h-screen flex flex-col items-center justify-center px-8">
-        <SlideRenderer slide={current} router={router} tripId={tripId} onShare={() => router.push(`/trips/${tripId}/share`)} />
+      {/* Tap Zones Overlay */}
+      <div className="absolute inset-0 z-40 cursor-pointer" onClick={handleTap} />
+
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 relative">
+        {/* Slide Content */}
+        <div key={index} className="animate-fade-in flex flex-col items-center max-w-sm">
+          {slide.type === 'title' && (
+            <>
+              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
+              <h1 className="text-6xl font-cinematic font-black tracking-tighter leading-[0.85] text-[#F5F0E8] mb-6 uppercase">
+                {slide.title.split(' ').map((w: string, i: number) => i === 1 ? <span key={i} className="italic text-chill-accent"><br/>{w}</span> : <span key={i}>{w} </span>)}
+              </h1>
+              <div className="text-xl font-cinematic italic text-chill-accent mb-6 leading-tight">{slide.italic}</div>
+              <div className="text-[13px] font-vibe text-white/35 leading-relaxed">{slide.body}</div>
+            </>
+          )}
+
+          {slide.type === 'chaos' && (
+            <>
+              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
+              <div className="text-[28vw] font-vibe font-black tracking-tighter text-cooked-accent leading-none animate-pulse-slow shadow-cooked-accent/40 mb-4">
+                {slide.score}
+              </div>
+              <div className="text-xl font-vibe font-black uppercase tracking-[0.05em] text-white/80 mb-4">
+                {slide.score >= 80 ? 'Historically Cooked' : slide.score >= 50 ? 'Peak Delusion' : 'Mildly Simmering'}
+              </div>
+              <div className="text-[13px] font-vibe text-white/35 leading-relaxed max-w-[280px]">{slide.body}</div>
+            </>
+          )}
+
+          {slide.type === 'recap' && (
+            <>
+              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
+              <div className="text-2xl font-cinematic font-black text-[#F5F0E8] mb-6 tracking-tight uppercase">{slide.title}</div>
+              <div className="text-[15px] font-cinematic italic text-white/50 leading-relaxed text-center px-4">"{slide.body}"</div>
+            </>
+          )}
+
+          {slide.type === 'character' && (
+            <>
+              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
+              <div className="w-20 h-20 rounded-full bg-cooked-accent/15 border border-cooked-accent/30 flex items-center justify-center text-3xl font-vibe font-black text-cooked-accent mb-6">
+                {slide.avatar}
+              </div>
+              <h2 className="text-5xl font-cinematic font-black tracking-tighter text-[#F5F0E8] mb-2 uppercase">{slide.name}</h2>
+              <div className="text-lg font-cinematic italic text-chill-accent mb-6">"{slide.role}"</div>
+              <div className="px-4 py-1.5 rounded-full bg-cooked-accent/12 border border-cooked-accent/30 text-[9px] font-vibe font-bold uppercase tracking-[0.2em] text-cooked-accent mb-6">
+                ⚡ Chaos Source · {slide.score}/10
+              </div>
+              <div className="text-[13px] font-vibe text-white/35 leading-relaxed">{slide.body}</div>
+            </>
+          )}
+
+          {slide.type === 'final' && (
+            <>
+              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
+              <h2 className="text-5xl font-cinematic font-black tracking-tighter text-chill-accent mb-6 uppercase">Share<br/>the Chaos</h2>
+              <div className="text-[13px] font-vibe text-white/35 leading-relaxed mb-10">{slide.body}</div>
+              <div className="flex gap-3 z-50 pointer-events-auto">
+                <Link
+                  href={`/trips/${tripId}/share`}
+                  className="px-8 py-4 bg-[#F5F0E8] text-black rounded-full text-[10px] font-vibe font-black uppercase tracking-[0.15em] hover:scale-[1.05] transition-all"
+                >
+                  Export Cards
+                </Link>
+                <button
+                  onClick={() => router.push(`/trips/${tripId}`)}
+                  className="px-8 py-4 border border-white/15 bg-transparent text-white/50 rounded-full text-[10px] font-vibe font-bold uppercase tracking-[0.15em] hover:bg-white/5"
+                >
+                  Back to Archive
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Navigation hints — only on first visit */}
-      {isFirst && (
-        <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8 pointer-events-none">
-          <span className="text-white/15 text-xs font-vibe uppercase tracking-wider">← tap</span>
-          <span className="text-white/15 text-xs font-vibe uppercase tracking-wider">tap →</span>
-        </div>
-      )}
+      {/* Nav Hints */}
+      <div className="flex justify-between p-8 pt-0 z-30 pointer-events-none opacity-20">
+        <span className="text-[9px] font-vibe uppercase tracking-[0.2em]">← tap</span>
+        <span className="text-[9px] font-vibe uppercase tracking-[0.2em]">tap →</span>
+      </div>
     </div>
   );
-}
-
-function SlideRenderer({ slide, router, tripId, onShare }: { slide: Slide; router: any; tripId: string; onShare: () => void }) {
-  switch (slide.type) {
-    case 'title':
-      return (
-        <div className="text-center space-y-8 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-vibe">The Official Archive</p>
-          <h1 className="text-6xl font-cinematic font-medium text-white leading-[0.9]">
-            {slide.lore.trip_title}
-          </h1>
-          <p className="text-xl font-cinematic italic text-chill-accent leading-relaxed">
-            &ldquo;{slide.lore.tagline}&rdquo;
-          </p>
-          <p className="text-sm text-white/40 font-data font-light">{slide.lore.opening_line}</p>
-        </div>
-      );
-
-    case 'cooked':
-      return (
-        <div className="text-center space-y-8 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-vibe">How Cooked?</p>
-          <div className="space-y-2">
-            <div className="text-[22vw] font-vibe font-bold tracking-tighter text-cooked-accent leading-none">
-              {slide.lore.cooked_level}
-            </div>
-            <p className="text-2xl font-vibe font-bold uppercase tracking-tight text-white/90">
-              {slide.lore.cooked_verdict}
-            </p>
-          </div>
-          <p className="text-base font-data font-light text-white/50 italic leading-relaxed">
-            {slide.lore.cooked_explanation}
-          </p>
-        </div>
-      );
-
-    case 'recap':
-      return (
-        <div className="space-y-8 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-vibe">The Season Recap</p>
-          <p className="text-xl font-data font-light text-white/80 leading-relaxed">
-            {slide.lore.season_recap?.full_narrative}
-          </p>
-        </div>
-      );
-
-    case 'era': {
-      const era = slide.lore.trip_eras![slide.idx];
-      return (
-        <div className="space-y-8 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-vibe">
-            Era {slide.idx + 1}
-          </p>
-          <h2 className="text-4xl font-cinematic font-medium text-white leading-tight">{era.era_name}</h2>
-          <p className="text-[10px] uppercase tracking-wider text-chill-accent font-vibe">{era.timeframe}</p>
-          <p className="text-lg font-data font-light text-white/70 leading-relaxed">{era.description}</p>
-          {era.defining_moment && (
-            <p className="text-base font-cinematic italic text-white/40 border-l-2 border-chill-accent/30 pl-4">
-              &ldquo;{era.defining_moment}&rdquo;
-            </p>
-          )}
-        </div>
-      );
-    }
-
-    case 'character': {
-      const m = slide.member;
-      return (
-        <div className="text-center space-y-8 max-w-sm animate-fade-in">
-          <div className="w-20 h-20 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 flex items-center justify-center mx-auto">
-            <span className="text-2xl font-vibe font-bold text-cooked-accent">
-              {(m.display_name || '?')[0].toUpperCase()}
-            </span>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/30 font-vibe">{m.display_name}</p>
-            <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{m.role_title}</h2>
-          </div>
-          <p className="text-base font-data font-light text-white/60 leading-relaxed">{m.role_description}</p>
-          {m.role_chaos_rating !== null && m.role_chaos_rating !== undefined && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cooked-accent/10 border border-cooked-accent/20">
-              <span className="text-cooked-accent font-vibe font-bold text-sm">Chaos {m.role_chaos_rating}/10</span>
-            </div>
-          )}
-          {m.role_most_likely_said && (
-            <p className="text-sm font-cinematic italic text-white/40">
-              &ldquo;{m.role_most_likely_said}&rdquo;
-            </p>
-          )}
-        </div>
-      );
-    }
-
-    case 'superlative': {
-      const s = slide.sup;
-      return (
-        <div className="space-y-8 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-vibe">Yearbook Award #{slide.idx + 1}</p>
-          <div className="space-y-3">
-            <p className="text-lg font-cinematic italic text-white/50">most likely to</p>
-            <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{s.question}</h2>
-          </div>
-          <div className="w-12 h-0.5 bg-chill-accent" />
-          <p className="text-5xl font-vibe font-bold text-white">{s.winner_name}</p>
-          {s.reason && (
-            <p className="text-sm font-data font-light text-white/50 italic leading-relaxed">{s.reason}</p>
-          )}
-        </div>
-      );
-    }
-
-    case 'verdict':
-      return (
-        <div className="text-center space-y-12 max-w-sm animate-fade-in">
-          <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
-          <p className="text-2xl font-cinematic italic text-white/80 leading-relaxed">
-            &ldquo;{slide.lore.closing_line}&rdquo;
-          </p>
-          <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-vibe">The Final Verdict</p>
-          {slide.lore.screenshot_moment_line && (
-            <p className="text-sm font-data font-light text-white/30 italic leading-relaxed border border-white/10 rounded-2xl p-6">
-              {slide.lore.screenshot_moment_line}
-            </p>
-          )}
-        </div>
-      );
-
-    case 'share':
-      return (
-        <div className="text-center space-y-10 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-vibe">Your Lore is Ready</p>
-          <h2 className="text-4xl font-cinematic font-medium text-white">Export your identity</h2>
-          <p className="text-sm font-data font-light text-white/40">
-            Pick your card and expose your friend group.
-          </p>
-          <button
-            onClick={(e) => { e.stopPropagation(); onShare(); }}
-            className="w-full py-5 bg-white text-cooked-bg rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] transition-transform shadow-2xl"
-          >
-            Pick Your Card
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); router.push(`/trips/${slide.tripId}`); }}
-            className="text-[10px] uppercase tracking-widest font-vibe text-white/20 hover:text-white/40 transition-colors"
-          >
-            View full archive →
-          </button>
-        </div>
-      );
-  }
 }

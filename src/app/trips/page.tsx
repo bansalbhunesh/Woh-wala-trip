@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 
 export default function TripsPage() {
-  const { data: trips, isLoading } = trpc.trips.list.useQuery();
+  const { data: trips, isLoading } = trpc.trips.listMine.useQuery();
 
   if (isLoading) return <LoadingState />;
 
