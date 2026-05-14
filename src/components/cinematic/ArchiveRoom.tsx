@@ -314,6 +314,67 @@ export function SchematicWidget() {
   );
 }
 
+/* --- CINEMATIC GALLERY CARD --- */
+export function CinematicGalleryCard({ trip }: { trip: any }) {
+  const isCooked = trip.chaos_score >= 80;
+  const isUnstable = trip.chaos_score >= 50 && trip.chaos_score < 80;
+  
+  const statusLabel = isCooked ? 'Historically Cooked' : isUnstable ? 'Peak Delusion' : 'Stable Archive';
+  const statusColor = isCooked ? 'text-cooked-accent' : isUnstable ? 'text-amber-500' : 'text-chill-accent';
+  const borderColor = isCooked ? 'border-cooked-accent/20' : isUnstable ? 'border-amber-500/20' : 'border-white/10';
+
+  return (
+    <Link 
+      href={`/trips/${trip.id}`}
+      className={cn(
+        "group relative block aspect-[4/5] rounded-[3rem] bg-[#14181C] border overflow-hidden transition-all duration-500 hover:scale-[1.02] shadow-2xl",
+        borderColor
+      )}
+    >
+      <div className="absolute inset-0 grayscale contrast-125 opacity-40 group-hover:opacity-60 transition-opacity duration-700">
+        <img 
+          src="https://images.unsplash.com/photo-1544620347-c4fd403d5957?q=80&w=2069" 
+          alt="" 
+          className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110"
+        />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+      
+      <div className="absolute inset-x-8 bottom-10 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isCooked ? 'bg-cooked-accent' : 'bg-white/40')} />
+          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40">{statusLabel}</span>
+        </div>
+        
+        <div className="space-y-1">
+          <span className="text-[9px] uppercase tracking-widest text-white/20 font-black block">Archive No. {trip.id.slice(0,4)}</span>
+          <h3 className="text-3xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] group-hover:text-cooked-accent transition-colors uppercase">
+            {trip.title}
+          </h3>
+        </div>
+
+        <p className="text-[11px] text-white/40 italic font-cinematic leading-relaxed line-clamp-2">
+          "{trip.tagline || 'Documenting the missed transfers and off-brand hotels.'}"
+        </p>
+
+        <div className="flex justify-between items-end pt-4 border-t border-white/5">
+          <div className="flex items-baseline gap-2">
+            <span className={cn("text-4xl font-vibe font-black", statusColor)}>{trip.chaos_score}</span>
+            <span className="text-[8px] uppercase tracking-[0.2em] text-white/20 font-black">Chaos</span>
+          </div>
+          <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/20 group-hover:border-white/40 group-hover:text-white transition-all">
+            <Play size={16} fill="currentColor" className="ml-1" />
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute top-8 right-8 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+        <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Season {new Date(trip.created_at).getMonth() + 1}</span>
+      </div>
+    </Link>
+  );
+}
+
 /* --- SPOTIFY WRAPPED STYLE WRAPPER --- */
 export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => void }) {
   const [step, setStep] = React.useState(0);
