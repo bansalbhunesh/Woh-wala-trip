@@ -1,89 +1,119 @@
 # ✦ Woh Wala Trip ✦
 > **Your trips, narrated. Your lore, archived.**
 
-[![Tech Stack](https://img.shields.io/badge/Stack-Next.js_15_%7C_tRPC_v11_%7C_Supabase-black?style=for-the-badge)](https://nextjs.org)
+[![Build Status](https://img.shields.io/badge/Build-Production--Ready-success?style=for-the-badge)](https://nextjs.org)
 [![Runtime](https://img.shields.io/badge/Runtime-Vercel_Edge-blue?style=for-the-badge)](https://vercel.com/docs/functions/edge-functions)
+[![Stack](https://img.shields.io/badge/Stack-Next.js_15_%7C_tRPC_v11_%7C_Supabase-black?style=for-the-badge)](https://trpc.io)
 [![AI Engine](https://img.shields.io/badge/AI-Claude_3.5_Sonnet-orange?style=for-the-badge)](https://anthropic.com)
-[![Design](https://img.shields.io/badge/Design-Glassmorphism_&_Chaos-pink?style=for-the-badge)](https://tailwindcss.com)
 
 ---
 
 ## 📖 The Vision
-We don't just store photos; we archive the **lore**. 
+In the age of infinite photo dumps, we’ve lost the **story**. Thousands of photos sit in WhatsApp groups and iCloud folders, never to be seen again. 
 
-**Woh Wala Trip** is a mobile-first PWA designed to transform messy group photo dumps into a cinematic, witty, and brutally honest narrative. Using advanced AI image analysis, we extract the "vibe" of your trip, assign character roles to your friends, and generate shareable cards that capture the *real* energy of the journey.
+**Woh Wala Trip** changes that. We don't just store photos; we archive the **lore**. 
 
----
-
-## 🚀 Key Features
-
-### 🧠 AI Lore Engine
-- **Narrative Arc**: Transforms chronological photo batches into a 3-act story.
-- **Character Dossiers**: Automatically assigns roles like *"The Chaos Coordinator"* or *"The Professional Nap Taker"* based on behavior.
-- **Hinglish Native**: Lore is written in authentic, specific Hinglish—the way friends actually talk.
-
-### 📊 Chaos Meter & Viral Cards
-- **Chaos Score**: A data-driven metric (0-100) reflecting the energy level of your trip.
-- **Viral Share Cards**: High-fidelity 1080x1920 cards generated at the edge for Instagram Stories and WhatsApp forwards.
-- **Variants**: Includes Role Cards, Superlative Awards ("Most Likely To"), Faux-Receipt Stats, and "Missing Person" alerts for those who skipped the trip.
-
-### 📱 Premium Experience
-- **Glassmorphic UI**: A high-fidelity, mobile-first design system built with Tailwind CSS.
-- **Fast & Edge-Ready**: Sub-250ms OG card rendering via Vercel Edge Functions.
-- **Offline Ready PWA**: Built for use in remote destinations.
+Using advanced AI vision and behavioral analysis, we transform your messy group uploads into a cinematic, witty, and brutally honest narrative. We identify the peak chaos, assign character roles to your friends, and generate high-fidelity social assets that capture the *real* energy of your journey.
 
 ---
 
-## 🛠️ Tech Stack
+## 🚀 Core Features
 
-### Frontend & API
-- **Framework**: Next.js 15 (App Router)
-- **API Layer**: tRPC v11 (End-to-end type safety)
-- **Styling**: Tailwind CSS + Custom Design System
-- **State Management**: TanStack Query (React Query v5)
+### 🧠 AI Lore Orchestrator
+Our proprietary pipeline analyzes batches of photos to extract emotional and social signals:
+- **Narrative Arc**: Automatically structures your trip into a 3-act story (The Excitement, The Peak Chaos, The Reflection).
+- **Character Dossiers**: Assigns roles like *"The Professional Nap Taker"*, *"The Chaos Coordinator"*, or *"The Budget Dictator"* based on observed behavior.
+- **Hinglish Native**: Lore is written in authentic, culturally resonant Hinglish—exactly how you and your friends actually talk.
 
-### Backend & AI
-- **Auth & DB**: Supabase (OTP Phone Auth + PostgreSQL)
-- **Storage**: Supabase Storage with image optimization.
-- **AI Worker**: Python FastAPI microservice using Anthropic Claude 3.5 Sonnet.
-- **Image Generation**: `@vercel/og` for dynamic social card rendering.
+### 📊 The Chaos Index
+Every trip is assigned a **Chaos Score (0-100)**. 
+- Backed by photo metadata (time of day, group density, lighting, transit ratio).
+- Visualization shifts from *"Zen Retreat"* to *"Peak Anarchy"* based on your data.
+
+### 🖼️ Viral Share Layer (OG Engine)
+The primary growth engine of Woh Wala Trip. We generate high-fidelity 1080x1920 PNGs at the Edge:
+- **Main Lore Card**: The cinematic poster of your trip.
+- **Award Cards**: "Most Likely To" superlatives for every member.
+- **Receipt Stats**: A faux-receipt summarizing the "damage" (late nights, photos taken, chaos contributed).
+- **Missing Alerts**: Custom "Wanted" posters for friends who missed the trip.
 
 ---
 
-## 🏁 Getting Started
+## 🏗️ Technical Architecture
 
-### 1. Environment Setup
-Create a `.env.local` (see `.env.local.example` for reference):
+Woh Wala Trip is built as a distributed system designed for high performance and type safety.
+
+### 1. Frontend & API (Next.js 15 + tRPC v11)
+- **App Router**: Leveraging React Server Components (RSC) for zero-JS footprints on static content.
+- **End-to-End Type Safety**: tRPC ensures that your frontend and backend are always in sync, catching errors at compile time.
+- **Premium PWA**: Fully responsive, mobile-first design with glassmorphic UI elements and offline support.
+
+### 2. Backend & Auth (Supabase)
+- **OTP Auth**: Seamless phone-number login via SMS.
+- **PostgreSQL**: Robust relational data storage with strict Row-Level Security (RLS).
+- **Storage**: Scalable image hosting with built-in CDN distribution.
+
+### 3. AI Lore Worker (Python/FastAPI)
+- **Intelligence**: Powered by **Claude 3.5 Sonnet** for nuanced behavioral analysis and witty copy generation.
+- **Pipeline**: Asynchronous processing that handles photo analysis, signal aggregation, and final lore synthesis.
+
+### 4. Viral Asset Engine (Vercel Edge)
+- **Runtime**: `@vercel/og` running on Edge Functions.
+- **Performance**: Sub-250ms cold start / 40ms warm start for image generation.
+- **Caching**: Intelligent CDN headers to ensure viral assets load instantly.
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+- Node.js 20+
+- Supabase Account
+- Anthropic API Key (for the AI Worker)
+
+### 1. Clone & Install
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
-SUPABASE_SERVICE_ROLE_KEY=your_key
-AI_WORKER_URL=http://localhost:8000
-AI_WORKER_SECRET=your_secret
-NEXT_PUBLIC_RAZORPAY_KEY_ID=your_key
+git clone https://github.com/your-username/woh-wala-trip.git
+cd woh-wala-trip
+npm install --legacy-peer-deps
 ```
 
-### 2. Install & Run
+### 2. Environment Variables
+Create a `.env.local` file. Use `.env.local.example` as a guide:
 ```bash
-# Install dependencies (using legacy-peer-deps for React 19 compatibility)
-npm install --legacy-peer-deps
+NEXT_PUBLIC_SUPABASE_URL=https://your-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role
+AI_WORKER_URL=http://localhost:8000
+AI_WORKER_SECRET=your-secret
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your-rzp-key
+```
 
-# Start development server
+### 3. Run Development
+```bash
 npm run dev
 ```
 
-### 3. Font Management
-The Viral Share Layer requires specific fonts for OG rendering. Ensure these are in `public/fonts/`:
-- `Inter-Medium.ttf`, `Inter-Regular.ttf`, `Lora-Italic.ttf`
+---
+
+## 🌍 Deployment
+
+### Vercel Deployment
+Woh Wala Trip is optimized for Vercel. 
+
+1. **Edge Fonts**: Ensure the `.ttf` files in `public/fonts/` are committed to your repo.
+2. **Environment Variables**: Mirror your `.env.local` in the Vercel Dashboard.
+3. **Razorpay Webhooks**: Configure your Razorpay dashboard to point to `/api/payments/webhook`.
+
+### Self-Hosting (Docker)
+The AI Worker can be containerized using the provided `Dockerfile` in the `ai-worker` directory.
 
 ---
 
-## 🌍 Deployment & Edge Runtime
-
-The **Viral Share Layer** is optimized for **Vercel Edge Functions**.
-
-- **Edge Configuration**: Routes in `src/app/api/card/` are set to `runtime = 'edge'`.
-- **Absolute URLs**: Ensure `VERCEL_URL` (or your production domain) is configured so the edge function can fetch font assets reliably.
+## 🛤️ Future Roadmap
+- **[ ] AI Video Recaps**: Short, narrated video stories using Lore JSON.
+- **[ ] Physical Merch**: Print your Lore Card on t-shirts and hoodies directly from the app.
+- **[ ] Trip Battles**: Public leaderboards for the highest Chaos Scores.
 
 ---
 
