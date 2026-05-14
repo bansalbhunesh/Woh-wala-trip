@@ -236,51 +236,93 @@ export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCt
   category: string; name: string; subtitle?: string; desc?: string;
   cta?: string; challengeCta?: string; color?: string; imageUrl?: string;
 }) {
+  const initial = name.replace(/[^a-zA-Z]/g, '')[0]?.toUpperCase() || '?';
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="group relative flex gap-6 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] overflow-hidden hover:border-white/10 transition-all duration-500"
+      className="group relative flex rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] overflow-hidden hover:border-white/[0.12] transition-all duration-500 hover:shadow-3xl"
     >
-      {/* Image */}
-      <div className="w-[160px] md:w-[200px] flex-shrink-0 relative overflow-hidden">
+      {/* Cinematic photo / gradient panel */}
+      <div className="w-[180px] md:w-[220px] flex-shrink-0 relative overflow-hidden min-h-[200px]">
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="w-full h-full object-cover grayscale contrast-125 group-hover:scale-105 transition-transform duration-700" />
+          <img
+            src={imageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            style={{ filter: 'contrast(1.15) saturate(0.75)' }}
+          />
         ) : (
-          <div className="w-full h-full min-h-[180px] flex items-center justify-center" style={{ background: `${color}08` }}>
-            <span className="text-5xl opacity-40">
-              {category.includes('MVP') ? '⭐' : category.includes('Villain') ? '🔪' : '🎵'}
-            </span>
-          </div>
+          <>
+            {/* Vivid gradient background */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(145deg, ${color}35 0%, ${color}12 50%, transparent 100%)`,
+              }}
+            />
+            {/* Noise texture */}
+            <div className="absolute inset-0 opacity-[0.06] bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:200px_200px]" />
+            {/* Giant watermark initial */}
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+              <span
+                className="text-[140px] font-cinematic font-black leading-none select-none"
+                style={{ color, opacity: 0.08 }}
+              >
+                {initial}
+              </span>
+            </div>
+            {/* Floating category label */}
+            <div className="absolute bottom-5 left-5">
+              <span
+                className="text-[8px] font-vibe font-black uppercase tracking-[0.25em] px-3 py-1.5 rounded-full"
+                style={{ background: `${color}20`, color, border: `1px solid ${color}30` }}
+              >
+                {category.split('–')[0].trim()}
+              </span>
+            </div>
+          </>
         )}
-        <div className="absolute inset-0" style={{ background: `linear-gradient(to right, transparent, #0E0E0C)` }} />
+        {/* Gradient bleed into card */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(to right, transparent 55%, #0E0E0C 100%)' }}
+        />
       </div>
 
       {/* Content */}
-      <div className="flex-1 py-8 pr-8 space-y-3">
-        <span className="text-[9px] uppercase tracking-[0.3em] font-vibe font-black" style={{ color: `${color}80` }}>
+      <div className="flex-1 py-8 pr-8 pl-4 space-y-3 flex flex-col justify-center">
+        <span className="text-[9px] uppercase tracking-[0.35em] font-vibe font-black" style={{ color: `${color}70` }}>
           {category}
         </span>
-        <h3 className="text-3xl font-cinematic font-black tracking-tight text-[#F5F0E8] leading-tight">
+        <h3 className="text-[28px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-[1.1]">
           {name}
         </h3>
         {subtitle && (
-          <p className="text-[10px] uppercase tracking-[0.2em] font-vibe font-black text-white/30">{subtitle}</p>
+          <span
+            className="inline-block px-3 py-1 rounded-full text-[8px] font-vibe font-black uppercase tracking-widest w-fit"
+            style={{ background: `${color}12`, color: `${color}90`, border: `1px solid ${color}20` }}
+          >
+            {subtitle}
+          </span>
         )}
         {desc && (
-          <p className="text-sm text-white/40 font-data font-light leading-relaxed italic max-w-md">
+          <p className="text-[12px] text-white/35 font-data font-light leading-relaxed italic max-w-sm line-clamp-3">
             &ldquo;{desc}&rdquo;
           </p>
         )}
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-2 pt-1 flex-wrap">
           {cta && (
-            <button className="px-5 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-widest border transition-all hover:scale-105"
-              style={{ borderColor: `${color}30`, color, background: `${color}10` }}>
+            <button
+              className="px-5 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-widest border transition-all hover:scale-[1.04] active:scale-95"
+              style={{ borderColor: `${color}35`, color, background: `${color}10` }}
+            >
               {cta}
             </button>
           )}
           {challengeCta && (
-            <button className="px-5 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-widest border border-white/10 text-white/40 hover:bg-white/5 transition-all">
+            <button className="px-5 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-widest border border-white/10 text-white/30 hover:bg-white/5 transition-all">
               {challengeCta}
             </button>
           )}
@@ -558,6 +600,220 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
         </button>
       </div>
     </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIGHT SIDEBAR — Letterboxd-style cream panel widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function CookedScoreLight({ trip }: { trip: any }) {
+  const lore = trip?.lore_json;
+  const level = lore?.cooked_level ?? trip?.chaos_score ?? 0;
+  const tenScore = (level / 10).toFixed(1);
+  const verdict = lore?.cooked_verdict ?? '—';
+  const explanation = lore?.cooked_explanation;
+  const accentColor = level >= 76 ? '#FF4D4D' : level >= 51 ? '#D49E2D' : '#2D9E8B';
+
+  return (
+    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-5">
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">Delusion Index</span>
+
+      <div className="flex items-baseline gap-4">
+        <span className="font-vibe font-black leading-none text-lore-ink" style={{ fontSize: '88px', fontVariantNumeric: 'tabular-nums' }}>
+          {level}
+        </span>
+        <div className="space-y-0.5 pb-2">
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl font-vibe font-black" style={{ color: accentColor }}>{tenScore}</span>
+            <span className="text-xs text-black/25 font-vibe font-black">/10</span>
+          </div>
+          <span className="block text-[8px] uppercase tracking-[0.3em] text-black/25 font-vibe font-black">Chaos</span>
+        </div>
+      </div>
+
+      <span
+        className="inline-block px-4 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-wider"
+        style={{ backgroundColor: `${accentColor}15`, color: accentColor, border: `1px solid ${accentColor}25` }}
+      >
+        {verdict}
+      </span>
+
+      {explanation && (
+        <p className="text-xs text-lore-muted font-data italic leading-relaxed border-l-2 border-black/10 pl-4">
+          {explanation}
+        </p>
+      )}
+
+      {/* Progress bar */}
+      <div className="space-y-1.5 pt-1">
+        <div className="h-1.5 bg-black/[0.08] rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${level}%` }}
+            transition={{ duration: 1.5, ease: 'easeOut' }}
+            className="h-full rounded-full"
+            style={{ backgroundColor: accentColor }}
+          />
+        </div>
+        <div className="flex justify-between text-[8px] font-vibe font-black uppercase tracking-widest text-black/20">
+          <span>Calm</span>
+          <span>Historically Cooked</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function BadFeelingsChart({ trip }: { trip: any }) {
+  const lore = trip?.lore_json;
+  const level = lore?.cooked_level ?? 60;
+  const stats = (lore?.receipt_stats || []).filter((s: any) => s.label && s.value);
+
+  const feelings = stats.length >= 3
+    ? stats.slice(0, 4).map((s: any, i: number) => {
+        const raw = parseFloat(s.value);
+        return {
+          label: s.label,
+          value: isNaN(raw) ? Math.max(20, level - i * 10) : Math.min(99, Math.max(5, raw)),
+          color: ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF'][i % 4],
+        };
+      })
+    : [
+        { label: 'Chaos Energy',     value: level,                          color: '#FF4D4D' },
+        { label: 'Emotional Damage', value: Math.round(level * 0.82),       color: '#D49E2D' },
+        { label: 'Group Stability',  value: Math.round((100 - level) * 0.7 + 18), color: '#2D9E8B' },
+        { label: 'Delusion Level',   value: Math.round(level * 0.65 + 10),  color: '#7C6AFF' },
+      ];
+
+  return (
+    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">Top Bad Feelings</span>
+      <div className="space-y-5">
+        {feelings.map((f, i) => (
+          <div key={i} className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-vibe font-black uppercase tracking-wider text-lore-soft">{f.label}</span>
+              <span className="text-[10px] font-vibe font-black tabular-nums" style={{ color: f.color }}>{Math.round(f.value)}%</span>
+            </div>
+            <div className="h-1 bg-black/[0.07] rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${f.value}%` }}
+                transition={{ duration: 1.1, delay: i * 0.12, ease: 'easeOut' }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: f.color }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function DonutChart({ trip }: { trip: any }) {
+  const lore = trip?.lore_json;
+  const level = lore?.cooked_level ?? trip?.chaos_score ?? 60;
+  const eras = lore?.trip_eras || [];
+
+  const PALETTE = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF'];
+
+  const segments =
+    eras.length >= 2
+      ? eras.slice(0, 4).map((era: any, i: number) => ({
+          label: era.era_name,
+          pct: Math.round(100 / Math.min(eras.length, 4)),
+          color: PALETTE[i % 4],
+        }))
+      : [
+          { label: 'Peak Chaos',      pct: level,           color: '#FF4D4D' },
+          { label: 'Stable Moments',  pct: 100 - level,     color: '#2D9E8B' },
+        ];
+
+  const r = 38;
+  const circumference = 2 * Math.PI * r;
+  let cumulative = 0;
+  const arcs = segments.map((seg) => {
+    const dash = (seg.pct / 100) * circumference;
+    const offset = -(cumulative / 100) * circumference;
+    cumulative += seg.pct;
+    return { ...seg, dash, offset };
+  });
+
+  return (
+    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">Season Breakdown</span>
+      <div className="flex items-center gap-6">
+        <div className="flex-shrink-0">
+          <svg width="90" height="90" viewBox="0 0 100 100" className="-rotate-90">
+            {/* Background ring */}
+            <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="10" />
+            {arcs.map((a, i) => (
+              <circle
+                key={i}
+                cx="50" cy="50" r={r}
+                fill="none"
+                stroke={a.color}
+                strokeWidth="10"
+                strokeDasharray={`${a.dash} ${circumference - a.dash}`}
+                strokeDashoffset={a.offset}
+                strokeLinecap="butt"
+                opacity="0.82"
+              />
+            ))}
+          </svg>
+        </div>
+        <div className="flex-1 space-y-2.5">
+          {segments.map((s, i) => (
+            <div key={i} className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+              <span className="text-[10px] font-vibe font-black text-lore-soft uppercase tracking-wider truncate flex-1">{s.label}</span>
+              <span className="text-[10px] font-vibe font-black text-black/35 tabular-nums">{s.pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LightCastWidget({ trip }: { trip: any }) {
+  const members = trip?.members || [];
+  const COLORS = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF', '#FF6B35'];
+
+  return (
+    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">The Cast</span>
+      <div className="space-y-4">
+        {members.length === 0 && (
+          <p className="text-[11px] text-lore-muted italic font-cinematic">Cast list processing...</p>
+        )}
+        {members.slice(0, 5).map((m: any, i: number) => (
+          <div key={m.user_id || i} className="flex items-center gap-3.5">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-vibe font-black text-white shadow-sm"
+              style={{ background: COLORS[i % COLORS.length] }}
+            >
+              {(m.display_name || '?')[0].toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-vibe font-black text-lore-ink truncate leading-none mb-0.5">
+                {m.display_name}
+              </p>
+              <p className="text-[9px] uppercase tracking-wider text-lore-muted font-vibe font-black truncate">
+                {m.role_title || 'Role pending...'}
+              </p>
+            </div>
+            {m.role_chaos_rating != null && (
+              <span className="text-[11px] font-vibe font-black text-cooked-accent flex-shrink-0 tabular-nums">
+                {m.role_chaos_rating}/10
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

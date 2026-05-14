@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { FilmGrain } from '@/components/ui/atoms';
 import {
-  ArchiveNavbar, ArchiveHero, ArchiveReveal, ProducerWidget,
-  ChaosChartWidget, SchematicWidget, ArchiveFooter, LoreWrapped
+  ArchiveNavbar, ArchiveHero, ArchiveReveal,
+  CookedScoreLight, BadFeelingsChart, DonutChart, LightCastWidget,
+  ArchiveFooter, LoreWrapped
 } from '@/components/cinematic/ArchiveRoom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -87,112 +88,135 @@ export default function TripRoomPage() {
       <FilmGrain />
       <ArchiveNavbar trip={trip} />
 
-      <main className="max-w-[1600px] mx-auto px-6 py-12 space-y-12">
+      {/* Full-width hero outside the grid */}
+      <div className="max-w-[1600px] mx-auto px-6 pt-12">
         {isProcessing ? (
           <GeneratingState tripId={tripId} />
         ) : !isReady ? (
           <UploadState trip={trip} tripId={tripId} onPhotosChanged={() => refetch()} />
-        ) : (
-          <>
-            {/* HERO */}
-            <ArchiveHero trip={trip} />
+        ) : null}
+      </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-              {/* Main column */}
-              <div className="lg:col-span-8 space-y-12">
-                {/* Emotional Reveals */}
-                <section className="space-y-8">
+      {isReady && (
+        <main className="max-w-[1600px] mx-auto px-6 pb-16">
+          {/* Hero — full width */}
+          <div className="py-10">
+            <ArchiveHero trip={trip} />
+          </div>
+
+          {/* Letterboxd 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
+
+            {/* ── LEFT: dark cinematic column ─────────────────────────────── */}
+            <div className="space-y-12">
+
+              {/* Emotional Reveals */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-6">
+                  <div className="space-y-1">
+                    <h2 className="text-3xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase">
+                      Emotional Reveals
+                    </h2>
+                    <p className="text-[9px] text-white/20 uppercase tracking-[0.4em] font-vibe font-black">
+                      Moments You Can&apos;t Unsee
+                    </p>
+                  </div>
+                  <div className="h-px flex-1 bg-white/[0.04]" />
+                </div>
+
+                {mvp && (
+                  <ArchiveReveal
+                    category="Trip MVP"
+                    name={`${mvp.display_name || 'Unknown'} – ${mvp.role_title || 'The Anchor'}`}
+                    subtitle={mvp.role_archetype_tag}
+                    desc={mvp.role_description}
+                    cta="Canon File"
+                    challengeCta="Make Poster"
+                    color="#2D9E8B"
+                  />
+                )}
+
+                {villain && (
+                  <ArchiveReveal
+                    category="Trip Villain"
+                    name={`${villain.display_name || 'Unknown'} – ${villain.role_title || 'The Source'}`}
+                    subtitle={villain.role_archetype_tag}
+                    desc={villain.role_description}
+                    cta="Blame"
+                    challengeCta="Challenge to Duel"
+                    color="#FF4D4D"
+                  />
+                )}
+
+                {insideJoke && (
+                  <ArchiveReveal
+                    category="Top Inside Joke"
+                    name={insideJoke}
+                    subtitle="Core memory confirmed by AI"
+                    desc={lore?.what_this_trip_was_really_about}
+                    cta="Save Clip"
+                    challengeCta="Save Snippet"
+                    color="#D49E2D"
+                  />
+                )}
+              </section>
+
+              {/* Season Timeline */}
+              {lore?.trip_eras?.length > 0 && (
+                <section className="space-y-6">
                   <div className="flex items-center gap-6">
-                    <div className="space-y-1">
-                      <h2 className="text-3xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase">Emotional Reveals</h2>
-                      <p className="text-[9px] text-white/20 uppercase tracking-[0.4em] font-vibe font-black">Moments You Can&apos;t Unsee</p>
-                    </div>
+                    <h2 className="text-3xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase">
+                      Season Timeline
+                    </h2>
                     <div className="h-px flex-1 bg-white/[0.04]" />
                   </div>
-
-                  {mvp && (
-                    <ArchiveReveal
-                      category="Trip MVP"
-                      name={`${mvp.display_name || 'Unknown'} – ${mvp.role_title || 'The Anchor'}`}
-                      subtitle={mvp.role_archetype_tag}
-                      desc={mvp.role_description}
-                      cta="Canon File"
-                      challengeCta="Make Poster"
-                      color="#2D9E8B"
-                    />
-                  )}
-
-                  {villain && (
-                    <ArchiveReveal
-                      category="Trip Villain"
-                      name={`${villain.display_name || 'Unknown'} – ${villain.role_title || 'The Source'}`}
-                      subtitle={villain.role_archetype_tag}
-                      desc={villain.role_description}
-                      cta="Blame"
-                      challengeCta="Challenge to Duel"
-                      color="#FF4D4D"
-                    />
-                  )}
-
-                  {insideJoke && (
-                    <ArchiveReveal
-                      category="Top Inside Joke – The Mixtape"
-                      name={insideJoke}
-                      subtitle="Core memory confirmed by AI"
-                      desc={lore?.what_this_trip_was_really_about}
-                      cta="Save Clip"
-                      challengeCta="Save Snippet"
-                      color="#D49E2D"
-                    />
-                  )}
+                  <div className="space-y-3">
+                    {lore.trip_eras.map((era: any, i: number) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.08 }}
+                        className="flex gap-5 p-6 rounded-[2rem] bg-[#0E0E0C] border border-white/[0.06] hover:border-white/10 transition-all"
+                      >
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                          <span className="text-[9px] font-vibe font-black text-white/25">{i + 1}</span>
+                        </div>
+                        <div className="space-y-1 flex-1">
+                          <p className="text-[9px] uppercase tracking-widest text-chill-accent font-vibe font-black">
+                            {era.timeframe}
+                          </p>
+                          <h3 className="text-xl font-cinematic font-black tracking-tight text-[#F5F0E8]">
+                            {era.era_name}
+                          </h3>
+                          <p className="text-sm text-white/40 font-data font-light leading-relaxed">
+                            {era.description}
+                          </p>
+                          {era.defining_moment && (
+                            <p className="text-[11px] text-white/20 italic font-cinematic mt-1.5">
+                              &ldquo;{era.defining_moment}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </section>
-
-                {/* Trip Eras */}
-                {lore?.trip_eras?.length > 0 && (
-                  <section className="space-y-6">
-                    <div className="flex items-center gap-6">
-                      <h2 className="text-3xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase">Season Timeline</h2>
-                      <div className="h-px flex-1 bg-white/[0.04]" />
-                    </div>
-                    <div className="space-y-4">
-                      {lore.trip_eras.map((era: any, i: number) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.1 }}
-                          className="flex gap-6 p-6 rounded-[2rem] bg-[#0E0E0C] border border-white/[0.06] hover:border-white/10 transition-all"
-                        >
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                            <span className="text-[10px] font-vibe font-black text-white/30">{i + 1}</span>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[9px] uppercase tracking-widest text-chill-accent font-vibe font-black">{era.timeframe}</p>
-                            <h3 className="text-xl font-cinematic font-black tracking-tight text-[#F5F0E8]">{era.era_name}</h3>
-                            <p className="text-sm text-white/40 font-data font-light leading-relaxed">{era.description}</p>
-                            {era.defining_moment && (
-                              <p className="text-[11px] text-white/25 italic font-cinematic mt-2">&ldquo;{era.defining_moment}&rdquo;</p>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </div>
-
-              {/* Sidebar */}
-              <div className="lg:col-span-4 space-y-6">
-                <ProducerWidget trip={trip} />
-                <ChaosChartWidget trip={trip} />
-                <SchematicWidget trip={trip} />
-              </div>
+              )}
             </div>
 
-            <ArchiveFooter />
-          </>
-        )}
-      </main>
+            {/* ── RIGHT: light sticky Letterboxd panel ──────────────────────── */}
+            <div className="lg:sticky lg:top-[73px] space-y-4">
+              <CookedScoreLight trip={trip} />
+              <BadFeelingsChart trip={trip} />
+              <DonutChart trip={trip} />
+              <LightCastWidget trip={trip} />
+            </div>
+          </div>
+
+          <ArchiveFooter />
+        </main>
+      )}
     </div>
   );
 }
