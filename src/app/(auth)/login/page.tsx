@@ -1,21 +1,10 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function friendlyError(msg: string): string {
-  if (/rate.*limit/i.test(msg) || /too many/i.test(msg))
-    return 'Too many attempts. Try again in a few minutes.';
-  if (/otp.*expired/i.test(msg) || /token.*expired/i.test(msg))
-    return 'Code expired — request a new one.';
-  if (/invalid.*otp/i.test(msg) || /wrong.*code/i.test(msg) || /invalid.*token/i.test(msg))
-    return 'Wrong code. Double-check and try again.';
-  if (/invalid.*email/i.test(msg))
-    return 'Enter a valid email address.';
-  return msg;
-}
 
 const AMBIENT = [
   'Chaos Index: 87. Historically cooked.',
@@ -25,74 +14,54 @@ const AMBIENT = [
   'The inside jokes have been archived.',
 ];
 
-export default function LoginPage() {
-  const [email, setEmail]   = useState('');
-  const [otp, setOtp]       = useState(['', '', '', '', '', '']);
-  const [step, setStep]     = useState<'email' | 'otp'>('email');
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+function LoginForm() {
+  const [email, setEmail]       = useState('');
+  const [step, setStep]         = useState<'email' | 'sent'>('email');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
   const [formatHint, setFormatHint] = useState(false);
   const [phraseIdx, setPhraseIdx]   = useState(0);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const router  = useRouter();
+  const router   = useRouter();
+  const params   = useSearchParams();
   const supabase = createSupabaseBrowserClient();
+
+  // Show error if callback returned ?error=auth_failed
+  useEffect(() => {
+    if (params.get('error') === 'auth_failed') {
+      setError('Magic link expired or invalid. Request a new one.');
+    }
+  }, [params]);
 
   useEffect(() => {
     const t = setInterval(() => setPhraseIdx(i => (i + 1) % AMBIENT.length), 3500);
     return () => clearInterval(t);
   }, []);
 
-  const sendOtp = async () => {
+  const sendLink = async () => {
     if (!EMAIL_RE.test(email.trim())) { setFormatHint(true); return; }
     setFormatHint(false);
     setLoading(true); setError('');
+    const redirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: true },
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
     });
     setLoading(false);
-    if (error) setError(friendlyError(error.message));
-    else { setStep('otp'); setTimeout(() => otpRefs.current[0]?.focus(), 80); }
-  };
-
-  const handleOtpKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
-  };
-
-  const handleOtpChange = (i: number, val: string) => {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const next = [...otp]; next[i] = digit; setOtp(next);
-    if (digit && i < 5) otpRefs.current[i + 1]?.focus();
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const next = [...otp];
-    digits.split('').forEach((d, i) => { next[i] = d; });
-    setOtp(next);
-    otpRefs.current[Math.min(digits.length, 5)]?.focus();
-  };
-
-  const verifyOtp = async () => {
-    const token = otp.join('');
-    if (token.length !== 6) return;
-    setLoading(true); setError('');
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token,
-      type: 'email',
-    });
-    setLoading(false);
-    if (error) setError(friendlyError(error.message));
-    else router.push('/trips');
+    if (error) {
+      if (/rate.*limit/i.test(error.message) || /too many/i.test(error.message))
+        setError('Too many attempts. Try again in a few minutes.');
+      else
+        setError(error.message);
+    } else {
+      setStep('sent');
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row" style={{ background: 'var(--bg)' }}>
       <div className="light-grain" />
 
-      {/* Left panel — decorative blobs */}
+      {/* Left panel */}
       <div className="hidden md:flex md:w-[45%] relative overflow-hidden items-center justify-center p-12"
            style={{ background: 'oklch(93% 0.018 55)' }}>
         <div className="absolute top-[-15%] left-[-10%] w-[70%] h-[70%] rounded-full opacity-60 animate-float-a"
@@ -108,22 +77,17 @@ export default function LoginPage() {
             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--accent)' }} />
             Season 2026 Open
           </div>
-
           <h2 className="font-display font-black tracking-tight leading-[0.85]"
               style={{ fontSize: 'clamp(40px, 6vw, 72px)', color: 'oklch(16% 0.015 60)' }}>
             Woh<br />Wala<br /><em className="italic" style={{ color: 'var(--accent)' }}>Trip</em>
           </h2>
-
-          <p className="font-display italic text-sm leading-relaxed"
-             style={{ color: 'oklch(40% 0.015 60)' }}>
+          <p className="font-display italic text-sm leading-relaxed" style={{ color: 'oklch(40% 0.015 60)' }}>
             "Your friendships,<br />narrated."
           </p>
-
-          <p className="text-[10px] font-ui font-semibold uppercase tracking-[0.25em] transition-all duration-700"
+          <p className="text-[10px] font-ui font-semibold uppercase tracking-[0.25em]"
              style={{ color: 'oklch(50% 0.015 60)' }}>
             {AMBIENT[phraseIdx]}
           </p>
-
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             {['⚡ Chaos Source', '🐈‍⬛ Black Cat', '🐕 Golden Retriever'].map(a => (
               <span key={a} className="px-3 py-1.5 rounded-full text-[9px] font-ui font-bold uppercase tracking-wider"
@@ -135,11 +99,10 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-16">
         <div className="w-full max-w-sm space-y-10">
 
-          {/* Mobile brand */}
           <div className="md:hidden text-center">
             <p className="font-display font-black text-4xl tracking-tight">
               Woh Wala <em className="italic" style={{ color: 'var(--accent)' }}>Trip</em>
@@ -153,7 +116,7 @@ export default function LoginPage() {
                   Enter the<br /><em className="italic" style={{ color: 'var(--accent)' }}>Archive</em>
                 </h1>
                 <p className="text-sm font-ui" style={{ color: 'var(--text-muted)' }}>
-                  We'll send a code to your email. No passwords.
+                  We'll email you a magic link. No password needed.
                 </p>
               </div>
 
@@ -164,8 +127,8 @@ export default function LoginPage() {
                   <input
                     type="email"
                     value={email}
-                    onChange={e => { setEmail(e.target.value); setFormatHint(false); }}
-                    onKeyDown={e => e.key === 'Enter' && sendOtp()}
+                    onChange={e => { setEmail(e.target.value); setFormatHint(false); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && sendLink()}
                     className="w-full rounded-2xl px-5 py-4 text-base font-ui font-semibold outline-none transition-all"
                     style={{
                       background: 'var(--bg-surface)',
@@ -183,64 +146,56 @@ export default function LoginPage() {
                 </div>
 
                 <button
-                  onClick={sendOtp}
+                  onClick={sendLink}
                   disabled={loading || !email.trim()}
                   className="w-full py-4 rounded-2xl text-[11px] font-ui font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40"
                   style={{ background: 'var(--text)', color: 'var(--bg)' }}>
-                  {loading ? 'Sending…' : 'Send Code →'}
+                  {loading ? 'Sending…' : 'Send Magic Link →'}
                 </button>
               </div>
             </>
           ) : (
-            <>
-              <div className="space-y-1">
+            /* Sent state */
+            <div className="space-y-8 text-center animate-slide-up">
+              <div className="text-6xl">📬</div>
+              <div className="space-y-2">
                 <h1 className="font-display font-black text-3xl tracking-tight" style={{ color: 'var(--text)' }}>
                   Check your<br /><em className="italic" style={{ color: 'var(--accent)' }}>Email</em>
                 </h1>
                 <p className="text-sm font-ui" style={{ color: 'var(--text-muted)' }}>
-                  Code sent to <strong>{email}</strong>
+                  Magic link sent to
+                </p>
+                <p className="text-sm font-ui font-bold" style={{ color: 'var(--text)' }}>
+                  {email}
                 </p>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex gap-2.5 justify-between" onPaste={handleOtpPaste}>
-                  {otp.map((d, i) => (
-                    <input
-                      key={i}
-                      ref={el => { otpRefs.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={d}
-                      onChange={e => handleOtpChange(i, e.target.value)}
-                      onKeyDown={e => handleOtpKey(i, e)}
-                      className="w-full aspect-square rounded-xl text-center text-2xl font-display font-black outline-none transition-all"
-                      style={{
-                        background: 'var(--bg-surface)',
-                        border: `1.5px solid ${d ? 'var(--accent)' : 'var(--border)'}`,
-                        color: 'var(--text)',
-                        boxShadow: d ? '0 0 0 3px oklch(60% 0.22 25 / 0.12)' : 'none',
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  onClick={verifyOtp}
-                  disabled={loading || otp.join('').length !== 6}
-                  className="w-full py-4 rounded-2xl text-[11px] font-ui font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40"
-                  style={{ background: 'var(--text)', color: 'var(--bg)' }}>
-                  {loading ? 'Verifying…' : 'Unlock →'}
-                </button>
-
-                <button
-                  onClick={() => { setStep('email'); setOtp(['','','','','','']); setError(''); }}
-                  className="w-full py-2 text-[10px] font-ui font-bold uppercase tracking-widest transition-colors"
-                  style={{ color: 'var(--text-muted)' }}>
-                  ← Change email
-                </button>
+              <div className="px-5 py-4 rounded-2xl text-left"
+                   style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                <p className="text-[10px] font-ui font-bold uppercase tracking-widest mb-2"
+                   style={{ color: 'var(--text-muted)' }}>How it works</p>
+                <ol className="space-y-1.5 text-sm font-ui" style={{ color: 'var(--text-muted)' }}>
+                  <li>1. Open the email from Woh Wala Trip</li>
+                  <li>2. Click the <strong style={{ color: 'var(--text)' }}>"Log In"</strong> button</li>
+                  <li>3. You're in — no password needed</li>
+                </ol>
               </div>
-            </>
+
+              <button
+                onClick={() => { setStep('email'); setError(''); }}
+                className="text-[10px] font-ui font-bold uppercase tracking-widest transition-colors hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}>
+                ← Use a different email
+              </button>
+
+              <button
+                onClick={sendLink}
+                disabled={loading}
+                className="block w-full text-[10px] font-ui font-bold uppercase tracking-widest transition-colors hover:opacity-70 disabled:opacity-40"
+                style={{ color: 'var(--text-muted)' }}>
+                {loading ? 'Resending…' : 'Resend link'}
+              </button>
+            </div>
           )}
 
           {error && (
@@ -263,5 +218,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" style={{ background: 'var(--bg)' }} />}>
+      <LoginForm />
+    </Suspense>
   );
 }
