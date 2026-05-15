@@ -1,17 +1,13 @@
 'use client';
 /**
- * CinematicAuth — "The Dimensional Entry"
+ * CinematicAuth — dimensional entry portal
  *
- * Auth strategy: magic link (default Supabase), detected via onAuthStateChange.
- * No 6-digit OTP confusion. One path, no loops.
- *
- * Phase 0: ARRIVAL    — void with single pulse
- * Phase 1: IDENTIFY   — email terminal
- * Phase 2: SIGNAL     — "check your email" waiting portal
- * Phase 3: GRANTED    — session confirmed, collapse begins
- * Phase 4: TRANSIT    — dimensional wipe → /trips
+ * Phase 0: TRANSIT   — particles rush inward from edges (arrival from portal)
+ * Phase 1: IDENTIFY  — content reveals from center outward
+ * Phase 2: SIGNAL    — check email waiting state
+ * Phase 3: GRANTED   — session confirmed, collapse
+ * Phase 4: TRANSIT   — wipe to /trips
  */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -27,10 +23,9 @@ const FRAGMENTS = [
   '"friendship lore: reconstructing"',
 ];
 
-/* ── Particle canvas — smooth, no jitter ─────────────────────── */
 function PortalCanvas({ phase }: { phase: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const phaseRef = useRef(phase);
+  const phaseRef  = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   useEffect(() => {
@@ -39,133 +34,121 @@ function PortalCanvas({ phase }: { phase: number }) {
     const ctx = canvas.getContext('2d')!;
     let W = canvas.width = window.innerWidth;
     let H = canvas.height = window.innerHeight;
-
-    const onResize = () => {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-    };
+    const onResize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     window.addEventListener('resize', onResize);
 
-    // Particles — smooth lerp-based movement, no discrete jumps
-    const pts = Array.from({ length: 400 }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.2,
-      vy: (Math.random() - 0.5) * 0.2,
-      tx: 0, ty: 0, // target velocity (lerped toward)
-      size: Math.random() * 1.8 + 0.2,
-      hue: ([10, 185, 280] as number[])[Math.floor(Math.random() * 3)],
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.008 + Math.random() * 0.012,
-    }));
+    // Particles start near edges, rush inward, then settle into gentle drift
+    const pts = Array.from({ length: 380 }, () => {
+      // Birth position: near a random edge
+      const edge = Math.floor(Math.random() * 4);
+      let x = 0, y = 0;
+      if (edge === 0) { x = Math.random() * W; y = -20; }
+      else if (edge === 1) { x = W + 20; y = Math.random() * H; }
+      else if (edge === 2) { x = Math.random() * W; y = H + 20; }
+      else { x = -20; y = Math.random() * H; }
+      return {
+        x, y,
+        vx: 0, vy: 0,
+        size: Math.random() * 1.8 + 0.2,
+        hue: ([10, 185, 280] as number[])[Math.floor(Math.random() * 3)],
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.006 + Math.random() * 0.01,
+        settled: false,
+      };
+    });
 
-    // Portal ring state — grows smoothly
-    let portalR = 0;
-    let portalTargetR = 0;
-
-    let t = 0;
-    let raf = 0;
+    let portalR = 0, portalTargetR = 0;
+    let t = 0, raf = 0;
 
     const draw = () => {
       raf = requestAnimationFrame(draw);
-      t += 0.007;
+      t += 0.006;
       const p = phaseRef.current;
 
-      // Soft background fade — slow, no flicker
-      ctx.fillStyle = `rgba(6,6,4,${p >= 3 ? 0.96 : 0.88})`;
+      ctx.fillStyle = `rgba(6,6,4,${p >= 1 ? 0.88 : 0.75})`;
       ctx.fillRect(0, 0, W, H);
 
       const cx = W / 2, cy = H / 2;
-      const intensity = [0.06, 0.2, 0.6, 1.0, 0.0][Math.min(p, 4)];
+      const intensity = [0.55, 0.25, 0.55, 1.0, 0.0][Math.min(p, 4)];
 
-      // Update portal ring target
-      portalTargetR = p >= 2 ? 90 + Math.sin(t * 1.4) * 8 : 0;
-      portalR += (portalTargetR - portalR) * 0.04; // smooth lerp
+      // Portal ring
+      portalTargetR = p >= 2 ? 88 + Math.sin(t * 1.2) * 7 : p === 0 ? Math.min(t * 120, 80) : 0;
+      portalR += (portalTargetR - portalR) * 0.05;
 
       pts.forEach(pt => {
         pt.phase += pt.speed;
-        const alpha = ((Math.sin(pt.phase) + 1) / 2) * intensity;
+        const lifeAlpha = (Math.sin(pt.phase) + 1) / 2;
+        const alpha = lifeAlpha * intensity;
 
-        // Target velocity: gentle drift + pull toward center in phases 2+
-        if (p >= 2) {
-          const dx = cx - pt.x, dy = cy - pt.y, d = Math.sqrt(dx * dx + dy * dy) + 1;
-          const pull = p >= 3 ? 0.006 : 0.0015;
-          pt.tx = (dx / d) * pull;
-          pt.ty = (dy / d) * pull;
+        const dx = cx - pt.x, dy = cy - pt.y, d = Math.sqrt(dx * dx + dy * dy) + 1;
+
+        // Phase 0: rush inward fast, then settle
+        if (p === 0) {
+          if (d > 40) {
+            pt.vx += (dx / d) * 0.35;
+            pt.vy += (dy / d) * 0.35;
+          } else {
+            pt.settled = true;
+          }
+        } else if (p >= 2) {
+          // Gentle pull during waiting
+          pt.vx += (dx / d) * 0.0012;
+          pt.vy += (dy / d) * 0.0012;
         } else {
-          pt.tx = 0; pt.ty = 0;
+          // Phase 1: gentle drift
+          pt.vx += (Math.random() - 0.5) * 0.003;
+          pt.vy += (Math.random() - 0.5) * 0.003;
         }
 
-        // Lerp velocity toward target — eliminates jitter
-        pt.vx = pt.vx * 0.96 + pt.tx * 0.04 + (Math.random() - 0.5) * 0.002;
-        pt.vy = pt.vy * 0.96 + pt.ty * 0.04 + (Math.random() - 0.5) * 0.002;
+        // Stronger damping in transit, normal otherwise
+        const damp = p === 0 ? 0.91 : 0.97;
+        pt.vx *= damp; pt.vy *= damp;
         pt.x += pt.vx; pt.y += pt.vy;
-        if (pt.x < -4) pt.x = W + 4;
-        if (pt.x > W + 4) pt.x = -4;
-        if (pt.y < -4) pt.y = H + 4;
-        if (pt.y > H + 4) pt.y = -4;
+
+        // Wrap only after settling
+        if (pt.settled || p >= 1) {
+          if (pt.x < -8) pt.x = W + 8;
+          if (pt.x > W + 8) pt.x = -8;
+          if (pt.y < -8) pt.y = H + 8;
+          if (pt.y > H + 8) pt.y = -8;
+        }
 
         if (alpha < 0.015) return;
-
-        const cols: Record<number, [number, number, number]> = {
+        const cols: Record<number, [number,number,number]> = {
           10:  [255, 77, 77],
           185: [45, 158, 139],
           280: [124, 106, 255],
         };
         const [r, g, b] = cols[pt.hue] ?? [245, 240, 232];
-
         if (pt.size > 1.2) {
           const grd = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pt.size * 5);
           grd.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
           grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-          ctx.fillStyle = grd;
-          ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size * 5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size * 5, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 1.4})`;
+        ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(alpha * 1.3, 1)})`;
         ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2); ctx.fill();
       });
 
-      // Portal ring — single smooth growing ring, no orbital jitter
-      if (portalR > 2 && p >= 2 && p <= 3) {
-        // Outer ring with depth gradient
-        const ringAlpha = Math.min(portalR / 90, 1) * 0.35;
+      // Portal ring (smooth, single, no spinning)
+      if (portalR > 3 && (p === 0 || p === 2)) {
+        const ra = Math.min(portalR / 88, 1) * 0.28 * (p === 0 ? Math.min(t * 2, 1) : 1);
         ctx.save();
-        // Depth halo behind the ring
-        const halo = ctx.createRadialGradient(cx, cy, portalR - 24, cx, cy, portalR + 24);
-        halo.addColorStop(0, `rgba(255,77,77,0)`);
-        halo.addColorStop(0.5, `rgba(255,77,77,${ringAlpha * 0.4})`);
-        halo.addColorStop(1, `rgba(255,77,77,0)`);
-        ctx.fillStyle = halo;
-        ctx.fillRect(0, 0, W, H);
-
-        // Crisp ring stroke
-        ctx.strokeStyle = `rgba(255,77,77,${ringAlpha * 1.4})`;
+        ctx.strokeStyle = `rgba(255,77,77,${ra * 1.3})`;
         ctx.lineWidth = 1;
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = `rgba(255,77,77,0.5)`;
+        ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(255,77,77,0.4)';
         ctx.beginPath(); ctx.arc(cx, cy, portalR, 0, Math.PI * 2); ctx.stroke();
-
-        // Second inner ring — teal, slightly behind
-        ctx.strokeStyle = `rgba(45,158,139,${ringAlpha * 0.5})`;
-        ctx.lineWidth = 0.5;
-        ctx.shadowColor = `rgba(45,158,139,0.3)`;
-        ctx.shadowBlur = 6;
-        ctx.beginPath(); ctx.arc(cx, cy, portalR * 0.62, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = `rgba(45,158,139,${ra * 0.4})`;
+        ctx.lineWidth = 0.5; ctx.shadowBlur = 5; ctx.shadowColor = 'rgba(45,158,139,0.25)';
+        ctx.beginPath(); ctx.arc(cx, cy, portalR * 0.6, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
 
-      // Collapse — smooth radial black expansion
+      // Collapse
       if (p >= 3) {
-        const collapseProgress = Math.min((t % 20) * 0.25, 1);
-        const collapseR = collapseProgress * Math.max(W, H) * 1.5;
-        if (collapseR > 0) {
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, collapseR);
-          g.addColorStop(0, `rgba(6,6,4,${collapseProgress})`);
-          g.addColorStop(0.7, `rgba(6,6,4,${collapseProgress * 0.6})`);
-          g.addColorStop(1, `rgba(6,6,4,0)`);
-          ctx.fillStyle = g;
-          ctx.fillRect(0, 0, W, H);
-        }
+        const cAlpha = Math.min((t % 30) * 0.3, 1);
+        ctx.fillStyle = `rgba(6,6,4,${cAlpha})`;
+        ctx.fillRect(0, 0, W, H);
       }
     };
 
@@ -174,16 +157,11 @@ function PortalCanvas({ phase }: { phase: number }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 w-full h-full"
-      style={{ zIndex: 0 }}
-    />
-  );
+  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }} />;
 }
 
-/* ── Main component ──────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────── */
+
 export default function CinematicAuth() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -193,6 +171,7 @@ export default function CinematicAuth() {
   const [inputFocused, setInputFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
   const [fragIdx, setFragIdx] = useState(0);
   const transitioningRef = useRef(false);
 
@@ -201,22 +180,20 @@ export default function CinematicAuth() {
     transitioningRef.current = true;
     setPhase(3);
     document.body.style.background = '#060604';
-    // refresh() forces Next.js server components to re-run with new session cookies
-    // then navigate after the cinematic collapse
     setTimeout(() => {
       router.refresh();
       setPhase(4);
       setTimeout(() => router.push('/trips'), 600);
-    }, 1200);
+    }, 1100);
   }, [router]);
 
-  // Arrival
+  // Arrival sequence: phase 0 → 1 after transit animation
   useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 700);
+    const t = setTimeout(() => setPhase(1), 1100);
     return () => clearTimeout(t);
   }, []);
 
-  // Check if already signed in on mount
+  // Check existing session on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) goToTrips();
@@ -224,173 +201,162 @@ export default function CinematicAuth() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Listen for session changes — works for magic link click (same or other tab)
-  // and for OTP verification
+  // Auth state listener — detects magic link click
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-        goToTrips();
-      }
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) goToTrips();
     });
     return () => subscription.unsubscribe();
   }, [supabase, goToTrips]);
 
-  // Fragment rotation when waiting
+  // Fragment rotation
   useEffect(() => {
-    if (phase < 1) return;
-    const id = setInterval(() => setFragIdx(i => (i + 1) % FRAGMENTS.length), 3000);
+    const id = setInterval(() => setFragIdx(i => (i + 1) % FRAGMENTS.length), 3200);
     return () => clearInterval(id);
-  }, [phase]);
+  }, []);
+
+  // Rate limit countdown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   const sendLink = async () => {
+    if (cooldown > 0) return;
     if (!EMAIL_RE.test(email.trim())) { setError('Enter a valid email address.'); return; }
     setLoading(true); setError('');
-    const redirectTo = `${window.location.origin}/auth/callback`;
     const { error: err } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback`, shouldCreateUser: true },
     });
     setLoading(false);
     if (err) {
-      if (/rate|limit|too many|over_email/i.test(err.message))
-        setError('Too many requests. Wait 60 seconds before trying again.');
-      else
+      if (/rate|limit|too many|over_email/i.test(err.message)) {
+        setError(`Wait ${60}s before requesting again.`);
+        setCooldown(60);
+      } else {
         setError(err.message);
+      }
     } else {
       setPhase(2);
     }
   };
 
-  const isPhaseVisible = (target: number) => phase === target;
+  // Each phase rendered as absolute overlay so they don't affect each other's layout
+  const phaseStyle = (target: number) => ({
+    position: 'absolute' as const,
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+    opacity: phase === target ? 1 : 0,
+    transform: phase === target ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.98)',
+    transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1)',
+    pointerEvents: (phase === target ? 'auto' : 'none') as 'auto' | 'none',
+    zIndex: 10,
+  });
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ background: '#060604' }}>
       <PortalCanvas phase={phase} />
 
-      {/* Atmospheric memory fragments — fixed opacity, no pulsing */}
+      {/* Ghost memory fragments */}
       {FRAGMENTS.map((fr, i) => (
         <div key={i} className="absolute pointer-events-none select-none font-mono"
              style={{
                left: `${4 + (i * 41) % 86}%`,
                top: `${6 + (i * 19) % 78}%`,
-               fontSize: 9,
-               letterSpacing: '0.15em',
+               fontSize: 9, letterSpacing: '0.15em',
                color: 'rgba(245,240,232,0.8)',
-               opacity: phase >= 1 ? (i === fragIdx ? 0.18 : 0.04) : 0,
+               opacity: phase >= 1 ? (i === fragIdx ? 0.16 : 0.035) : 0,
                transform: `rotate(${-2 + (i * 5) % 8}deg)`,
-               transition: 'opacity 1.2s cubic-bezier(0.4,0,0.2,1)',
-               whiteSpace: 'nowrap',
-               zIndex: 1,
+               transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
+               whiteSpace: 'nowrap', zIndex: 1,
              }}>
           {fr}
         </div>
       ))}
 
-      {/* ── UI LAYERS ──────────────────────────────────────── */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6">
-
-        {/* PHASE 0: Void */}
-        <div style={{
-          opacity: isPhaseVisible(0) ? 1 : 0,
-          transition: 'opacity 0.8s ease',
-          pointerEvents: 'none',
-          position: 'absolute',
-        }}>
+      {/* ── PHASE 0: TRANSIT ARRIVAL ── */}
+      <div style={phaseStyle(0)}>
+        <div className="text-center space-y-4">
           <div className="w-1 h-1 rounded-full mx-auto"
-               style={{ background: '#FF4D4D', boxShadow: '0 0 24px 10px rgba(255,77,77,0.4)' }} />
+               style={{ background: '#FF4D4D', boxShadow: '0 0 28px 12px rgba(255,77,77,0.45)' }} />
+          <p className="font-mono text-[8px] uppercase tracking-[0.7em]"
+             style={{ color: 'rgba(245,240,232,0.1)' }}>ENTERING</p>
         </div>
+      </div>
 
-        {/* PHASE 1: IDENTIFY */}
-        <div className="w-full max-w-md space-y-10"
-             style={{
-               opacity: isPhaseVisible(1) ? 1 : 0,
-               transform: isPhaseVisible(1) ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.98)',
-               transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1)',
-               pointerEvents: isPhaseVisible(1) ? 'auto' : 'none',
-             }}>
-          <div className="space-y-3 text-center">
+      {/* ── PHASE 1: IDENTIFY ── */}
+      <div style={phaseStyle(1)}>
+        <div className="w-full max-w-md space-y-9">
+          <div className="text-center space-y-3">
             <p className="font-mono text-[8px] uppercase tracking-[0.7em]"
                style={{ color: 'rgba(255,77,77,0.45)' }}>
               ● MEMORY GATEWAY ACTIVE
             </p>
             <h1 className="font-display font-black uppercase leading-[0.85]"
-                style={{ fontSize: 'clamp(40px, 8vw, 80px)', color: 'rgba(245,240,232,0.92)' }}>
-              IDENTIFY<br />
-              <em className="italic" style={{ color: '#FF4D4D' }}>YOURSELF</em>
+                style={{ fontSize: 'clamp(44px, 8vw, 80px)', color: 'rgba(245,240,232,0.92)' }}>
+              IDENTIFY<br /><em className="italic" style={{ color: '#FF4D4D' }}>YOURSELF</em>
             </h1>
-            <p className="font-mono text-[9px]"
-               key={fragIdx}
-               style={{ color: 'rgba(245,240,232,0.18)', letterSpacing: '0.15em', transition: 'opacity 0.8s ease' }}>
+            <p key={fragIdx} className="font-mono text-[9px]"
+               style={{ color: 'rgba(245,240,232,0.18)', letterSpacing: '0.12em', transition: 'opacity 0.8s ease' }}>
               {FRAGMENTS[fragIdx]}
             </p>
           </div>
 
-          {/* Email input — no jitter, stable border */}
           <div className="relative">
             <input
-              type="email"
-              value={email}
+              type="email" value={email}
               onChange={e => { setEmail(e.target.value); setError(''); }}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               onKeyDown={e => e.key === 'Enter' && sendLink()}
               placeholder="enter.your@signal.address"
               autoFocus
-              className="w-full bg-transparent py-6 px-8 text-center font-mono text-base outline-none"
+              className="w-full py-6 px-8 text-center font-mono text-base outline-none"
               style={{
+                background: 'rgba(245,240,232,0.025)',
+                border: `1px solid ${inputFocused || email ? 'rgba(255,77,77,0.32)' : 'rgba(245,240,232,0.07)'}`,
+                borderRadius: '0.9rem',
                 color: 'rgba(245,240,232,0.85)',
                 caretColor: '#FF4D4D',
                 letterSpacing: '0.04em',
-                background: 'rgba(245,240,232,0.025)',
-                border: '1px solid rgba(245,240,232,0.07)',
-                borderRadius: '1rem',
-                transition: 'border-color 0.6s ease, box-shadow 0.6s ease',
-                ...(inputFocused || email ? {
-                  borderColor: 'rgba(255,77,77,0.35)',
-                  boxShadow: '0 0 24px rgba(255,77,77,0.07)',
-                } : {}),
+                boxShadow: inputFocused ? '0 0 20px rgba(255,77,77,0.06)' : 'none',
+                transition: 'border-color 0.5s ease, box-shadow 0.5s ease',
               }}
             />
-            {/* Scan line — only on focus, smooth fade */}
             <div className="absolute bottom-0 left-8 right-8 h-px"
                  style={{
-                   background: 'linear-gradient(90deg, transparent, rgba(255,77,77,0.5), transparent)',
+                   background: 'linear-gradient(90deg, transparent, rgba(255,77,77,0.45), transparent)',
                    opacity: inputFocused ? 1 : 0,
-                   transition: 'opacity 0.5s ease',
+                   transition: 'opacity 0.4s ease',
                  }} />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <button
               onClick={sendLink}
-              disabled={loading || !email.trim()}
-              className="w-full py-4 rounded-2xl font-ui font-black text-[10px] uppercase tracking-[0.35em] transition-all disabled:opacity-30 flex items-center justify-center gap-3"
+              disabled={loading || !email.trim() || cooldown > 0}
+              className="w-full py-4 rounded-2xl font-ui font-black text-[10px] uppercase tracking-[0.35em] flex items-center justify-center gap-3 disabled:opacity-30"
               style={{
                 background: 'rgba(255,77,77,0.08)',
-                border: '1px solid rgba(255,77,77,0.35)',
+                border: '1px solid rgba(255,77,77,0.32)',
                 color: 'rgba(255,77,77,0.9)',
-                boxShadow: '0 0 24px rgba(255,77,77,0.08)',
-                transition: 'box-shadow 0.6s ease, background 0.4s ease',
+                transition: 'box-shadow 0.5s ease, background 0.3s ease',
               }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.boxShadow = '0 0 48px rgba(255,77,77,0.25)';
-                el.style.background = 'rgba(255,77,77,0.14)';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.boxShadow = '0 0 24px rgba(255,77,77,0.08)';
-                el.style.background = 'rgba(255,77,77,0.08)';
-              }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.boxShadow = '0 0 40px rgba(255,77,77,0.2)'; el.style.background = 'rgba(255,77,77,0.13)'; }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.boxShadow = 'none'; el.style.background = 'rgba(255,77,77,0.08)'; }}
             >
               {loading ? (
-                <>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid rgba(255,77,77,0.3)', borderTopColor: '#FF4D4D', animation: 'wwt-spin 0.9s cubic-bezier(0.4,0,0.6,1) infinite' }} />
-                  TRANSMITTING...
-                </>
+                <><div style={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid rgba(255,77,77,0.3)', borderTopColor: '#FF4D4D', animation: 'wwt-spin 0.9s linear infinite' }} /> TRANSMITTING...</>
+              ) : cooldown > 0 ? (
+                `WAIT ${cooldown}s`
               ) : 'TRANSMIT SIGNAL →'}
             </button>
-
             {process.env.NODE_ENV === 'development' && (
               <button onClick={goToTrips}
                       className="w-full py-2 font-mono text-[7.5px] uppercase tracking-[0.4em] transition-opacity hover:opacity-50"
@@ -400,134 +366,87 @@ export default function CinematicAuth() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* PHASE 2: SIGNAL SENT — cinematic waiting portal */}
-        <div className="w-full max-w-md text-center space-y-10"
-             style={{
-               opacity: isPhaseVisible(2) ? 1 : 0,
-               transform: isPhaseVisible(2) ? 'translateY(0)' : 'translateY(20px)',
-               transition: 'opacity 1s cubic-bezier(0.16,1,0.3,1) 0.15s, transform 1s cubic-bezier(0.16,1,0.3,1) 0.15s',
-               pointerEvents: isPhaseVisible(2) ? 'auto' : 'none',
-             }}>
-          {/* Breathing portal indicator — smooth, not jittery */}
-          <div className="relative w-20 h-20 mx-auto">
+      {/* ── PHASE 2: SIGNAL SENT ── */}
+      <div style={phaseStyle(2)}>
+        <div className="w-full max-w-md text-center space-y-9">
+          <div className="relative w-16 h-16 mx-auto">
             <div className="absolute inset-0 rounded-full"
-                 style={{
-                   border: '1px solid rgba(255,77,77,0.2)',
-                   animation: 'wwt-breathe 3s ease-in-out infinite',
-                 }} />
+                 style={{ border: '1px solid rgba(255,77,77,0.2)', animation: 'wwt-breathe 3s ease-in-out infinite' }} />
             <div className="absolute inset-3 rounded-full"
-                 style={{
-                   border: '1px solid rgba(255,77,77,0.12)',
-                   animation: 'wwt-breathe 3s ease-in-out infinite 0.5s',
-                 }} />
+                 style={{ border: '1px solid rgba(255,77,77,0.1)', animation: 'wwt-breathe 3s ease-in-out infinite 0.6s' }} />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full"
-                   style={{ background: '#FF4D4D', boxShadow: '0 0 16px rgba(255,77,77,0.8)', animation: 'wwt-breathe-dot 3s ease-in-out infinite' }} />
+              <div className="w-2 h-2 rounded-full" style={{ background: '#FF4D4D', boxShadow: '0 0 14px rgba(255,77,77,0.8)', animation: 'wwt-breathe-dot 3s ease-in-out infinite' }} />
             </div>
           </div>
 
           <div className="space-y-3">
-            <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
-               style={{ color: 'rgba(255,77,77,0.5)' }}>
+            <p className="font-mono text-[8px] uppercase tracking-[0.6em]" style={{ color: 'rgba(255,77,77,0.45)' }}>
               ● SIGNAL TRANSMITTED
             </p>
             <h2 className="font-display font-black uppercase"
-                style={{ fontSize: 'clamp(24px, 5vw, 48px)', color: 'rgba(245,240,232,0.9)' }}>
-              CHECK YOUR<br />
-              <em className="italic" style={{ color: '#FF4D4D' }}>EMAIL</em>
+                style={{ fontSize: 'clamp(28px, 5vw, 52px)', color: 'rgba(245,240,232,0.9)' }}>
+              CHECK YOUR<br /><em className="italic" style={{ color: '#FF4D4D' }}>EMAIL</em>
             </h2>
-            <p className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.25)', letterSpacing: '0.1em' }}>
-              WE SENT A LINK TO
-            </p>
-            <p className="font-ui font-bold text-sm" style={{ color: 'rgba(245,240,232,0.6)' }}>
-              {email}
+            <p className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.3)' }}>
+              LINK SENT TO {email.toUpperCase()}
             </p>
           </div>
 
-          <div className="space-y-3 px-4 py-5 rounded-2xl"
+          <div className="space-y-2.5 px-5 py-5 rounded-2xl text-left"
                style={{ background: 'rgba(245,240,232,0.025)', border: '1px solid rgba(245,240,232,0.05)' }}>
-            <p className="font-mono text-[8px] uppercase tracking-[0.4em]" style={{ color: 'rgba(245,240,232,0.2)' }}>
-              HOW TO ENTER
-            </p>
-            <ol className="space-y-2 text-left">
-              {['Open the email from Woh Wala Trip', 'Click the "Log In" button in the email', 'You\'ll be pulled through instantly'].map((step, i) => (
-                <li key={i} className="flex items-start gap-3 font-ui text-sm"
-                    style={{ color: 'rgba(245,240,232,0.4)' }}>
-                  <span className="font-mono text-[8px] mt-0.5 flex-shrink-0" style={{ color: 'rgba(255,77,77,0.4)' }}>0{i + 1}</span>
-                  {step}
-                </li>
-              ))}
-            </ol>
+            {['Open the email from Woh Wala Trip', 'Click the "Log In" button', 'You\'ll arrive here instantly'].map((s, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className="font-mono text-[8px] mt-0.5" style={{ color: 'rgba(255,77,77,0.35)' }}>0{i + 1}</span>
+                <span className="font-ui text-sm" style={{ color: 'rgba(245,240,232,0.38)' }}>{s}</span>
+              </div>
+            ))}
           </div>
 
           <button onClick={() => { setPhase(1); setEmail(''); setError(''); }}
-                  className="font-mono text-[7.5px] uppercase tracking-[0.4em] transition-opacity hover:opacity-60"
-                  style={{ color: 'rgba(245,240,232,0.2)' }}>
-            ← WRONG EMAIL ADDRESS
+                  className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+                  style={{ color: 'rgba(245,240,232,0.18)' }}>
+            ← WRONG EMAIL
           </button>
         </div>
+      </div>
 
-        {/* PHASE 3: ACCESS GRANTED */}
-        <div style={{
-          opacity: isPhaseVisible(3) ? 1 : 0,
-          transform: isPhaseVisible(3) ? 'scale(1)' : 'scale(0.94)',
-          transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)',
-          pointerEvents: 'none',
-          textAlign: 'center',
-        }}>
-          <p className="font-mono text-[8px] uppercase tracking-[0.6em] mb-4"
-             style={{ color: 'rgba(255,77,77,0.5)' }}>
+      {/* ── PHASE 3: ACCESS GRANTED ── */}
+      <div style={phaseStyle(3)}>
+        <div className="text-center space-y-4">
+          <p className="font-mono text-[8px] uppercase tracking-[0.6em]" style={{ color: 'rgba(255,77,77,0.4)' }}>
             ● IDENTITY CONFIRMED
           </p>
           <div className="font-display font-black uppercase"
-               style={{ fontSize: 'clamp(32px, 7vw, 64px)', color: 'rgba(245,240,232,0.9)' }}>
+               style={{ fontSize: 'clamp(36px, 7vw, 64px)', color: 'rgba(245,240,232,0.9)' }}>
             ACCESS<br /><em className="italic" style={{ color: '#FF4D4D' }}>GRANTED</em>
-          </div>
-        </div>
-
-        {/* Error pill — smooth entrance */}
-        <div style={{
-          position: 'absolute',
-          bottom: 72,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          opacity: error ? 1 : 0,
-          transition: 'opacity 0.5s ease',
-          pointerEvents: 'none',
-          zIndex: 20,
-          whiteSpace: 'nowrap',
-        }}>
-          <div className="px-6 py-3 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
-               style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.25)', color: 'rgba(255,77,77,0.8)' }}>
-            {error}
           </div>
         </div>
       </div>
 
-      {/* Dimensional collapse — smooth radial wipe, no abrupt cut */}
+      {/* Error pill */}
+      {error && (
+        <div className="fixed bottom-16 left-0 right-0 flex justify-center z-20" style={{ pointerEvents: 'none' }}>
+          <div className="px-6 py-3 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
+               style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.22)', color: 'rgba(255,77,77,0.8)' }}>
+            {error}
+          </div>
+        </div>
+      )}
+
+      {/* Final wipe */}
       <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: '#060604',
+        position: 'fixed', inset: 0, background: '#060604', zIndex: 50,
         opacity: phase >= 4 ? 1 : 0,
-        transition: 'opacity 0.7s cubic-bezier(0.4,0,1,1)',
+        transition: 'opacity 0.65s cubic-bezier(0.4,0,1,1)',
         pointerEvents: 'none',
-        zIndex: 50,
       }} />
 
       <style jsx>{`
-        @keyframes wwt-spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes wwt-breathe {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50%       { transform: scale(1.12); opacity: 1; }
-        }
-        @keyframes wwt-breathe-dot {
-          0%, 100% { box-shadow: 0 0 16px rgba(255,77,77,0.8); }
-          50%       { box-shadow: 0 0 28px rgba(255,77,77,1); }
-        }
+        @keyframes wwt-spin { to { transform: rotate(360deg); } }
+        @keyframes wwt-breathe { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.1);opacity:1} }
+        @keyframes wwt-breathe-dot { 0%,100%{box-shadow:0 0 14px rgba(255,77,77,.7)} 50%{box-shadow:0 0 24px rgba(255,77,77,1)} }
       `}</style>
     </div>
   );

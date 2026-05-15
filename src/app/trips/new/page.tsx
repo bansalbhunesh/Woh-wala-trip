@@ -2,21 +2,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { CinematicShell } from '@/components/experience/CinematicShell';
-
-const FIELD_LABELS: Record<string, string> = {
-  name: 'SEASON TITLE',
-  destination: 'FILMING LOCATION',
-  startDate: 'PREMIERE DATE',
-  endDate: 'FINALE DATE',
-};
-
-const FIELD_HINTS: Record<string, string> = {
-  name: '"The Bus That Betrayed Us"',
-  destination: '"Midnight Coimbatore"',
-  startDate: '',
-  endDate: '',
-};
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -29,43 +14,64 @@ export default function NewTripPage() {
 
   const isReady = fields.name.trim() && fields.startDate && fields.endDate && !createTrip.isPending;
 
+  const LABELS: Record<string, string> = {
+    name: 'SEASON TITLE', destination: 'FILMING LOCATION',
+    startDate: 'PREMIERE DATE', endDate: 'FINALE DATE',
+  };
+  const HINTS: Record<string, string> = {
+    name: '"The Bus That Betrayed Us"', destination: '"Midnight Coimbatore"',
+    startDate: '', endDate: '',
+  };
+
   return (
-    <CinematicShell intensity={0.3}>
-      <div className="film-grain" />
+    /* Light cream — intentional contrast with dark cinematic pages */
+    <div className="min-h-screen flex flex-col" style={{ background: 'oklch(97% 0.008 70)', color: 'oklch(16% 0.015 60)' }}>
+      <div className="light-grain" />
 
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
-        <div className="w-full max-w-lg space-y-12">
+      {/* Thin nav */}
+      <nav className="relative z-10 flex items-center justify-between px-8 py-4"
+           style={{ borderBottom: '1px solid oklch(87% 0.015 72)' }}>
+        <button onClick={() => router.back()}
+                className="font-mono text-[8px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+                style={{ color: 'oklch(52% 0.015 60)' }}>
+          ← BACK
+        </button>
+        <span className="font-display italic font-black text-base tracking-tight"
+              style={{ color: 'oklch(60% 0.22 25)' }}>
+          woh wala trip
+        </span>
+        <div className="w-12" />
+      </nav>
 
-          {/* Header */}
-          <div className="space-y-3">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-16">
+        <div className="w-full max-w-lg space-y-10">
+
+          <div className="space-y-2">
             <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
-               style={{ color: 'rgba(255,77,77,0.5)' }}>
-              ● INITIALIZING NEW TIMELINE
+               style={{ color: 'oklch(60% 0.22 25)' }}>
+              NEW ARCHIVE
             </p>
             <h1 className="font-display font-black uppercase tracking-tighter leading-[0.85]"
-                style={{ fontSize: 'clamp(36px, 7vw, 72px)', color: 'rgba(245,240,232,0.92)' }}>
-              NEW <em className="italic" style={{ color: '#FF4D4D' }}>SEASON</em>
+                style={{ fontSize: 'clamp(40px, 7vw, 80px)', color: 'oklch(16% 0.015 60)' }}>
+              NEW <em className="italic" style={{ color: 'oklch(60% 0.22 25)' }}>SEASON</em>
             </h1>
-            <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.25)' }}>
+            <p className="font-display italic text-sm" style={{ color: 'oklch(52% 0.015 60)' }}>
               "Every disaster starts with a date and a group chat."
             </p>
           </div>
 
-          {/* Fields — terminal style */}
-          <div className="space-y-1 rounded-2xl overflow-hidden"
-               style={{ border: '1px solid rgba(245,240,232,0.07)', background: 'rgba(245,240,232,0.02)' }}>
+          {/* Editorial bottom-border fields */}
+          <div className="space-y-0 rounded-2xl overflow-hidden"
+               style={{ border: '1.5px solid oklch(87% 0.015 72)', background: 'oklch(93.5% 0.012 72)' }}>
             {(Object.keys(fields) as Array<keyof typeof fields>).map((key, idx) => (
-              <div
-                key={key}
-                className="relative px-7 py-5 transition-all duration-300"
-                style={{
-                  borderBottom: idx < 3 ? '1px solid rgba(245,240,232,0.05)' : 'none',
-                  background: active === key ? 'rgba(255,77,77,0.04)' : 'transparent',
-                }}
-              >
-                <label className="block font-mono text-[7.5px] uppercase tracking-[0.5em] mb-2"
-                       style={{ color: active === key ? 'rgba(255,77,77,0.6)' : 'rgba(245,240,232,0.25)' }}>
-                  {FIELD_LABELS[key]}
+              <div key={key} className="relative px-7 py-5 transition-colors duration-300"
+                   style={{
+                     borderBottom: idx < 3 ? '1px solid oklch(87% 0.015 72)' : 'none',
+                     background: active === key ? 'oklch(96% 0.012 25 / 0.4)' : 'transparent',
+                   }}>
+                <label className="block font-mono text-[7.5px] uppercase tracking-[0.5em] mb-2 transition-colors duration-300"
+                       style={{ color: active === key ? 'oklch(60% 0.22 25)' : 'oklch(52% 0.015 60)' }}>
+                  {LABELS[key]}
                 </label>
                 <input
                   type={key.includes('Date') ? 'date' : 'text'}
@@ -73,67 +79,42 @@ export default function NewTripPage() {
                   onChange={e => setFields(f => ({ ...f, [key]: e.target.value }))}
                   onFocus={() => setActive(key)}
                   onBlur={() => setActive(null)}
-                  placeholder={FIELD_HINTS[key]}
+                  placeholder={HINTS[key]}
                   autoFocus={key === 'name'}
                   className="w-full bg-transparent outline-none font-ui font-semibold text-base"
-                  style={{
-                    color: 'rgba(245,240,232,0.85)',
-                    caretColor: '#FF4D4D',
-                    colorScheme: 'dark',
-                  }}
+                  style={{ color: 'oklch(16% 0.015 60)', caretColor: 'oklch(60% 0.22 25)', colorScheme: 'light' }}
                 />
-                {active === key && (
-                  <div className="absolute bottom-0 left-7 right-7 h-px"
-                       style={{ background: 'linear-gradient(90deg, transparent, rgba(255,77,77,0.6), transparent)' }} />
-                )}
+                <div className="absolute bottom-0 left-7 right-7 h-px transition-opacity duration-400"
+                     style={{ background: 'oklch(60% 0.22 25)', opacity: active === key ? 0.5 : 0 }} />
               </div>
             ))}
           </div>
 
-          {/* Submit */}
-          <div className="space-y-4">
-            <button
-              onClick={() => createTrip.mutate({ name: fields.name, destination: fields.destination || undefined, startDate: fields.startDate, endDate: fields.endDate })}
-              disabled={!isReady}
-              className="w-full py-5 rounded-2xl font-ui font-black text-[11px] uppercase tracking-[0.3em] transition-all duration-500 disabled:opacity-25 flex items-center justify-center gap-3"
-              style={{
-                background: isReady ? 'rgba(255,77,77,0.15)' : 'rgba(245,240,232,0.04)',
-                border: `1px solid ${isReady ? 'rgba(255,77,77,0.5)' : 'rgba(245,240,232,0.08)'}`,
-                color: isReady ? 'rgba(255,77,77,0.95)' : 'rgba(245,240,232,0.2)',
-                boxShadow: isReady ? '0 0 30px rgba(255,77,77,0.15)' : 'none',
-              }}
-              onMouseEnter={e => { if (isReady) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 50px rgba(255,77,77,0.3)'; }}
-              onMouseLeave={e => { if (isReady) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 30px rgba(255,77,77,0.15)'; }}
-            >
-              {createTrip.isPending ? (
-                <>
-                  <div className="w-3.5 h-3.5 rounded-full" style={{ border: '1px solid rgba(255,77,77,0.4)', borderTopColor: '#FF4D4D', animation: 'spin 0.8s linear infinite' }} />
-                  INITIALIZING TIMELINE...
-                </>
-              ) : (
-                'LAUNCH THE SEASON →'
-              )}
-            </button>
-
-            <button onClick={() => router.back()}
-                    className="w-full py-2 font-mono text-[8px] uppercase tracking-[0.4em] transition-opacity hover:opacity-60"
-                    style={{ color: 'rgba(245,240,232,0.2)' }}>
-              ← ABORT
-            </button>
-          </div>
+          <button
+            onClick={() => createTrip.mutate({ name: fields.name, destination: fields.destination || undefined, startDate: fields.startDate, endDate: fields.endDate })}
+            disabled={!isReady}
+            className="w-full py-4 rounded-2xl font-ui font-black text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all duration-400 disabled:opacity-30"
+            style={{
+              background: isReady ? 'oklch(16% 0.015 60)' : 'oklch(93.5% 0.012 72)',
+              color: isReady ? 'oklch(97% 0.008 70)' : 'oklch(52% 0.015 60)',
+              border: `1.5px solid ${isReady ? 'transparent' : 'oklch(87% 0.015 72)'}`,
+            }}>
+            {createTrip.isPending ? (
+              <><div style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid currentColor', borderTopColor: 'transparent', animation: 'nt-spin 0.8s linear infinite' }} /> CREATING...</>
+            ) : 'LAUNCH THE SEASON →'}
+          </button>
 
           {createTrip.error && (
-            <div className="px-5 py-3 rounded-full text-center font-mono text-[8px] uppercase tracking-[0.3em]"
-                 style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,77,77,0.2)', color: 'rgba(255,77,77,0.8)' }}>
+            <p className="text-center text-sm font-ui" style={{ color: 'oklch(60% 0.22 25)' }}>
               {createTrip.error.message}
-            </div>
+            </p>
           )}
         </div>
       </div>
 
       <style jsx>{`
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes nt-spin { to{transform:rotate(360deg)} }
       `}</style>
-    </CinematicShell>
+    </div>
   );
 }
