@@ -48,8 +48,13 @@ function LoginForm() {
     });
     setLoading(false);
     if (error) {
-      if (/rate.*limit/i.test(error.message) || /too many/i.test(error.message))
-        setError('Too many attempts. Try again in a few minutes.');
+      if (
+        /over_email_send_rate_limit/i.test(error.message) ||
+        /rate.*limit/i.test(error.message) ||
+        /too many/i.test(error.message) ||
+        (error as { code?: string }).code === 'over_email_send_rate_limit'
+      )
+        setError('You just requested a link. Wait 60 seconds before requesting another.');
       else
         setError(error.message);
     } else {
