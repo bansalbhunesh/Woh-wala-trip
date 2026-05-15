@@ -31,13 +31,17 @@ export async function createSupabaseServerClient() {
  * Service role client — bypasses RLS. Use only in trusted server contexts
  * like webhooks, OG image rendering, or AI worker callbacks. Never accept
  * user-controlled input that flows through this without verifying first.
+ *
+ * Uses the raw supabase-js client (not the SSR wrapper) so admin APIs work.
  */
 export function createSupabaseServiceClient() {
-  return createServerClient<Database>(
+  // Use raw supabase-js (not SSR wrapper) so auth.admin methods work correctly
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createClient } = require('@supabase/supabase-js') as typeof import('@supabase/supabase-js');
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: { getAll() { return []; }, setAll() {} },
       auth: { persistSession: false, autoRefreshToken: false },
     }
   );
