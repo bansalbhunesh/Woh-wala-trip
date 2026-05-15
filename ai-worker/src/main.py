@@ -74,4 +74,22 @@ async def judge_battle(req: BattleRequest, bg: BackgroundTasks, authorization: s
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "version": "2.0", "model": settings.CLAUDE_MODEL}
+    return {"ok": True, "version": "2.1", "model": settings.CLAUDE_MODEL,
+            "proxy": bool(settings.ANTHROPIC_BASE_URL), "base_url": settings.ANTHROPIC_BASE_URL}
+
+
+@app.get("/test-claude")
+async def test_claude(authorization: str = Header(...)):
+    """Debug endpoint — tests Anthropic API call from Render environment."""
+    verify_auth(authorization)
+    from .clients import anthropic_client
+    try:
+        msg = anthropic_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=5,
+            messages=[{"role": "user", "content": "say ok"}]
+        )
+        return {"ok": True, "response": msg.content[0].text,
+                "model": msg.model, "usage": dict(msg.usage)}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "type": type(e).__name__}
