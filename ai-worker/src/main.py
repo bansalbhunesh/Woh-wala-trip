@@ -123,13 +123,29 @@ async def debug_pipeline(trip_id: str, authorization: str = Header(...)):
             step("aggregate_signals", False, traceback.format_exc()[-300:])
             agg = None
 
-        # 6. Lore generation
+        # 6. Lore generation with retry (full loop including validator)
         if agg:
             try:
-                lore = await orch._generate_lore(trip, agg, [])
-                step("generate_lore", isinstance(lore, dict), f"keys:{list(lore.keys())[:5]}")
+                lore = await orch._generate_lore_with_retry(trip, agg, [])
+                step("lore_with_retry", isinstance(lore, dict), f"keys:{list(lore.keys())[:6]}")
             except Exception as e:
-                step("generate_lore", False, traceback.format_exc()[-400:])
+                step("lore_with_retry", False, traceback.format_exc()[-400:])
+                lore = None
+
+        # 7. Save lore to DB (with actual lore content)
+        if lore:
+            try:
+                orch._save_lore(trip["id"], lore)
+                step("save_lore", True, "lore_json saved")
+            except Exception as e:
+                step("save_lore", False, traceback.format_exc()[-400:])
+
+        # 8. Final status update
+        try:
+            supabase.table("trips").update({"lore_status": "debug_done"}).eq("id", trip["id"]).execute()
+            step("set_ready", True, "lore_status=debug_done")
+        except Exception as e:
+            step("set_ready", False, str(e))
 
         results["status"] = "DONE"
     except Exception as e:
