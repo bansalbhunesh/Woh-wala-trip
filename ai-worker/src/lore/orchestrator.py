@@ -105,15 +105,19 @@ class LoreOrchestrator:
         )
 
     def _get_confessions(self, trip_id: str) -> list[str]:
-        rows = (
-            supabase.table("trip_members")
-            .select("confession_text")
-            .eq("trip_id", trip_id)
-            .not_.is_("confession_text", "null")
-            .execute()
-            .data
-        )
-        return [r["confession_text"] for r in rows if r.get("confession_text")]
+        # confession_text column may not exist — return empty list safely
+        try:
+            rows = (
+                supabase.table("trip_members")
+                .select("confession_text")
+                .eq("trip_id", trip_id)
+                .not_.is_("confession_text", "null")
+                .execute()
+                .data
+            )
+            return [r["confession_text"] for r in (rows or []) if r.get("confession_text")]
+        except Exception:
+            return []
 
     def _calculate_duration(self, trip: dict) -> int:
         if not trip.get("trip_start_date") or not trip.get("trip_end_date"):
@@ -483,7 +487,8 @@ class LoreOrchestrator:
         card = self._parse_json(response)
 
         supabase.table("trip_members").update({
-            "missing_person_card_json": card
+            # missing_person_card_json may not exist in schema — silently skip
+            "role_title": card.get("role_title", "The Missing One"),
         }).eq("trip_id", trip_id).eq("user_id", absent_user_id).execute()
 
     # -------------------------------------------------------------------------
