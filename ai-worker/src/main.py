@@ -80,48 +80,62 @@ async def health():
 
 @app.get("/debug-pipeline/{trip_id}")
 async def debug_pipeline(trip_id: str, authorization: str = Header(...)):
-    """Step-by-step pipeline debug — no Claude calls, just DB + storage."""
+    """Full pipeline trace — runs every step and reports exact failure."""
     verify_auth(authorization)
+    import traceback, asyncio, json
     from .clients import supabase, anthropic_client
-    results = {}
+    from .lore.orchestrator import LoreOrchestrator
+    from .config import settings
+    results = {"steps": []}
+
+    def step(name, ok, detail=""):
+        results["steps"].append({"step": name, "ok": ok, "detail": str(detail)[:200]})
+        log.info(f"[debug] {name}: {'OK' if ok else 'FAIL'} {detail}")
+
     try:
-        # Step 1: fetch trip
+        orch = LoreOrchestrator()
+
+        # 1. Trip
         trip = supabase.table("trips").select("*").eq("id", trip_id).single().execute().data
-        results["trip"] = trip["name"] if trip else "NULL"
+        step("get_trip", bool(trip), trip["name"] if trip else "null")
 
-        # Step 2: fetch photos
-        photos = supabase.table("photos").select("*").eq("trip_id", trip_id).execute().data
-        results["photo_count"] = len(photos) if photos else 0
+        # 2. Photos
+        photos = supabase.table("photos").select("*").eq("trip_id", trip_id).execute().data or []
+        step("get_photos", len(photos) >= 5, f"{len(photos)} photos")
 
-        # Step 3: fetch members
-        members = supabase.table("trip_members").select("*, profiles:user_id(display_name)").eq("trip_id", trip_id).execute().data
-        results["member_count"] = len(members) if members else 0
+        # 3. Members
+        members = supabase.table("trip_members").select("*, profiles:user_id(display_name)").eq("trip_id", trip_id).execute().data or []
+        step("get_members", True, f"{len(members)} members")
 
-        # Step 4: test signed URL on first photo
-        if photos:
-            url_resp = supabase.storage.from_("trip-photos").create_signed_url(photos[0]["storage_path"], 60)
-            # Handle response format
-            if isinstance(url_resp, dict):
-                signed = url_resp.get("signedURL") or url_resp.get("signedUrl") or url_resp.get("signed_url")
-            else:
-                signed = getattr(url_resp, "signed_url", None) or getattr(url_resp, "signedURL", None)
-                if not signed and hasattr(url_resp, "data") and isinstance(url_resp.data, dict):
-                    signed = url_resp.data.get("signedURL") or url_resp.data.get("signedUrl")
-            results["signed_url"] = "OK" if signed else f"FAIL: {url_resp}"
+        # 4. Vision batch (1 photo only to test)
+        try:
+            one_batch = await orch._analyze_one_batch(trip, photos[:1], 1, 1)
+            step("vision_batch_1photo", "error" not in str(one_batch).lower(), str(one_batch)[:100])
+        except Exception as e:
+            step("vision_batch_1photo", False, traceback.format_exc()[-300:])
 
-        # Step 5: tiny Claude call
-        msg = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514", max_tokens=3,
-            messages=[{"role": "user", "content": "ok"}]
-        )
-        results["claude"] = msg.content[0].text
+        # 5. Aggregation
+        try:
+            fallback = [{"raw_cooked_score": 70, "recurring_behaviors": [], "emotional_arc": {}, "photo_count": 1}]
+            agg = await orch._aggregate_signals(trip, fallback, members)
+            step("aggregate_signals", isinstance(agg, dict), str(list(agg.keys()))[:100])
+        except Exception as e:
+            step("aggregate_signals", False, traceback.format_exc()[-300:])
+            agg = None
 
-        results["status"] = "ALL STEPS PASSED"
+        # 6. Lore generation
+        if agg:
+            try:
+                lore = await orch._generate_lore(trip, agg, [])
+                step("generate_lore", isinstance(lore, dict), f"keys:{list(lore.keys())[:5]}")
+            except Exception as e:
+                step("generate_lore", False, traceback.format_exc()[-400:])
+
+        results["status"] = "DONE"
     except Exception as e:
-        import traceback
-        results["error"] = str(e)
-        results["traceback"] = traceback.format_exc()[-500:]
-        results["status"] = "FAILED"
+        results["error"] = traceback.format_exc()[-500:]
+        results["status"] = "CRASHED"
+
     return results
 
 
