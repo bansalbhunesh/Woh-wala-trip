@@ -66,7 +66,9 @@ export default function GeneratingPage() {
     const onResize = () => { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; };
     window.addEventListener('resize', onResize);
 
-    const particles = Array.from({ length: 600 }, () => {
+    // Adaptive particle count — fewer on mobile for 60fps
+    const particleCount = Math.min(400, Math.max(150, Math.floor(W / 4)));
+    const particles = Array.from({ length: particleCount }, () => {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.random() * Math.max(W, H);
       return {
@@ -78,6 +80,9 @@ export default function GeneratingPage() {
         life: Math.random() * Math.PI * 2,
       };
     });
+
+    // Easing helper for organic ring expansion
+    const easeOutQuart = (x: number) => 1 - Math.pow(1 - x, 4);
 
     let t = 0;
     const draw = () => {
@@ -116,7 +121,7 @@ export default function GeneratingPage() {
       });
 
       // Central stage ring — expands with progress
-      const ringR = 100 + (stage / STAGES.length) * 80 + Math.sin(t * 2) * 6;
+      const ringR = 100 + easeOutQuart(stage / STAGES.length) * 80 + Math.sin(t * 2) * 6;
       const ringA = 0.15 + (stage / STAGES.length) * 0.3;
       ctx.save();
       ctx.strokeStyle = `rgba(255,77,77,${ringA})`;

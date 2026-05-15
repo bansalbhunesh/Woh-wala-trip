@@ -233,7 +233,7 @@ export default function TripsPage() {
       </footer>
 
       <style jsx>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* spin defined in globals.css */
         @keyframes pulse-soft { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
     </CinematicShell>

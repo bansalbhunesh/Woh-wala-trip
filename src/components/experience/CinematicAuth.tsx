@@ -557,7 +557,7 @@ export default function CinematicAuth() {
           </div>
 
           {/* 6 digit slots */}
-          <div className="flex gap-3 justify-center" onPaste={handlePaste}>
+          <div className="flex gap-1.5 sm:gap-2.5 justify-center" onPaste={handlePaste}>
             {otp.map((d, i) => (
               <div key={i} className="relative">
                 {d && (
@@ -573,7 +573,7 @@ export default function CinematicAuth() {
                   onFocus={() => setActiveDigit(i)}
                   onBlur={() => setActiveDigit(-1)}
                   disabled={verifyLoading}
-                  className="relative w-12 h-14 text-center text-2xl font-display font-black outline-none rounded-xl disabled:opacity-50"
+                  className="relative w-9 h-11 sm:w-11 sm:h-13 text-center text-xl sm:text-2xl font-display font-black outline-none rounded-xl disabled:opacity-50"
                   style={{
                     background: d ? 'rgba(255,77,77,0.1)' : 'rgba(245,240,232,0.03)',
                     border: `1px solid ${activeDigit===i ? 'rgba(255,77,77,0.65)' : d ? 'rgba(255,77,77,0.35)' : 'rgba(245,240,232,0.08)'}`,

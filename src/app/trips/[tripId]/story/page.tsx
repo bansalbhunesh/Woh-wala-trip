@@ -83,28 +83,32 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Progress bars */}
-      <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-4">
+      {/* Progress bars — thicker, with active glow */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-3">
         {slides.map((_, i) => (
-          <div key={i} className="flex-1 h-0.5 bg-white/10 rounded-full overflow-hidden">
+          <div key={i} className="flex-1 h-1 bg-white/12 rounded-full overflow-hidden"
+               style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)' }}>
             <div
-              className="h-full bg-white/60 rounded-full transition-all duration-300"
-              style={{ width: i < idx ? '100%' : i === idx ? '50%' : '0%' }}
+              className="h-full bg-white/65 rounded-full transition-all duration-400"
+              style={{
+                width: i < idx ? '100%' : i === idx ? '50%' : '0%',
+                boxShadow: i === idx ? '0 0 6px rgba(255,255,255,0.35)' : 'none',
+              }}
             />
           </div>
         ))}
       </div>
 
-      {/* Exit */}
+      {/* Exit — more visible */}
       <button
         onClick={e => { e.stopPropagation(); router.push(`/trips/${tripId}`); }}
-        className="absolute top-8 right-4 z-50 text-white/25 text-xs font-vibe uppercase tracking-wider hover:text-white/50 transition-colors"
+        className="absolute top-6 right-4 z-50 text-white/40 text-xs font-vibe uppercase tracking-wider hover:text-white/65 active:text-white/80 transition-colors duration-200"
       >
         Exit
       </button>
 
-      {/* Slide content */}
-      <div className="min-h-screen flex flex-col items-center justify-center px-8 py-20">
+      {/* Slide content — key forces animation remount on every slide change */}
+      <div key={idx} className="min-h-screen flex flex-col items-center justify-center px-8 py-20">
         <SlideRenderer
           slide={current}
           router={router}
@@ -195,8 +199,13 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
       const name = m.display_name || m.role_archetype_tag || '?';
       return (
         <div className="text-center space-y-8 max-w-sm animate-fade-in">
-          <div className="w-20 h-20 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 flex items-center justify-center mx-auto">
-            <span className="text-2xl font-vibe font-bold text-cooked-accent">{name[0].toUpperCase()}</span>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto animate-fade-in"
+               style={{
+                 background: 'linear-gradient(135deg, rgba(255,77,77,0.15), rgba(255,77,77,0.04))',
+                 border: '1.5px solid rgba(255,77,77,0.3)',
+                 boxShadow: '0 0 24px rgba(255,77,77,0.12), inset 0 0 20px rgba(255,77,77,0.06)',
+               }}>
+            <span className="text-3xl font-vibe font-bold text-cooked-accent">{name[0].toUpperCase()}</span>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-white/25 font-vibe">{name}</p>
@@ -233,7 +242,10 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
             <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{s.question}</h2>
           </div>
           <div className="w-12 h-0.5 bg-chill-accent" />
-          <p className="text-5xl font-vibe font-bold text-white">{s.winner_name}</p>
+          <p className="text-5xl font-vibe font-bold text-cooked-accent"
+             style={{ textShadow: '0 0 20px rgba(255,77,77,0.25)' }}>
+            {s.winner_name}
+          </p>
           {s.reason && (
             <p className="text-sm font-data font-light text-white/45 italic leading-relaxed">{s.reason}</p>
           )}
