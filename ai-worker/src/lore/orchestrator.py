@@ -153,21 +153,32 @@ class LoreOrchestrator:
                     photo["storage_path"], 600
                 )
                 # supabase-py 2.x returns SignedURLResponse object or dict — handle both
+                # supabase-py 2.x wraps response in .data — handle both old and new formats
+                signed_url = None
                 if isinstance(url_resp, dict):
-                    signed_url = url_resp.get("signedURL") or url_resp.get("signedUrl")
+                    # New: {"data": {"signedUrl": "..."}, "error": None}
+                    if "data" in url_resp and isinstance(url_resp["data"], dict):
+                        d = url_resp["data"]
+                        signed_url = d.get("signedUrl") or d.get("signedURL") or d.get("signed_url")
+                    else:
+                        # Old: {"signedURL": "..."} or {"signedUrl": "..."}
+                        signed_url = url_resp.get("signedUrl") or url_resp.get("signedURL") or url_resp.get("signed_url")
                 else:
-                    signed_url = (
-                        getattr(url_resp, "signed_url", None)
-                        or getattr(url_resp, "signedURL", None)
-                        or (url_resp.data.get("signedURL") if hasattr(url_resp, "data") and isinstance(url_resp.data, dict) else None)
-                    )
+                    # Object-style response
+                    data = getattr(url_resp, "data", None)
+                    if isinstance(data, dict):
+                        signed_url = data.get("signedUrl") or data.get("signedURL")
+                    else:
+                        signed_url = (getattr(url_resp, "signedUrl", None)
+                                      or getattr(url_resp, "signedURL", None)
+                                      or getattr(url_resp, "signed_url", None))
                 if signed_url:
                     image_blocks.append({
                         "type": "image",
                         "source": {"type": "url", "url": signed_url},
                     })
                 else:
-                    log.warning(f"Empty signed URL for photo {photo.get('id')} — resp: {url_resp}")
+                    log.warning(f"Empty signed URL for photo {photo.get('id')} — resp type:{type(url_resp)} keys:{list(url_resp.keys()) if isinstance(url_resp, dict) else '?'}")
             except Exception as e:
                 log.warning(f"Failed to get signed URL for photo {photo.get('id')}: {e}")
 
