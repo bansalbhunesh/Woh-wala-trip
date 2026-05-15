@@ -16,7 +16,7 @@ export async function GET(
   const supabase = createSupabaseServiceClient();
 
   const { data: battle, error } = await supabase
-    .from('trip_vs_trip')
+    .from('trip_vs_trip' as never)
     .select(`
       *,
       trip_a:trip_a_id (*),
