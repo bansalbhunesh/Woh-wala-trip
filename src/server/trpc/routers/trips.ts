@@ -158,7 +158,7 @@ export const tripsRouter = router({
       const supabase = ctx.supabase as any;
       const { data } = await supabase
         .from('trips')
-        .select('creator_id, total_photos')
+        .select('creator_id')
         .eq('id', input.tripId)
         .single();
 
@@ -171,10 +171,16 @@ export const tripsRouter = router({
         });
       }
 
-      if ((trip.total_photos || 0) < 5) {
+      // Count actual photos — don't trust the cached total_photos column
+      const { count: photoCount } = await supabase
+        .from('photos')
+        .select('id', { count: 'exact', head: true })
+        .eq('trip_id', input.tripId);
+
+      if ((photoCount || 0) < 5) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Need at least 5 photos to generate lore—we cant write history without receipts.',
+          message: `Need at least 5 photos to generate lore. You have ${photoCount || 0} — upload ${5 - (photoCount || 0)} more.`,
         });
       }
 
