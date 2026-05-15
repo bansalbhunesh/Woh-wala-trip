@@ -101,7 +101,9 @@ export default function CinematicLanding() {
 
   const handleEnter = () => {
     setPhase(4);
-    setTimeout(() => router.push('/login'), 1200);
+    // Keep body black during navigation so there's no flash of white
+    document.body.style.background = '#060604';
+    setTimeout(() => router.push('/login'), 1100);
   };
 
   return (
@@ -424,14 +426,13 @@ export default function CinematicLanding() {
         </div>
       </div>
 
-      {/* ── PHASE 4: PORTAL COLLAPSE ─────────────────────── */}
+      {/* ── PHASE 4: PORTAL COLLAPSE — smooth full-screen fade, no scale pop ── */}
       <div
         className="absolute inset-0 z-20 pointer-events-none"
         style={{
-          background: 'radial-gradient(circle at 50% 85%, #060604 0%, transparent 100%)',
+          background: '#060604',
           opacity: phase === 4 ? 1 : 0,
-          transition: 'opacity 1.2s cubic-bezier(0.4,0,1,1)',
-          transform: phase === 4 ? 'scale(4)' : 'scale(1)',
+          transition: 'opacity 1s cubic-bezier(0.4,0,1,1)',
         }}
       />
 
