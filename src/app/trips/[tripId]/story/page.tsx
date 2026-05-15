@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useRef } from 'react';
+import { use, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import type { LoreJson } from '@/lib/types';
@@ -28,10 +28,32 @@ function buildSlides(tripId: string, lore: LoreJson, members: any[]): Slide[] {
   return slides;
 }
 
+// Count-up hook for the cooked score slam
+function useCountUp(target: number, active: boolean, duration = 1200) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!active) { setValue(0); return; }
+    const start = performance.now();
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+    let raf: number;
+    const tick = (now: number) => {
+      const elapsed = Math.min((now - start) / duration, 1);
+      setValue(Math.round(easeOut(elapsed) * target));
+      if (elapsed < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, active, duration]);
+  return value;
+}
+
 export default function StoryPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
   const router = useRouter();
   const [idx, setIdx] = useState(0);
+  const [dir, setDir] = useState<'forward' | 'backward'>('forward');
+  const [animKey, setAnimKey] = useState(0);
+  const [slamActive, setSlamActive] = useState(false);
   const touchStart = useRef<number | null>(null);
 
   const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
@@ -55,26 +77,40 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
   const current = slides[idx];
   const isFirst = idx === 0;
 
-  const advance = () => setIdx(i => Math.min(i + 1, slides.length - 1));
-  const retreat = () => setIdx(i => Math.max(i - 1, 0));
+  const advance = () => {
+    if (idx >= slides.length - 1) return;
+    setDir('forward'); setAnimKey(k => k + 1); setIdx(i => i + 1);
+    setSlamActive(false);
+  };
+  const retreat = () => {
+    if (idx <= 0) return;
+    setDir('backward'); setAnimKey(k => k + 1); setIdx(i => i - 1);
+    setSlamActive(false);
+  };
+
+  // Trigger slam on cooked slide
+  useEffect(() => {
+    if (current.type === 'cooked') {
+      const t = setTimeout(() => setSlamActive(true), 200);
+      return () => clearTimeout(t);
+    }
+    setSlamActive(false);
+  }, [current.type, animKey]);
 
   const handleTap = (e: React.MouseEvent) => {
-    const x = e.clientX;
-    const w = window.innerWidth;
-    if (x < w * 0.33) retreat();
-    else advance();
+    if (e.clientX < window.innerWidth * 0.33) retreat(); else advance();
   };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStart.current = e.touches[0].clientX;
-  };
-
+  const handleTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStart.current;
     if (Math.abs(dx) > 50) dx < 0 ? advance() : retreat();
     touchStart.current = null;
   };
+
+  const slideAnim = dir === 'forward'
+    ? 'story-slide-in-right'
+    : 'story-slide-in-left';
 
   return (
     <div
@@ -83,84 +119,136 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Progress bars — thicker, with active glow */}
+      {/* Progress bars */}
       <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-3">
         {slides.map((_, i) => (
           <div key={i} className="flex-1 h-1 bg-white/12 rounded-full overflow-hidden"
                style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)' }}>
-            <div
-              className="h-full bg-white/65 rounded-full transition-all duration-400"
-              style={{
-                width: i < idx ? '100%' : i === idx ? '50%' : '0%',
-                boxShadow: i === idx ? '0 0 6px rgba(255,255,255,0.35)' : 'none',
-              }}
-            />
+            <div className="h-full bg-white/65 rounded-full transition-all duration-400"
+                 style={{
+                   width: i < idx ? '100%' : i === idx ? '50%' : '0%',
+                   boxShadow: i === idx ? '0 0 6px rgba(255,255,255,0.35)' : 'none',
+                 }} />
           </div>
         ))}
       </div>
 
-      {/* Exit — more visible */}
-      <button
-        onClick={e => { e.stopPropagation(); router.push(`/trips/${tripId}`); }}
-        className="absolute top-6 right-4 z-50 text-white/40 text-xs font-vibe uppercase tracking-wider hover:text-white/65 active:text-white/80 transition-colors duration-200"
-      >
+      {/* Exit */}
+      <button onClick={e => { e.stopPropagation(); router.push(`/trips/${tripId}`); }}
+              className="absolute top-6 right-4 z-50 text-white/40 text-xs font-vibe uppercase tracking-wider hover:text-white/65 transition-colors duration-200">
         Exit
       </button>
 
-      {/* Slide content — key forces animation remount on every slide change */}
-      <div key={idx} className="min-h-screen flex flex-col items-center justify-center px-8 py-20">
+      {/* Directional slide — key remounts on every nav, direction drives the enter animation */}
+      <div
+        key={animKey}
+        className="min-h-screen flex flex-col items-center justify-center px-8 py-20"
+        style={{ animation: `${slideAnim} 0.35s cubic-bezier(0.16,1,0.3,1) both` }}
+      >
         <SlideRenderer
           slide={current}
           router={router}
           tripId={tripId}
           onShare={() => router.push(`/trips/${tripId}/share`)}
+          slamActive={slamActive}
         />
       </div>
 
       {isFirst && (
-        <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8 pointer-events-none">
-          <span className="text-white/12 text-xs font-vibe uppercase tracking-wider">← tap</span>
-          <span className="text-white/12 text-xs font-vibe uppercase tracking-wider">tap →</span>
+        <div className="absolute bottom-6 left-0 right-0 flex justify-between px-8 pointer-events-none">
+          <span className="text-white/25 text-xs font-vibe uppercase tracking-wider">← tap</span>
+          <span className="text-white/25 text-xs font-vibe uppercase tracking-wider">tap →</span>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes story-slide-in-right {
+          from { opacity: 0.4; transform: translateX(60px) scale(0.96); }
+          to   { opacity: 1;   transform: translateX(0)    scale(1); }
+        }
+        @keyframes story-slide-in-left {
+          from { opacity: 0.4; transform: translateX(-60px) scale(0.96); }
+          to   { opacity: 1;   transform: translateX(0)     scale(1); }
+        }
+        @keyframes score-slam {
+          0%   { transform: scale(0.5); opacity: 0; }
+          60%  { transform: scale(1.12); opacity: 1; }
+          80%  { transform: scale(0.97); }
+          100% { transform: scale(1); }
+        }
+        @keyframes slam-glow {
+          0%   { text-shadow: 0 0 0px rgba(255,77,77,0); }
+          50%  { text-shadow: 0 0 60px rgba(255,77,77,0.6), 0 0 100px rgba(255,77,77,0.3); }
+          100% { text-shadow: 0 0 20px rgba(255,77,77,0.2); }
+        }
+        @keyframes card-flip {
+          from { transform: perspective(800px) rotateY(-90deg) scale(0.8); opacity: 0; }
+          to   { transform: perspective(800px) rotateY(0deg)   scale(1);   opacity: 1; }
+        }
+        @keyframes verdict-rise {
+          from { opacity: 0; transform: translateY(30px); filter: blur(4px); }
+          to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+        }
+      `}</style>
     </div>
   );
 }
 
-function SlideRenderer({ slide, router, tripId, onShare }: {
-  slide: Slide; router: any; tripId: string; onShare: () => void;
+function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
+  slide: Slide; router: any; tripId: string; onShare: () => void; slamActive: boolean;
 }) {
+  const cookedLevel = slide.type === 'cooked'
+    ? (slide.lore.cooked_level ?? (slide.lore as any).chaos_score ?? 84)
+    : 0;
+  const countedScore = useCountUp(cookedLevel, slamActive, 1100);
+
   switch (slide.type) {
     case 'title':
       return (
-        <div className="text-center space-y-8 max-w-sm animate-fade-in">
+        <div className="text-center space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
           <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Official Archive</p>
           <h1 className="text-5xl font-cinematic font-medium text-white leading-[0.9]">
-            {slide.lore.trip_title || (slide.lore as any).name}
+            {(slide.lore as any).trip_title || (slide.lore as any).name}
           </h1>
           <p className="text-xl font-cinematic italic text-chill-accent leading-relaxed">
             &ldquo;{slide.lore.tagline || 'Your friendship, documented.'}&rdquo;
           </p>
           {(slide.lore as any).opening_line && (
-            <p className="text-sm text-white/35 font-data font-light">{(slide.lore as any).opening_line}</p>
+            <p className="text-sm text-white/35 font-data font-light" style={{ animationDelay: '0.3s' }}>
+              {(slide.lore as any).opening_line}
+            </p>
           )}
         </div>
       );
 
     case 'cooked':
       return (
-        <div className="text-center space-y-8 max-w-sm animate-fade-in">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">How Cooked?</p>
-          <div className="space-y-2">
-            <div className="text-[20vw] font-vibe font-bold tracking-tighter text-cooked-accent leading-none">
-              {slide.lore.cooked_level ?? (slide.lore as any).chaos_score ?? 84}
-            </div>
-            <p className="text-2xl font-vibe font-bold uppercase tracking-tight text-white/90">
-              {slide.lore.cooked_verdict || 'Historically Cooked'}
-            </p>
+        <div className="text-center space-y-6 max-w-sm">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe"
+             style={{ animation: 'fade-in 0.4s ease both' }}>
+            How Cooked?
+          </p>
+          {/* The SLAM — big number counts up then slams */}
+          <div
+            style={{
+              fontSize: 'clamp(100px, 22vw, 200px)',
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 900,
+              lineHeight: 1,
+              color: '#FF4D4D',
+              letterSpacing: '-0.04em',
+              animation: slamActive ? 'score-slam 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both, slam-glow 1.2s ease 0.7s both' : 'none',
+            }}
+          >
+            {slamActive ? countedScore : ''}
           </div>
+          <p className="text-2xl font-vibe font-bold uppercase tracking-tight text-white/90"
+             style={{ animation: slamActive ? 'verdict-rise 0.5s ease 0.8s both' : 'none', opacity: slamActive ? undefined : 0 }}>
+            {slide.lore.cooked_verdict || 'Historically Cooked'}
+          </p>
           {(slide.lore as any).cooked_explanation && (
-            <p className="text-base font-data font-light text-white/45 italic leading-relaxed">
+            <p className="text-base font-data font-light text-white/45 italic leading-relaxed"
+               style={{ animation: slamActive ? 'fade-in 0.6s ease 1.2s both' : 'none', opacity: slamActive ? undefined : 0 }}>
               {(slide.lore as any).cooked_explanation}
             </p>
           )}
@@ -169,7 +257,7 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
 
     case 'recap':
       return (
-        <div className="space-y-8 max-w-sm animate-fade-in">
+        <div className="space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
           <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Season Recap</p>
           <p className="text-xl font-data font-light text-white/75 leading-relaxed">
             {slide.lore.season_recap?.full_narrative}
@@ -180,7 +268,7 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
     case 'era': {
       const era = slide.lore.trip_eras![slide.idx];
       return (
-        <div className="space-y-8 max-w-sm animate-fade-in">
+        <div className="space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
           <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Era {slide.idx + 1}</p>
           <h2 className="text-4xl font-cinematic font-medium text-white leading-tight">{era.era_name}</h2>
           {era.timeframe && <p className="text-[10px] uppercase tracking-wider text-chill-accent font-vibe">{era.timeframe}</p>}
@@ -198,35 +286,28 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
       const m = slide.member;
       const name = m.display_name || m.role_archetype_tag || '?';
       return (
-        <div className="text-center space-y-8 max-w-sm animate-fade-in">
-          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto animate-fade-in"
+        // Card flip reveal on character slides
+        <div className="text-center space-y-8 max-w-sm" style={{ animation: 'card-flip 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s both' }}>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto"
                style={{
-                 background: 'linear-gradient(135deg, rgba(255,77,77,0.15), rgba(255,77,77,0.04))',
-                 border: '1.5px solid rgba(255,77,77,0.3)',
-                 boxShadow: '0 0 24px rgba(255,77,77,0.12), inset 0 0 20px rgba(255,77,77,0.06)',
+                 background: 'linear-gradient(135deg, rgba(255,77,77,0.18), rgba(255,77,77,0.04))',
+                 border: '1.5px solid rgba(255,77,77,0.35)',
+                 boxShadow: '0 0 28px rgba(255,77,77,0.15), inset 0 0 20px rgba(255,77,77,0.07)',
                }}>
             <span className="text-3xl font-vibe font-bold text-cooked-accent">{name[0].toUpperCase()}</span>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-white/25 font-vibe">{name}</p>
-            <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">
-              {m.role_title}
-            </h2>
+            <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{m.role_title}</h2>
           </div>
-          <p className="text-base font-data font-light text-white/55 leading-relaxed">
-            {m.role_description}
-          </p>
+          <p className="text-base font-data font-light text-white/55 leading-relaxed">{m.role_description}</p>
           {(m.role_chaos_rating != null) && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cooked-accent/10 border border-cooked-accent/15">
-              <span className="text-cooked-accent font-vibe font-bold text-sm">
-                Chaos {m.role_chaos_rating}/10
-              </span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cooked-accent/10 border border-cooked-accent/18">
+              <span className="text-cooked-accent font-vibe font-bold text-sm">Chaos {m.role_chaos_rating}/10</span>
             </div>
           )}
           {m.role_most_likely_said && (
-            <p className="text-sm font-cinematic italic text-white/35">
-              &ldquo;{m.role_most_likely_said}&rdquo;
-            </p>
+            <p className="text-sm font-cinematic italic text-white/35">&ldquo;{m.role_most_likely_said}&rdquo;</p>
           )}
         </div>
       );
@@ -235,19 +316,26 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
     case 'superlative': {
       const s = slide.sup;
       return (
-        <div className="space-y-8 max-w-sm animate-fade-in">
+        <div className="space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
           <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Award #{slide.idx + 1}</p>
           <div className="space-y-3">
             <p className="text-lg font-cinematic italic text-white/45">most likely to</p>
             <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{s.question}</h2>
           </div>
-          <div className="w-12 h-0.5 bg-chill-accent" />
+          <div className="w-12 h-0.5 bg-chill-accent rounded-full"
+               style={{ boxShadow: '0 0 8px rgba(45,158,139,0.4)' }} />
           <p className="text-5xl font-vibe font-bold text-cooked-accent"
-             style={{ textShadow: '0 0 20px rgba(255,77,77,0.25)' }}>
+             style={{
+               textShadow: '0 0 20px rgba(255,77,77,0.25)',
+               animation: 'score-slam 0.5s cubic-bezier(0.16,1,0.3,1) 0.2s both',
+             }}>
             {s.winner_name}
           </p>
           {s.reason && (
-            <p className="text-sm font-data font-light text-white/45 italic leading-relaxed">{s.reason}</p>
+            <p className="text-sm font-data font-light text-white/45 italic leading-relaxed"
+               style={{ animation: 'fade-in 0.5s ease 0.5s both', opacity: 0 }}>
+              {s.reason}
+            </p>
           )}
         </div>
       );
@@ -255,32 +343,34 @@ function SlideRenderer({ slide, router, tripId, onShare }: {
 
     case 'verdict':
       return (
-        <div className="text-center space-y-12 max-w-sm animate-fade-in">
-          <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
-          <p className="text-2xl font-cinematic italic text-white/75 leading-relaxed">
+        <div className="text-center space-y-12 max-w-sm">
+          <div className="w-12 h-0.5 bg-chill-accent mx-auto rounded-full"
+               style={{ boxShadow: '0 0 8px rgba(45,158,139,0.4)', animation: 'fade-in 0.4s ease both' }} />
+          <p className="text-2xl font-cinematic italic text-white/80 leading-relaxed"
+             style={{ animation: 'verdict-rise 0.7s cubic-bezier(0.16,1,0.3,1) 0.15s both', opacity: 0 }}>
             &ldquo;{(slide.lore as any).closing_line || slide.lore.cooked_verdict}&rdquo;
           </p>
-          <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/15 font-vibe">The Final Verdict</p>
+          <div className="w-12 h-0.5 bg-chill-accent mx-auto rounded-full"
+               style={{ boxShadow: '0 0 8px rgba(45,158,139,0.4)', animation: 'fade-in 0.4s ease 0.4s both', opacity: 0 }} />
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/15 font-vibe"
+             style={{ animation: 'fade-in 0.4s ease 0.6s both', opacity: 0 }}>
+            The Final Verdict
+          </p>
         </div>
       );
 
     case 'share':
       return (
-        <div className="text-center space-y-10 max-w-sm animate-fade-in">
+        <div className="text-center space-y-10 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
           <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Your Lore is Ready</p>
           <h2 className="text-4xl font-cinematic font-medium text-white">Export your identity</h2>
           <p className="text-sm font-data font-light text-white/35">Pick your card and expose your friend group.</p>
-          <button
-            onClick={e => { e.stopPropagation(); onShare(); }}
-            className="w-full py-5 bg-white text-[#060604] rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] transition-transform shadow-2xl"
-          >
+          <button onClick={e => { e.stopPropagation(); onShare(); }}
+                  className="w-full py-5 bg-white text-[#060604] rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-xl">
             Pick Your Card
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); router.push(`/trips/${slide.tripId}`); }}
-            className="text-[10px] uppercase tracking-widest font-vibe text-white/15 hover:text-white/35 transition-colors"
-          >
+          <button onClick={e => { e.stopPropagation(); router.push(`/trips/${slide.tripId}`); }}
+                  className="text-[10px] uppercase tracking-widest font-vibe text-white/15 hover:text-white/35 transition-colors">
             View full archive →
           </button>
         </div>

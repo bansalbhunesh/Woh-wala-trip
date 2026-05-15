@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 
@@ -28,14 +28,20 @@ export default function GeneratingPage() {
   const trip = (tripData as any)?.trip;
   const loreStatus = trip?.lore_status;
 
+  const [unlocking, setUnlocking] = useState(false);
+
   useEffect(() => {
-    if (loreStatus === 'ready') router.push(`/trips/${tripId}/story`);
-    else if (loreStatus === 'failed') router.push(`/trips/${tripId}`);
-    // Guard: if data loaded and status is not processing, go back (prevents infinite spinner)
-    else if (tripData && loreStatus !== 'processing' && loreStatus !== undefined) {
+    if (loreStatus === 'ready' && !unlocking) {
+      // Dramatic unlock flash before routing to story
+      setUnlocking(true);
+      setProgress(100);
+      setTimeout(() => router.push(`/trips/${tripId}/story`), 1800);
+    } else if (loreStatus === 'failed') {
+      router.push(`/trips/${tripId}`);
+    } else if (tripData && loreStatus !== 'processing' && loreStatus !== undefined) {
       router.push(`/trips/${tripId}`);
     }
-  }, [loreStatus, router, tripId, tripData]);
+  }, [loreStatus, router, tripId, tripData, unlocking]);
 
   // Progress simulation
   useEffect(() => {
@@ -215,9 +221,45 @@ export default function GeneratingPage() {
         </p>
       </div>
 
+      {/* Lore-unlock cinematic overlay — appears when lore_status→ready */}
+      {unlocking && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center"
+             style={{ background: '#060604', animation: 'unlock-appear 0.3s ease both' }}>
+          <div style={{ textAlign: 'center' }} className="space-y-4">
+            <p className="font-mono text-[8px] uppercase tracking-[0.7em] mb-6"
+               style={{ color: 'rgba(255,77,77,0.6)', animation: 'fade-in 0.4s ease 0.2s both', opacity: 0 }}>
+              ● LORE SEALED
+            </p>
+            <div className="font-display font-black uppercase"
+                 style={{
+                   fontSize: 'clamp(40px, 8vw, 80px)',
+                   color: 'rgba(245,240,232,0.95)',
+                   letterSpacing: '-0.03em',
+                   animation: 'slam-up 0.6s cubic-bezier(0.16,1,0.3,1) 0.3s both',
+                   opacity: 0,
+                 }}>
+              {trip?.name || 'THE LORE'}
+            </div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.5em] mt-6"
+               style={{
+                 color: 'rgba(255,77,77,0.5)',
+                 animation: 'fade-in 0.5s ease 0.9s both',
+                 opacity: 0,
+               }}>
+              OPENING THE ARCHIVE...
+            </p>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         @keyframes slide-up { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fade-in { from{opacity:0} to{opacity:1} }
+        @keyframes unlock-appear { from{opacity:0} to{opacity:1} }
+        @keyframes slam-up {
+          from { opacity:0; transform: translateY(40px) scale(0.92); }
+          to   { opacity:1; transform: translateY(0)    scale(1); }
+        }
       `}</style>
     </div>
   );

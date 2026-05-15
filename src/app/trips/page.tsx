@@ -127,22 +127,31 @@ export default function TripsPage() {
                 <Link
                   key={trip.id}
                   href={`/trips/${trip.id}`}
-                  className="group relative block rounded-2xl overflow-hidden transition-all duration-500"
+                  className="group relative block rounded-2xl overflow-hidden"
                   style={{
                     background: 'rgba(245,240,232,0.03)',
                     border: `1px solid rgba(245,240,232,0.07)`,
                     boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)`,
                     opacity: revealed ? 1 : 0,
                     transform: revealed ? 'translateY(0)' : 'translateY(20px)',
-                    transition: `opacity 0.6s ease ${animDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, box-shadow 0.3s ease, border-color 0.3s ease`,
+                    transition: `opacity 0.6s ease ${animDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, box-shadow 0.4s ease, border-color 0.3s ease`,
+                    willChange: 'transform',
+                    transformStyle: 'preserve-3d',
                   }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = `${accent}40`;
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 16px 48px rgba(0,0,0,0.4), 0 0 40px ${glow}, inset 0 1px 0 rgba(245,240,232,0.06)`;
+                  onMouseMove={e => {
+                    const el = e.currentTarget as HTMLAnchorElement;
+                    const r = el.getBoundingClientRect();
+                    const x = (e.clientX - r.left) / r.width - 0.5;
+                    const y = (e.clientY - r.top) / r.height - 0.5;
+                    el.style.transform = `perspective(800px) rotateX(${-y * 6}deg) rotateY(${x * 6}deg) translateY(-4px)`;
+                    el.style.borderColor = `${accent}40`;
+                    el.style.boxShadow = `0 20px 52px rgba(0,0,0,0.5), 0 0 40px ${glow}, inset 0 1px 0 rgba(245,240,232,0.07)`;
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(245,240,232,0.07)';
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)';
+                    const el = e.currentTarget as HTMLAnchorElement;
+                    el.style.transform = revealed ? 'translateY(0) perspective(800px) rotateX(0) rotateY(0)' : '';
+                    el.style.borderColor = 'rgba(245,240,232,0.07)';
+                    el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)';
                   }}
                 >
                   {/* Color glow panel */}
