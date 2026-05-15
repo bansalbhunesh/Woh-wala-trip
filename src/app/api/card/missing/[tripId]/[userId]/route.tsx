@@ -30,10 +30,10 @@ export async function GET(
 
   const trip = m.trips;
   const palette = PALETTES.chaos; // Missing cards are always high-chaos alert themed
-  const origin = req.headers.get('origin');
+  const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
     loadCardFonts(origin),
-    qrDataUrl(`${origin}/join/${trip.invite_code}`, {
+    qrDataUrl(`${origin}/trips/join?code=${trip.invite_code}`, {
       dark: palette.ink,
     }),
   ]);

@@ -51,7 +51,7 @@ export async function GET(
     const palette = paletteFor(trip.chaos_score || 50);
 
     // 2. Fetch QR code (depends on trip data)
-    const qr = await qrDataUrl(`${origin}/join/${trip.invite_code}`, {
+    const qr = await qrDataUrl(`${origin}/trips/join?code=${trip.invite_code}`, {
       dark: palette.ink,
     });
 

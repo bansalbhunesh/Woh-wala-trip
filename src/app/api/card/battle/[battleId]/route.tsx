@@ -32,11 +32,12 @@ export async function GET(
   const b = battle as any;
   const tripA = b.trip_a;
   const tripB = b.trip_b;
-  const palette = PALETTES.inferno; // Battles are high stakes
-  const origin = req.headers.get('origin');
+  const maxScore = Math.max((b.trip_a as any)?.chaos_score ?? 0, (b.trip_b as any)?.chaos_score ?? 0);
+  const palette = maxScore >= 76 ? PALETTES.cooked : PALETTES.delusional;
+  const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
     loadCardFonts(origin),
-    qrDataUrl(`${origin}/battles/${battleId}`, {
+    qrDataUrl(`${origin}/trips/${tripA.id}`, {
       dark: palette.ink,
     }),
   ]);

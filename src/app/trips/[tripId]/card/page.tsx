@@ -20,7 +20,7 @@ export default function ShareCardPage({ params }: { params: Promise<{ tripId: st
     );
   }
   
-  const cardImageUrl = `/api/render-card?tripId=${tripId}`;
+  const cardImageUrl = `/api/card/${tripId}`;
   
   const shareToWhatsApp = () => {
     const msg = `${lore.whatsapp_caption || lore.tagline} ${window.location.origin}/trips/${tripId}`;

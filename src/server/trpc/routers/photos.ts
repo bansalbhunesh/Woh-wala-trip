@@ -79,7 +79,7 @@ export const photosRouter = router({
         .from('photos')
         .insert({
           trip_id: input.tripId,
-          uploader_id: ctx.user.id,
+          user_id: ctx.user.id,
           storage_path: input.storagePath,
           width: input.width,
           height: input.height,
@@ -117,7 +117,7 @@ export const photosRouter = router({
         .from('photos')
         .select('*')
         .eq('trip_id', input.tripId)
-        .order('uploaded_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error)
         throw new TRPCError({

@@ -17,8 +17,8 @@ export default function InvitePage({ params }: { params: Promise<{ tripId: strin
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trip = (tripData as any)?.trip;
   const inviteCode = trip?.invite_code || '';
-  const tripName = trip?.title || 'this trip';
-  const inviteLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${inviteCode}`;
+  const tripName = trip?.name || 'this trip';
+  const inviteLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/trips/join?code=${inviteCode}`;
   const whatsappMessage = `Aaye yaar, ${tripName} ka archive bana raha hoon. Apne photos upload karo: ${inviteLink}`;
 
   const copyCode = async () => {

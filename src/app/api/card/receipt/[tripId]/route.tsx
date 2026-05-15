@@ -35,10 +35,10 @@ export async function GET(
   }
 
   const palette = paletteFor(t.chaos_score || 50);
-  const origin = req.headers.get('origin');
+  const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
     loadCardFonts(origin),
-    qrDataUrl(`${origin}/join/${t.invite_code}`, {
+    qrDataUrl(`${origin}/trips/join?code=${t.invite_code}`, {
       dark: palette.ink,
     }),
   ]);
