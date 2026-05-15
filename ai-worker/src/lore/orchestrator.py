@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -285,9 +285,14 @@ class LoreOrchestrator:
         other_uploads = {
             m["profiles"]["display_name"]: m.get("photos_uploaded", 0)
             for m in all_members
-            if m["user_id"] != member["user_id"] and m.get("profiles")
+            if m["user_id"] != member["user_id"]
+            and m.get("profiles") and isinstance(m["profiles"], dict) and m["profiles"].get("display_name")
         }
-        name = member["profiles"]["display_name"] if member.get("profiles") else "Unknown"
+        name = (
+            member["profiles"]["display_name"]
+            if member.get("profiles") and isinstance(member["profiles"], dict) and member["profiles"].get("display_name")
+            else "Unknown"
+        )
 
         user_prompt = prompts.CHARACTER_ROLE_USER.format(
             person_label=name,
@@ -354,7 +359,7 @@ class LoreOrchestrator:
         members_payload = [
             {
                 "user_id": m["user_id"],
-                "display_name": m["profiles"]["display_name"] if m.get("profiles") else "Unknown",
+                "display_name": (m["profiles"].get("display_name") if isinstance(m.get("profiles"), dict) else None) or "Unknown",
             }
             for m in members
         ]
@@ -387,7 +392,7 @@ class LoreOrchestrator:
             "lore_json": lore,
             # Write cooked_level to chaos_score column for backwards compat
             "chaos_score": lore.get("cooked_level", 60),
-            "lore_generated_at": datetime.utcnow().isoformat(),
+            "lore_generated_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", trip_id).execute()
 
         if lore.get("trip_eras"):

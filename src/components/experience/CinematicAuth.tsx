@@ -412,7 +412,7 @@ export default function CinematicAuth() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const digits = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
+    const digits = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,8);
     const next = [...otp];
     digits.split('').forEach((d,i) => { next[i] = d; });
     setOtp(next);

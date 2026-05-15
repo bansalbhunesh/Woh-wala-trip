@@ -31,7 +31,11 @@ export default function GeneratingPage() {
   useEffect(() => {
     if (loreStatus === 'ready') router.push(`/trips/${tripId}/story`);
     else if (loreStatus === 'failed') router.push(`/trips/${tripId}`);
-  }, [loreStatus, router, tripId]);
+    // Guard: if data loaded and status is not processing, go back (prevents infinite spinner)
+    else if (tripData && loreStatus !== 'processing' && loreStatus !== undefined) {
+      router.push(`/trips/${tripId}`);
+    }
+  }, [loreStatus, router, tripId, tripData]);
 
   // Progress simulation
   useEffect(() => {
