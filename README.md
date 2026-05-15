@@ -1,82 +1,299 @@
-# ✦ Woh Wala Trip ✦
-> **The "Spotify Wrapped-meets-A24" Cinematic Overhaul.**
+<div align="center">
 
-[![Vibe](https://img.shields.io/badge/Design_System-Total_11-red?style=for-the-badge)](https://nextjs.org)
-[![Aesthetic](https://img.shields.io/badge/Aesthetic-Cinematic_High_Fidelity-black?style=for-the-badge)](https://vercel.com)
-[![Status](https://img.shields.io/badge/Build-Historically_Cooked-orange?style=for-the-badge)](https://github.com/bansalbhunesh/Woh-wala-trip)
+# WOH WALA TRIP
 
----
+### *Your friendships, narrated.*
 
-## 🎬 The Overhaul: Cinematic Lore Archiving
+**The AI-powered friendship documentary. Spotify Wrapped for the trips you'll never forget.**
 
-**Woh Wala Trip** isn't just a gallery; it's a high-fidelity digital museum of your group's chaos. We've rebuilt the entire experience using the **"Total 11" Design System**—a premium visual identity characterized by aggressive typography, ambient theatrical motion, and "historically cooked" data reveals.
-
----
-
-## 🎭 The Screen-by-Screen Experience
-
-### 1. ✦ The Cinematic Home
-The entry point into the lore. 
-- **Floating Hero Cards**: Immersive character and trip posters that float across the screen.
-- **Marquee Tickers**: Real-time chaos-lore scrolling in a high-contrast cinematic ticker.
-- **Vibrant Ambient Glows**: Theatrical lighting that shifts based on the "collective energy."
-
-### 2. ✦ The Lore scanning (Generating)
-The algorithm doesn't just "load"; it **documents**.
-- **SVG Progress Ring**: A high-fidelity, pulsing ring tracking the decryption of your group's identity.
-- **Lore Scanning Steps**: Sequential logging (e.g., "Cross-referencing incident reports...", "Assigning archetypes...") that brings the AI worker to life.
-- **The Verdict Reveal**: A massive theatrical reveal when the engine determines your final "Cooked Level."
-
-### 3. ✦ Tap-Through Story Mode
-Your trip, narrated as a full-screen cinematic sequence.
-- **Story Navigation**: Intuitive tap-to-advance navigation with synchronized progress bars (Instagram Stories style).
-- **Chaos Reveal Slides**: High-impact reveals of the Collective Chaos Score (0–100).
-- **Character Spotlights**: Dedicated slides for each member with their **Archetype**, **Roast**, and **Chaos Rating**.
-- **The Verdict Slide**: A final "Sealed Lore" verdict with "most likely to" superlatives.
-
-### 4. ✦ The Season Archive (Gallery)
-A curated collection of your group's history.
-- **High-Fidelity Posters**: Every trip is reimagined as a cinematic "Season Poster."
-- **Chaos-Coded Gradients**: Visual indicators that shift from "Chill" (Teal) to "Historically Cooked" (Deep Red) based on the score.
-- **Ghosted Data Overlays**: Massive scores ghosted into the background of each poster.
-
-### 5. ✦ The Trip Room (Detail View)
-The high-stakes dashboard of your collective identity.
-- **Massive Chaos Score**: A theatrical, screen-filling chaos score with ambient drop shadows.
-- **Trip Eras Timeline**: A vertical, era-based timeline (e.g., "The Yoga Phase", "The Realization") that segments the chaos chronologically.
-- **Chaos-Sized Cards**: Character cards that physically size themselves based on their contribution to the group's chaos.
-
-### 6. ✦ The Share Suite
-Where the lore goes viral.
-- **Identity Card Gallery**: A horizontal carousel of high-fidelity cards.
-- **Distinct Aesthetic Styles**: 
-  - **The Dark Poster**: For high-chaos season finales.
-  - **The Warm Character**: Focused on individual archetypes.
-  - **The Light Receipt**: An itemized list of group decisions and data points.
-- **WhatsApp Optimized**: Integrated "Share to WhatsApp" with pre-filled, lore-aware captions.
-
-### 7. ✦ The Battle Arena (VS)
-For when the lore needs to be settled through public opinion.
-- **Pulse VS Animation**: A theatrical "VS" divider that pulses with the group's energy.
-- **Live Voting Progress**: Real-time visualization of who is currently winning the "Chaos Clash."
-- **Ghosted Leaderboards**: Aggressive background typography tracking the score.
-
-### 8. ✦ Short-Link Public Preview (`/t/[code]`)
-The viral entry point for outsiders.
-- **Dynamic OG Cards**: Custom OpenGraph images generated for every trip and character.
-- **Ambient Public Landing**: A stripped-back, cinematic landing page for non-members to see the "verdict."
+[![Live Demo](https://img.shields.io/badge/LIVE_DEMO-woh--wala--trip.vercel.app-FF4D4D?style=for-the-badge&logoColor=white)](https://woh-wala-trip.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![Claude AI](https://img.shields.io/badge/Claude_Sonnet_4-FF6B00?style=for-the-badge&logoColor=white)](https://anthropic.com)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 
 ---
 
-## 🛠️ The "Total 11" Tech Stack
-- **Typography**: `Playfair Display` (Theatrical Headings) & `Syne` (Aggressive UI).
-- **Texture**: SVG-based **Film Grain** overlay for premium cinematic feel.
-- **Engine**: Next.js 16 + tRPC + Supabase SSR.
-- **Motion**: Custom Tailwind keyframes for floating, pulsing, and sliding.
+> *"Some products show you data. This one shows you who you really are."*
+
+</div>
 
 ---
 
-<p align="center">
-  <b>Woh Wala Trip — Your friendships, narrated.</b><br>
-  <i>Stop being "technically impressive." Start being "historically cooked."</i>
-</p>
+## What Is This?
+
+You went on a trip with your friends. Someone started drama on Day 1. Someone else claimed to be "fine" until 2 AM. There were three near-disasters, eleven incidents, and one conversation you're never speaking of again.
+
+**Woh Wala Trip turns all of that into mythology.**
+
+Upload your photo dump. Our AI watches, judges, and documents. Out comes a cinematic, roasting, brutally honest **Friendship Lore Archive** — complete with character archetypes, season recaps, chaos scores, and superlatives that will immediately end up in the group chat.
+
+This is not a travel app. It's a **friendship documentary reconstructed from recovered memories.**
+
+---
+
+## The Experience
+
+### Phase 0 — The Universe Opens
+
+You don't "sign up". You enter. The landing page materializes from void — 880 particles rush inward, archetype cards orbit in deep space, a golden snitch bounces across the edges. The Dr. Strange portal rotates on the login screen. Nothing is immediate. Everything is revealed.
+
+```
+WOH          ⚡ Chaos Source      🐈‍⬛ Black Cat
+WALA            9/10                7/10
+TRIP ←——
+             📊 Trip Receipt     🐕 Golden Ret.
+             VERDICT: COOKED✓       5/10
+```
+
+### Phase 1 — The Archive
+
+Your trips live as dark glass cards that physically tilt in 3D toward your cursor. Each card glows in its own accent color. One tap and the story begins.
+
+### Phase 2 — Feed The Engine
+
+Photos get absorbed one at a time through a cinematic pipeline:
+
+```
+Click +  →  Preview appears in slot
+         →  Red scan line sweeps down the image
+         →  Progress ring fills clockwise
+         →  Image collapses into the lore engine ✓
+         →  Slot resets for the next memory
+```
+
+### Phase 3 — The Generating Universe
+
+While Claude analyzes your photos, the app becomes a particle universe that intensifies with each stage:
+
+```
+STAGE 1  SCANNING MEMORIES        "Reading your photo dump for emotional evidence"
+STAGE 2  IDENTIFYING ARCHETYPES   "Detecting who started it this time"
+STAGE 3  CROSS-REFERENCING        "Connecting incidents to archetypes"
+STAGE 4  WRITING THE LORE         "Constructing your friendship mythology"
+STAGE 5  SCORING THE CHAOS        "Calculating historically cooked potential"
+STAGE 6  SEALING THE UNIVERSE     "Finalizing the memory archive"
+```
+
+### Phase 4 — The Story
+
+Tap through slides like Instagram Stories — but instead of selfies:
+
+- The **cooked score** counts up 0→84 with a visual shockwave and glow bloom
+- **Character archetypes** flip in with a 3D card reveal
+- **Season eras** appear like documentary chapters
+- **Superlatives** slam in with the winner's name in oversized type
+- A **closing line** that will end up on someone's Instagram Story
+
+---
+
+## What The AI Actually Does
+
+The pipeline runs 8 stages using Claude Sonnet 4 vision + text:
+
+| Stage | What Happens |
+|---|---|
+| **Vision Batching** | Claude looks at every photo for behavioral signals — who's documenting vs who's performing, late-night vs golden-hour energy, chaos indicators |
+| **Signal Aggregation** | Cross-references all batches into a unified friendship signal: social dynamic, dominant time pattern, peak cooked moment |
+| **Lore Generation** | Writes a full Hinglish-native, A24-toned narrative with: trip title, tagline, 3-act season recap, trip eras with defining moments |
+| **Archetype Assignment** | Per-person character roles: Chaos Source · Black Cat · Golden Retriever · NPC Energy · Main Character · Plot Twist |
+| **Cooked Score** | 0–100 chaos measurement. Mildly Simmering → Emotionally Unstable → Peak Delusion → **Historically Cooked** |
+| **Superlatives** | "Most likely to start drama and blame Mercury retrograde" — assigned to the actual person with evidence |
+| **Trip Receipt** | Documentary-style stats: photos dumped, incidents logged, chaos %, star rating |
+| **Validation** | Rejects any generic AI-sounding output. "Unforgettable memories" = auto-rejected. Must be specific, roasty, human. |
+
+---
+
+## Features
+
+| | Feature | Description |
+|---|---|---|
+| 🎬 | **AI Lore Generation** | Full cinematic narrative from photo analysis alone |
+| 📸 | **Cinematic Upload** | One-at-a-time photo absorption with scan/progress/absorb animations |
+| 🎭 | **Character Archetypes** | Per-person internet-native role assignment |
+| 🔥 | **Cooked Score** | 0–100 chaos measurement with 4-tier verdict system |
+| 📖 | **Tap-Through Story** | Directional slide transitions with count-up animations |
+| 🌌 | **Particle Universe** | Canvas-based atmospheric backgrounds that respond to app state |
+| 🔐 | **Cinematic OTP Auth** | Email code entry through a dimensional portal |
+| 🤝 | **Group Invites** | 7-char access code shareable via WhatsApp |
+| 📱 | **PWA Ready** | Install to home screen. Your lore goes everywhere. |
+| 🎯 | **Real-Time Generating** | Live particle universe intensifying through 6 stages |
+| 📊 | **Trip Receipt** | Documentary-style statistics card |
+| 🏆 | **Yearbook Awards** | AI-assigned superlatives with evidence |
+
+---
+
+## Tech Stack
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  FRONTEND                                               │
+│  Next.js 16 (App Router, Turbopack)                    │
+│  tRPC · Supabase SSR · Framer Motion                   │
+│  Bricolage Grotesque · Nunito · Fira Mono               │
+│  Canvas API particle systems · CSS keyframes           │
+├─────────────────────────────────────────────────────────┤
+│  BACKEND                                                │
+│  Supabase PostgreSQL + Storage                         │
+│  Supabase Auth (Email OTP via Resend)                  │
+│  Next.js API Routes · tRPC routers                     │
+├─────────────────────────────────────────────────────────┤
+│  AI WORKER                                              │
+│  Python FastAPI on Render (Docker)                     │
+│  Anthropic Claude Sonnet 4 (vision + text)            │
+│  8-stage async pipeline with tenacity retry           │
+│  Parallel enrichment (roles, stats, superlatives)     │
+├─────────────────────────────────────────────────────────┤
+│  DEPLOYMENT                                             │
+│  Vercel (frontend + API routes)                        │
+│  Render (AI worker, always-on)                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Setup & Run
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/bansalbhunesh/Woh-wala-trip
+cd Woh-wala-trip
+npm install
+```
+
+### 2. Environment
+
+Create `.env.local`:
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUz...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUz...
+
+# Email (Resend — free tier: 3000/month)
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+
+# AI Worker
+AI_WORKER_URL=https://wwt-ai-worker.onrender.com
+AI_WORKER_SECRET=your-secret-here
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+### 3. Database
+
+Run in Supabase SQL editor:
+```sql
+-- Auto-create profile on user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name)
+  VALUES (NEW.id, NEW.email, split_part(NEW.email, '@', 1))
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Trip members policy
+ALTER TABLE public.trip_members ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "users can read own memberships"
+ON public.trip_members FOR SELECT TO authenticated
+USING (user_id = auth.uid());
+```
+
+### 4. AI Worker
+
+```bash
+cd ai-worker
+pip install .
+```
+
+Create `ai-worker/.env`:
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-xxxx   # or proxy key
+ANTHROPIC_BASE_URL=                    # leave empty for official Anthropic
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciO...
+AI_WORKER_SECRET=your-secret-here
+```
+
+```bash
+uvicorn src.main:app --reload --port 8000
+```
+
+### 5. Run
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000` — enter the universe.
+
+---
+
+## Deploy to Production
+
+### Frontend → Vercel
+```bash
+npm install -g vercel
+vercel deploy
+```
+Add all env variables in Vercel Dashboard → Settings → Environment Variables.
+
+### AI Worker → Render
+1. [render.com](https://render.com) → New Web Service → Connect repo
+2. **Root Directory:** `ai-worker` · **Runtime:** Docker
+3. Add env vars: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AI_WORKER_SECRET`
+4. After deploy, add `AI_WORKER_URL=https://your-service.onrender.com` to Vercel
+
+---
+
+## The Lore Quality Bar
+
+The AI is instructed to never produce generic travel writing. The validator rejects any response containing:
+
+```
+"unforgettable memories" / "bonds that last" / "adventure awaits"
+"magical experience" / "once in a lifetime" / "create memories"
+```
+
+The prompt system is Hinglish-native, internet-culture-aware, and built to roast with love. It knows the difference between "historically cooked" and "mildly simmering". It assigns blame where blame is due.
+
+If you want to improve the lore quality: `ai-worker/src/lore/prompts.py`
+If you want to adjust validation: `ai-worker/src/lore/validators.py`
+
+---
+
+## Contributing
+
+PRs welcome. The codebase is structured to make each layer independently hackable:
+
+```
+src/components/experience/   ← Cinematic animations (landing, auth, shell)
+src/app/trips/               ← Trip flows (upload, generating, story, share)
+src/server/trpc/routers/     ← API layer (trips, photos)
+ai-worker/src/lore/          ← AI pipeline (prompts, orchestrator, validators)
+```
+
+---
+
+<div align="center">
+
+---
+
+**Some trips deserve to be documented properly.**
+
+*This is how.*
+
+---
+
+[**Try it live →**](https://woh-wala-trip.vercel.app)
+
+*Season 2026 · AI Friendship Archive · Built with chaos, documented with care*
+
+</div>
