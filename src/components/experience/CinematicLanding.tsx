@@ -5,13 +5,15 @@ import dynamic from 'next/dynamic';
 
 const ParticleUniverse = dynamic(() => import('./ParticleUniverse'), { ssr: false });
 
+// Cards occupy ONLY the peripheral zones — never the center title band (30-70% x, 30-70% y)
+// and never the CTA zone (40-60% x, 72-92% y). All float animations stay in bounds.
 const ARCHETYPES = [
-  { emoji: '⚡', label: 'Chaos Source', score: '9/10', color: '#FF4D4D', x: 18, y: 22, rot: -8, delay: 0 },
-  { emoji: '🐈‍⬛', label: 'Black Cat', score: '7/10', color: '#2D9E8B', x: 68, y: 15, rot: 5, delay: 0.15 },
-  { emoji: '🐕', label: 'Golden Ret.', score: '5/10', color: '#D49E2D', x: 78, y: 58, rot: -4, delay: 0.3 },
-  { emoji: '🧍', label: 'NPC Energy', score: '2/10', color: '#7C6AFF', x: 12, y: 62, rot: 7, delay: 0.45 },
-  { emoji: '🌟', label: 'Main Character', score: '6/10', color: '#E86F2D', x: 50, y: 72, rot: -3, delay: 0.6 },
-  { emoji: '🦋', label: 'Plot Twist', score: '8/10', color: '#C94B9E', x: 38, y: 14, rot: 4, delay: 0.75 },
+  { emoji: '⚡', label: 'Chaos Source',  score: '9/10', color: '#FF4D4D', x:  7, y: 12, rot: -8, delay: 0    },
+  { emoji: '🐈‍⬛', label: 'Black Cat',      score: '7/10', color: '#2D9E8B', x: 68, y:  9, rot:  5, delay: 0.15 },
+  { emoji: '🐕', label: 'Golden Ret.',   score: '5/10', color: '#D49E2D', x: 78, y: 50, rot: -4, delay: 0.30 },
+  { emoji: '🧍', label: 'NPC Energy',    score: '2/10', color: '#7C6AFF', x:  5, y: 55, rot:  7, delay: 0.45 },
+  { emoji: '🌟', label: 'Main Char.',    score: '6/10', color: '#E86F2D', x: 76, y: 26, rot: -3, delay: 0.60 },
+  { emoji: '🦋', label: 'Plot Twist',    score: '8/10', color: '#C94B9E', x: 28, y:  7, rot:  4, delay: 0.75 },
 ];
 
 const SIGNAL_LINES = [
@@ -360,9 +362,9 @@ export default function CinematicLanding() {
           </div>
         </div>
 
-        {/* ── PORTAL CTA (bottom center) ── */}
+        {/* ── PORTAL CTA (bottom center) — z-30 keeps it above all cards ── */}
         <div
-          className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-4"
+          className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-4 z-30"
           style={{ animation: 'card-emerge 1s cubic-bezier(0.16,1,0.3,1) 1.5s both' }}
         >
           <button
