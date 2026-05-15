@@ -1,19 +1,29 @@
 import anthropic
+import httpx
 from supabase import create_client, Client
 from .config import settings
 
 # Build Anthropic client
-# aicredits.in and similar proxies use Authorization: Bearer instead of x-api-key
-# Setting auth_token makes the SDK use the Bearer header
-_client_kwargs: dict = {"api_key": settings.ANTHROPIC_API_KEY}
+# For proxy services (aicredits.in etc): use a custom httpx client that sends
+# ONLY Authorization: Bearer header and suppresses the SDK's x-api-key header.
 if settings.ANTHROPIC_BASE_URL:
-    _client_kwargs["base_url"] = settings.ANTHROPIC_BASE_URL
-    # Proxy services use Bearer auth — override the default header
-    _client_kwargs["default_headers"] = {
-        "Authorization": f"Bearer {settings.ANTHROPIC_API_KEY}",
-    }
-
-anthropic_client = anthropic.Anthropic(**_client_kwargs)
+    _transport = httpx.HTTPTransport()
+    _http_client = httpx.Client(
+        base_url=settings.ANTHROPIC_BASE_URL,
+        headers={
+            "Authorization": f"Bearer {settings.ANTHROPIC_API_KEY}",
+            "anthropic-version": "2023-06-01",
+        },
+        transport=_transport,
+        timeout=120.0,
+    )
+    # Pass a dummy api_key so SDK doesn't complain; real auth is via httpx headers
+    anthropic_client = anthropic.Anthropic(
+        api_key="proxy-auth",
+        http_client=_http_client,
+    )
+else:
+    anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 try:
     supabase: Client = create_client(
@@ -21,5 +31,5 @@ try:
         settings.SUPABASE_SERVICE_ROLE_KEY,
     )
 except Exception as e:
-    print(f"Warning: Supabase client failed to initialize: {e}")
-    supabase = None  # type: ignore
+    print(f"FATAL: Supabase client failed to initialize: {e}")
+    raise  # Don't continue with None — crash immediately with a clear message

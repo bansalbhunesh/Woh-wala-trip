@@ -28,13 +28,14 @@ class LoreOrchestrator:
     """
 
     async def run_full_pipeline(self, trip_id: str):
-        log.info(f"[{trip_id}] pipeline start")
+        log.info(f"[{trip_id}] pipeline start — model={settings.CLAUDE_MODEL} proxy={bool(settings.ANTHROPIC_BASE_URL)}")
         try:
             supabase.table("trips").update({"lore_status": "processing"}).eq("id", trip_id).execute()
 
             trip = self._get_trip(trip_id)
             photos = self._get_photos(trip_id)
             members = self._get_members(trip_id)
+            log.info(f"[{trip_id}] fetched: {len(photos)} photos, {len(members)} members")
 
             if len(photos) < 5:
                 log.warning(f"[{trip_id}] only {len(photos)} photos — need 5+")
@@ -142,14 +143,24 @@ class LoreOrchestrator:
                 url_resp = supabase.storage.from_("trip-photos").create_signed_url(
                     photo["storage_path"], 600
                 )
-                signed_url = url_resp.get("signedURL") or url_resp.get("signedUrl")
+                # supabase-py 2.x returns SignedURLResponse object or dict — handle both
+                if isinstance(url_resp, dict):
+                    signed_url = url_resp.get("signedURL") or url_resp.get("signedUrl")
+                else:
+                    signed_url = (
+                        getattr(url_resp, "signed_url", None)
+                        or getattr(url_resp, "signedURL", None)
+                        or (url_resp.data.get("signedURL") if hasattr(url_resp, "data") and isinstance(url_resp.data, dict) else None)
+                    )
                 if signed_url:
                     image_blocks.append({
                         "type": "image",
                         "source": {"type": "url", "url": signed_url},
                     })
+                else:
+                    log.warning(f"Empty signed URL for photo {photo.get('id')} — resp: {url_resp}")
             except Exception as e:
-                log.warning(f"Failed to get signed URL for photo {photo['id']}: {e}")
+                log.warning(f"Failed to get signed URL for photo {photo.get('id')}: {e}")
 
         if not image_blocks:
             return {"raw_cooked_score": 60, "recurring_behaviors": [], "photo_count": 0}
@@ -178,7 +189,12 @@ class LoreOrchestrator:
     # -------------------------------------------------------------------------
 
     async def _aggregate_signals(self, trip: dict, batches: list[dict], members: list[dict]) -> dict:
-        member_names = [m["profiles"]["display_name"] for m in members if m.get("profiles")]
+        # Safe null check — profiles join may return None if user has no profile row
+        member_names = [
+            m["profiles"]["display_name"]
+            for m in members
+            if m.get("profiles") and isinstance(m["profiles"], dict) and m["profiles"].get("display_name")
+        ]
 
         user_prompt = prompts.SIGNAL_AGGREGATION_USER.format(
             trip_name=trip["name"],
@@ -533,7 +549,9 @@ class LoreOrchestrator:
         loop = asyncio.get_event_loop()
 
         system_content: list | str = system
-        if cache_system:
+        # cache_control only works with official Anthropic API — disable for proxy services
+        use_cache = cache_system and not settings.ANTHROPIC_BASE_URL
+        if use_cache:
             system_content = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
 
         def _sync_call():
