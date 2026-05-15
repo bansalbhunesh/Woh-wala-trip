@@ -84,11 +84,6 @@ export const photosRouter = router({
           trip_id: input.tripId,
           user_id: ctx.user.id,
           storage_path: input.storagePath,
-          width: input.width,
-          height: input.height,
-          file_size_bytes: input.fileSize,
-          mime_type: input.mimeType,
-          taken_at: input.takenAt,
         })
         .select()
         .single();
