@@ -26,10 +26,19 @@ export const metadata = {
   title: 'Woh Wala Trip — AI Friendship Lore',
   description: 'Turn your trips and friendships into cinematic chaos lore.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icon.png', type: 'image/png' },
+    ],
+  },
   openGraph: {
     title: 'Woh Wala Trip',
     description: 'Your friendships, narrated.',
     type: 'website',
+    images: [{ url: '/icon.png' }],
   },
 };
 
