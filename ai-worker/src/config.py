@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str
     AI_WORKER_SECRET: str
 
+    # Optional: set if using a proxy (e.g. aicredits.in, openrouter, etc.)
+    ANTHROPIC_BASE_URL: str = ""
+
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"         # vision + fast
     CLAUDE_HAIKU_MODEL: str = "claude-haiku-4-5-20251001"  # thumbnails + cheap calls
 

@@ -2,8 +2,12 @@ import anthropic
 from supabase import create_client, Client
 from .config import settings
 
-# Native Anthropic SDK — supports vision, prompt caching, structured output
-anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+# Build Anthropic client — supports proxy base URLs (aicredits.in, openrouter, etc.)
+_client_kwargs: dict = {"api_key": settings.ANTHROPIC_API_KEY}
+if settings.ANTHROPIC_BASE_URL:
+    _client_kwargs["base_url"] = settings.ANTHROPIC_BASE_URL
+
+anthropic_client = anthropic.Anthropic(**_client_kwargs)
 
 try:
     supabase: Client = create_client(
