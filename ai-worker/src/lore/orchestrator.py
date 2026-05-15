@@ -36,6 +36,11 @@ class LoreOrchestrator:
             photos = self._get_photos(trip_id)
             members = self._get_members(trip_id)
             log.info(f"[{trip_id}] fetched: {len(photos)} photos, {len(members)} members")
+            # Sync total_photos from real count so lore reflects accurate data
+            if trip and len(photos) != trip.get("total_photos", 0):
+                supabase.table("trips").update({"total_photos": len(photos), "member_count": len(members)}).eq("id", trip_id).execute()
+                trip["total_photos"] = len(photos)
+                trip["member_count"] = len(members)
 
             if len(photos) < 5:
                 log.warning(f"[{trip_id}] only {len(photos)} photos — need 5+")

@@ -604,7 +604,9 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
                      background: 'rgba(245,240,232,0.04)',
                      animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
                    }}>
-                {photo.thumbnailUrl && <img src={photo.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
+                {(photo.thumbnailUrl || photo.url) && (
+                  <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" />
+                )}
               </div>
             ))}
           </div>
