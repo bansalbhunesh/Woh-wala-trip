@@ -23,7 +23,10 @@ export default function GeneratingPage() {
   const [progress, setProgress] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
-  const { data: tripData } = trpc.trips.getFull.useQuery({ tripId }, { refetchInterval: 4000 });
+  const { data: tripData } = trpc.trips.getFull.useQuery(
+    { tripId },
+    { refetchInterval: (data) => (data ? 4000 : false) } // stop polling if no data (auth error)
+  );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trip = (tripData as any)?.trip;
   const loreStatus = trip?.lore_status;

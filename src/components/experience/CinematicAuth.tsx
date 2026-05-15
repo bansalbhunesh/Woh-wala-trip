@@ -446,12 +446,14 @@ export default function CinematicAuth() {
       {FRAGMENTS.map((fr, i) => (
         <div key={i} className="absolute pointer-events-none select-none font-mono"
              style={{
-               left: `${4+(i*41)%86}%`, top: `${6+(i*19)%78}%`,
-               fontSize: 9, letterSpacing: '0.15em', color: 'rgba(245,240,232,0.8)',
-               opacity: phase >= 1 ? (i===fragIdx ? 0.16 : 0.03) : 0,
+               // Keep fragments in safe zone — max left 60% so long strings don't clip right edge
+               left: `${4+(i*31)%56}%`, top: `${6+(i*19)%78}%`,
+               fontSize: 9, letterSpacing: '0.12em', color: 'rgba(245,240,232,0.8)',
+               opacity: phase >= 1 ? (i===fragIdx ? 0.15 : 0.025) : 0,
                transform: `rotate(${-2+(i*5)%8}deg)`,
                transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
                whiteSpace: 'nowrap', zIndex: 1,
+               maxWidth: '40vw', overflow: 'hidden', textOverflow: 'ellipsis',
              }}>
           {fr}
         </div>
