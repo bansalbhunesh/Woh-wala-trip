@@ -59,7 +59,7 @@ export function ArchiveNavbar({ trip }: { trip: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ARCHIVE HERO — full-width immersive documentary hero
+// ARCHIVE HERO — emotionally overwhelming full-height documentary opening
 // ─────────────────────────────────────────────────────────────────────────────
 export function ArchiveHero({ trip }: { trip: any }) {
   const lore = trip?.lore_json;
@@ -69,89 +69,155 @@ export function ArchiveHero({ trip }: { trip: any }) {
   const verdict = lore?.cooked_verdict || '';
   const memberCount = trip?.member_count || 0;
   const photoCount = trip?.total_photos || 0;
+  const level = lore?.cooked_level ?? trip?.chaos_score ?? 0;
+  const accentColor = level >= 76 ? '#FF4D4D' : level >= 51 ? '#D49E2D' : '#2D9E8B';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="relative overflow-hidden rounded-[2.5rem] bg-[#0A0A08] border border-white/[0.05] min-h-[420px] flex flex-col justify-end"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+      className="relative overflow-hidden rounded-[2.5rem] bg-[#060604] min-h-[80vh] flex flex-col justify-end"
     >
-      {/* Cover photo or atmospheric gradient */}
+      {/* ── Layer 1: blurred photo or deep gradient ── */}
       <div className="absolute inset-0">
         {trip?.cover_photo ? (
           <img
             src={trip.cover_photo}
             alt=""
-            className="w-full h-full object-cover opacity-30 grayscale contrast-125 scale-[1.03]"
+            className="w-full h-full object-cover opacity-20 grayscale scale-[1.05]"
+            style={{ filter: 'grayscale(100%) contrast(1.3) blur(2px)' }}
           />
         ) : (
           <div
             className="w-full h-full"
             style={{
-              background: 'radial-gradient(ellipse at 30% 40%, rgba(255,77,77,0.12) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(45,158,139,0.06) 0%, transparent 50%)',
+              background: `radial-gradient(ellipse at 20% 30%, ${accentColor}18 0%, transparent 55%), radial-gradient(ellipse at 85% 75%, rgba(45,158,139,0.08) 0%, transparent 50%)`,
             }}
           />
         )}
-        {/* Cinematic gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A08] via-[#0A0A08]/60 to-transparent" />
-        {/* Film grain */}
-        <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px] animate-grain" />
       </div>
 
-      {/* Top meta */}
+      {/* ── Layer 2: atmospheric blobs ── */}
+      <div
+        className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full blur-[180px] pointer-events-none"
+        style={{ background: `${accentColor}14`, animation: 'floatA 14s ease-in-out infinite' }}
+      />
+      <div
+        className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[150px] pointer-events-none"
+        style={{ background: 'rgba(45,158,139,0.06)', animation: 'floatB 18s ease-in-out infinite' }}
+      />
+
+      {/* ── Layer 3: cinematic gradient ── */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#060604] via-[#060604]/50 to-[#060604]/10 pointer-events-none" />
+
+      {/* ── Layer 4: film grain ── */}
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none animate-grain bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px]" />
+
+      {/* ── Layer 5: VHS scanline ── */}
+      <div className="absolute left-0 right-0 h-12 pointer-events-none opacity-[0.04]"
+        style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.4), transparent)', animation: 'scan 8s linear infinite' }}
+      />
+
+      {/* ── Layer 6: floating polaroid fragments ── */}
+      {[
+        { top: '12%', right: '8%', rotate: '8deg', delay: '0s' },
+        { top: '6%', right: '22%', rotate: '-5deg', delay: '1s' },
+        { top: '18%', right: '3%', rotate: '-12deg', delay: '2s' },
+      ].map((pos, i) => (
+        <div
+          key={i}
+          className="absolute w-14 h-16 bg-white/[0.03] border border-white/[0.06] rounded-sm flex flex-col overflow-hidden"
+          style={{ top: pos.top, right: pos.right, transform: `rotate(${pos.rotate})`, animation: `float-up ${5 + i}s ease-in-out infinite`, animationDelay: pos.delay }}
+        >
+          <div className="flex-1" style={{ background: `${accentColor}08`, filter: 'blur(4px)' }} />
+          <div className="h-3 bg-white/[0.02]" />
+        </div>
+      ))}
+
+      {/* ── Layer 7: CLASSIFIED watermark ── */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-mono uppercase tracking-[0.8em] border-2 px-6 py-2 rounded pointer-events-none select-none"
+        style={{
+          color: `${accentColor}08`,
+          borderColor: `${accentColor}06`,
+          transform: 'translate(-50%, -50%) rotate(-15deg)',
+          fontSize: '52px',
+          letterSpacing: '0.5em',
+        }}
+      >
+        ARCHIVE
+      </div>
+
+      {/* ── Top meta bar ── */}
       <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-10">
         <div className="flex gap-2 flex-wrap">
           {verdict && (
-            <span className="px-3 py-1.5 rounded-full bg-cooked-accent text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]">
+            <span className="px-3 py-1.5 rounded-full text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]"
+              style={{ background: accentColor }}>
               {verdict}
             </span>
           )}
           {destination && (
-            <span className="px-3 py-1.5 rounded-full bg-white/8 backdrop-blur-md text-white/50 text-[8px] font-vibe font-black uppercase tracking-[0.2em] border border-white/10">
+            <span className="px-3 py-1.5 rounded-full bg-white/[0.06] backdrop-blur-md text-white/40 text-[8px] font-vibe font-black uppercase tracking-[0.2em] border border-white/[0.08]">
               {destination}
             </span>
           )}
         </div>
-        <span className="text-[8px] font-mono text-white/15 uppercase tracking-[0.3em]">
-          {memberCount} cast · {photoCount} photos
-        </span>
+        <div className="text-right space-y-0.5">
+          <div className="text-[7px] font-mono text-white/12 uppercase tracking-[0.35em]">Archive</div>
+          <div className="font-mono text-[11px] text-white/25 animate-flicker">
+            {trip?.id?.slice(0, 8)?.toUpperCase() || '——'}
+          </div>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="relative z-10 p-10 space-y-6">
-        <div className="space-y-4">
-          <h1 className="text-[56px] md:text-[72px] font-cinematic font-black tracking-tighter leading-[0.82] text-[#F5F0E8] uppercase">
-            {name}
-          </h1>
-          <p className="text-lg text-white/40 font-cinematic italic max-w-xl leading-relaxed">
-            &ldquo;{tagline}&rdquo;
-          </p>
-          {lore?.season_recap?.full_narrative && (
-            <p className="text-sm text-white/25 font-data font-light leading-relaxed line-clamp-2 max-w-lg">
-              {lore.season_recap.full_narrative}
-            </p>
-          )}
+      {/* ── Main content ── */}
+      <div className="relative z-10 p-10 space-y-8">
+        {/* Season label */}
+        <div className="text-[9px] font-mono text-white/20 uppercase tracking-[0.5em]">
+          Season {new Date().getFullYear()} · {memberCount} cast · {photoCount} photos documented
         </div>
 
-        <div className="flex flex-wrap gap-3 pt-1">
+        {/* Giant title */}
+        <div className="space-y-3">
+          <h1
+            className="font-cinematic font-black tracking-tighter text-[#F5F0E8] uppercase leading-[0.80]"
+            style={{ fontSize: 'clamp(52px, 9vw, 100px)' }}
+          >
+            {name}
+          </h1>
+          <p className="text-xl text-white/35 font-cinematic italic max-w-xl leading-relaxed">
+            &ldquo;{tagline}&rdquo;
+          </p>
+        </div>
+
+        {/* Narrative excerpt */}
+        {lore?.season_recap?.full_narrative && (
+          <p className="text-sm text-white/20 font-data font-light leading-relaxed line-clamp-2 max-w-lg border-l border-white/[0.06] pl-4">
+            {lore.season_recap.full_narrative}
+          </p>
+        )}
+
+        {/* CTAs */}
+        <div className="flex flex-wrap gap-3">
           <Link
             href={`/trips/${trip?.id}/story`}
-            className="flex items-center gap-2.5 px-7 py-3.5 bg-[#F5F0E8] text-black rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-[1.03] active:scale-95 transition-all shadow-3xl"
+            className="flex items-center gap-2.5 px-7 py-4 bg-[#F5F0E8] text-black rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-[1.03] active:scale-95 transition-all shadow-3xl"
           >
             <Play size={13} fill="currentColor" /> Play Documentary
           </Link>
           <Link
             href={`/trips/${trip?.id}/share`}
-            className="flex items-center gap-2.5 px-7 py-3.5 bg-white/6 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+            className="flex items-center gap-2.5 px-7 py-4 bg-white/[0.05] border border-white/[0.08] text-white/55 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
           >
             <Share2 size={13} /> Share Archive
           </Link>
           <Link
             href={`/trips/${trip?.id}/invite`}
-            className="flex items-center gap-2.5 px-7 py-3.5 bg-white/6 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+            className="flex items-center gap-2.5 px-7 py-4 bg-white/[0.05] border border-white/[0.08] text-white/55 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
           >
-            <Plus size={13} /> Invite Cast
+            <Plus size={13} /> Add Cast
           </Link>
         </div>
       </div>

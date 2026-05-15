@@ -418,6 +418,234 @@ export function FriendshipVerdict({ lore }: { lore: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// STICKY CHAPTER HEADER — pins during scroll, creates documentary pacing
+// ─────────────────────────────────────────────────────────────────────────────
+export function StickyChapter({
+  number,
+  title,
+  accent = '#FF4D4D',
+}: {
+  number: string;
+  title: string;
+  accent?: string;
+}) {
+  return (
+    <div className="sticky top-[73px] z-30 py-3 -mx-6 px-6 mb-8 backdrop-blur-xl"
+      style={{ background: 'rgba(6,6,4,0.88)' }}
+    >
+      <div className="flex items-center gap-4 border-b border-white/[0.05] pb-3">
+        <span className="font-mono text-[8px] text-white/20 uppercase tracking-[0.45em] flex-shrink-0">
+          {number}
+        </span>
+        <div className="h-px flex-1 bg-white/[0.04]" />
+        <span
+          className="font-vibe font-black text-[9px] uppercase tracking-[0.35em]"
+          style={{ color: `${accent}70` }}
+        >
+          {title}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EVIDENCE BOARD — detective wall with overlapping rotated evidence cards
+// ─────────────────────────────────────────────────────────────────────────────
+export function EvidenceBoard({
+  mvp,
+  villain,
+  insideJoke,
+  lore,
+}: {
+  mvp?: any;
+  villain?: any;
+  insideJoke?: string;
+  lore?: any;
+}) {
+  if (!mvp && !villain && !insideJoke) return null;
+
+  const caseId = `WWT-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.6 }}
+      className="relative overflow-hidden rounded-[2.5rem] border border-white/[0.06] bg-[#080806]"
+    >
+      {/* Cork board dot grid */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.025]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(245,240,232,0.8) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+        }}
+      />
+
+      {/* Film grain */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] animate-grain bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px]" />
+
+      {/* Header */}
+      <div className="relative z-10 px-8 pt-8 pb-4 border-b border-white/[0.05]">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="text-[7px] font-mono text-white/15 uppercase tracking-[0.5em] mb-1">Case File</div>
+            <h3 className="text-2xl font-cinematic font-black italic tracking-tight text-[#F5F0E8] uppercase">
+              Evidence Board
+            </h3>
+          </div>
+          <div className="text-right space-y-1">
+            <div className="text-[7px] font-mono text-white/12 uppercase tracking-[0.3em]">Case ID</div>
+            <div className="font-mono text-[11px] text-white/25">{caseId}</div>
+            <div
+              className="text-[6px] font-mono uppercase tracking-[0.4em] border px-2 py-0.5 rounded text-cooked-accent/50 border-cooked-accent/20"
+              style={{ transform: 'rotate(3deg)', display: 'inline-block' }}
+            >
+              Classified
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Evidence cards */}
+      <div className="relative z-10 p-8 space-y-4">
+        {/* Top row: 2-3 secondary cards */}
+        <div className={cn('grid gap-4', villain && mvp ? 'grid-cols-2' : 'grid-cols-1')}>
+          {mvp && (
+            <motion.div
+              initial={{ opacity: 0, rotate: -4, y: 10 }}
+              whileInView={{ opacity: 1, rotate: -2, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1, type: 'spring', stiffness: 120 }}
+              className="tape-strip relative bg-[#0E0E0C] border border-white/[0.08] rounded-2xl p-5 space-y-2 overflow-hidden"
+            >
+              {/* Tape pin */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white/5 border border-white/10" />
+              <div className="text-[7px] font-mono text-chill-accent/50 uppercase tracking-[0.3em]">
+                Unlikely Hero
+              </div>
+              <h4 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none">
+                {mvp.display_name}
+              </h4>
+              <p className="text-[9px] font-vibe font-black text-white/25 uppercase tracking-wider">
+                {mvp.role_title || 'The Anchor'}
+              </p>
+              {mvp.role_description && (
+                <p className="text-[10px] text-white/30 font-data italic leading-relaxed line-clamp-2">
+                  {mvp.role_description}
+                </p>
+              )}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-chill-accent" />
+                <span className="text-[8px] font-mono text-chill-accent/60">
+                  Chaos: {mvp.role_chaos_rating ?? '?'}/10
+                </span>
+              </div>
+            </motion.div>
+          )}
+
+          {villain && (
+            <motion.div
+              initial={{ opacity: 0, rotate: 3, y: 10 }}
+              whileInView={{ opacity: 1, rotate: 1.5, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 120 }}
+              className="tape-strip-right relative bg-[#0E0E0C] border border-cooked-accent/15 rounded-2xl p-5 space-y-2 overflow-hidden"
+            >
+              <div className="absolute top-0 right-8 -translate-y-1/2 w-4 h-4 rounded-full bg-cooked-accent/10 border border-cooked-accent/20" />
+              <div className="text-[7px] font-mono text-cooked-accent/50 uppercase tracking-[0.3em]">
+                Primary Suspect
+              </div>
+              <h4 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none">
+                {villain.display_name}
+              </h4>
+              <p className="text-[9px] font-vibe font-black text-white/25 uppercase tracking-wider">
+                {villain.role_title || 'The Source'}
+              </p>
+              {villain.role_description && (
+                <p className="text-[10px] text-white/30 font-data italic leading-relaxed line-clamp-2">
+                  {villain.role_description}
+                </p>
+              )}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-cooked-accent animate-pulse" />
+                <span className="text-[8px] font-mono text-cooked-accent/60">
+                  Chaos: {villain.role_chaos_rating ?? '?'}/10 · Confirmed
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* SVG connecting strings */}
+        {mvp && villain && (
+          <div className="relative h-8 -my-2">
+            <svg className="absolute inset-0 w-full h-full overflow-visible" aria-hidden="true">
+              <line
+                x1="25%" y1="0" x2="50%" y2="100%"
+                stroke="rgba(255,77,77,0.12)" strokeWidth="1"
+                strokeDasharray="4 3"
+              />
+              <line
+                x1="75%" y1="0" x2="50%" y2="100%"
+                stroke="rgba(255,77,77,0.12)" strokeWidth="1"
+                strokeDasharray="4 3"
+              />
+            </svg>
+          </div>
+        )}
+
+        {/* Bottom: Inside Joke / Core Evidence — larger, centered */}
+        {insideJoke && (
+          <motion.div
+            initial={{ opacity: 0, rotate: -1, scale: 0.97 }}
+            whileInView={{ opacity: 1, rotate: 0.5, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3, type: 'spring' }}
+            className="tape-strip relative bg-gradient-to-br from-unstable-accent/6 via-[#0E0E0C] to-[#060604] border border-unstable-accent/15 rounded-2xl p-6 space-y-3"
+          >
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-unstable-accent/10 border border-unstable-accent/20" />
+            <div className="text-[7px] font-mono text-unstable-accent/50 uppercase tracking-[0.3em]">
+              Core Memory · AI Identified
+            </div>
+            <p className="text-xl font-cinematic font-black tracking-tight text-[#F5F0E8] leading-tight">
+              {insideJoke}
+            </p>
+            {lore?.what_this_trip_was_really_about && (
+              <p className="text-[11px] text-white/30 font-data italic leading-relaxed border-l border-unstable-accent/15 pl-3">
+                {lore.what_this_trip_was_really_about.slice(0, 120)}
+                {lore.what_this_trip_was_really_about.length > 120 ? '...' : ''}
+              </p>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-unstable-accent" />
+              <span className="text-[8px] font-mono text-unstable-accent/50 uppercase tracking-widest">
+                Non-removable from group memory
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="relative z-10 px-8 pb-6 flex justify-between items-center">
+        <span className="text-[7px] font-mono text-white/10 uppercase tracking-[0.4em]">
+          Evidence Confirmed · AI Certified
+        </span>
+        <span
+          className="text-[7px] font-mono text-cooked-accent/25 uppercase tracking-[0.3em] border border-cooked-accent/15 px-2 py-0.5 rounded"
+          style={{ transform: 'rotate(2deg)', display: 'inline-block' }}
+        >
+          Sealed
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EMOTIONAL TIMESTAMP — "Day 3 · 2:13 AM · Nobody was okay."
 // ─────────────────────────────────────────────────────────────────────────────
 export function EmotionalTimestamp({

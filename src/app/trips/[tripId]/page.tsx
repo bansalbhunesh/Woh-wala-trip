@@ -13,6 +13,7 @@ import {
   CinematicBreak, CookedLevelReveal, FriendshipExpose,
   DocumentaryEra, PlotTwistMoment, FriendshipVerdict, ClosingVerdict,
   EmotionalTimestamp, RecoveredArtifact, MemoryCollage, SuperlativeCard,
+  StickyChapter, EvidenceBoard,
 } from '@/components/cinematic/Documentary';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -126,51 +127,11 @@ export default function TripRoomPage() {
                 timestamp={`Archive No. ${trip?.id?.slice(0, 6)?.toUpperCase() || '——'} · Classified`}
               />
 
-              {/* ③ Character reveals — MVP / Villain / Inside Joke */}
+              {/* ③ Evidence board — investigation wall replaces equal-weight cards */}
               {(mvp || villain || insideJoke) && (
-                <section className="space-y-4 py-4">
-                  <div className="space-y-1 mb-8">
-                    <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Emotional Reveals</div>
-                    <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
-                      Moments You<br />Can&apos;t Unsee
-                    </h2>
-                  </div>
-
-                  {mvp && (
-                    <ArchiveReveal
-                      category="Trip MVP"
-                      name={`${mvp.display_name || 'Unknown'} – ${mvp.role_title || 'The Anchor'}`}
-                      subtitle={mvp.role_archetype_tag}
-                      desc={mvp.role_description}
-                      cta="Canon File"
-                      challengeCta="Make Poster"
-                      color="#2D9E8B"
-                    />
-                  )}
-
-                  {villain && (
-                    <ArchiveReveal
-                      category="Trip Villain"
-                      name={`${villain.display_name || 'Unknown'} – ${villain.role_title || 'The Source'}`}
-                      subtitle={villain.role_archetype_tag}
-                      desc={villain.role_description}
-                      cta="Blame"
-                      challengeCta="Challenge to Duel"
-                      color="#FF4D4D"
-                    />
-                  )}
-
-                  {insideJoke && (
-                    <ArchiveReveal
-                      category="Top Inside Joke"
-                      name={insideJoke}
-                      subtitle="Core memory confirmed by AI"
-                      desc={lore?.what_this_trip_was_really_about}
-                      cta="Save Clip"
-                      challengeCta="Save Snippet"
-                      color="#D49E2D"
-                    />
-                  )}
+                <section className="py-4">
+                  <StickyChapter number="Chapter 01" title="The Evidence" accent="#FF4D4D" />
+                  <EvidenceBoard mvp={mvp} villain={villain} insideJoke={insideJoke} lore={lore} />
                 </section>
               )}
 
@@ -187,26 +148,23 @@ export default function TripRoomPage() {
                 accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
               />
 
-              {/* ⑤ Cinematic break before chaos rankings */}
+              {/* ⑤ Chaos rankings */}
               {members.some((m: any) => m.role_chaos_rating != null) && (
-                <>
+                <section className="py-4">
                   <EmotionalTimestamp
                     time="2:13 AM"
                     text="The AI identified a primary chaos source. The data is not flattering."
                     accent="#FF4D4D"
                   />
+                  <StickyChapter number="Chapter 02" title="Who Caused The Collapse" accent="#FF4D4D" />
                   <CinematicBreak
                     text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
                     sub="AI Findings · Cross-referenced · 0 appeals accepted"
                     accent="#FF4D4D"
                   />
-                </>
+                  <FriendshipExpose members={members} />
+                </section>
               )}
-
-              {/* ⑥ Friendship Expose — chaos rankings */}
-              <div className="py-4">
-                <FriendshipExpose members={members} />
-              </div>
 
               {/* ⑦ Recovered evidence artifacts */}
               {(lore?.season_recap?.act_1 || lore?.cooked_explanation) && (
@@ -240,17 +198,12 @@ export default function TripRoomPage() {
 
               {/* ⑨ Season Timeline as documentary scenes */}
               {lore?.trip_eras?.length > 0 && (
-                <section className="py-8 space-y-6">
+                <section className="py-4 space-y-0">
                   <EmotionalTimestamp
                     text="The timeline of events, reconstructed."
                     accent="#7C6AFF"
                   />
-                  <div className="space-y-2">
-                    <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Documentary Timeline</div>
-                    <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
-                      How It All<br />Unfolded
-                    </h2>
-                  </div>
+                  <StickyChapter number="Chapter 03" title="How It Unfolded" accent="#7C6AFF" />
                   <div className="pt-4">
                     {lore.trip_eras.map((era: any, i: number) => (
                       <DocumentaryEra
@@ -266,20 +219,16 @@ export default function TripRoomPage() {
 
               {/* ⑩ AI Psychological Profile */}
               {lore && (
-                <div className="py-6">
+                <section className="py-4">
+                  <StickyChapter number="Chapter 04" title="AI Psychological Profile" accent="#2D9E8B" />
                   <FriendshipVerdict lore={lore} />
-                </div>
+                </section>
               )}
 
               {/* ⑪ Superlatives — yearbook awards */}
               {lore?.superlatives?.length > 0 && (
-                <section className="py-8 space-y-6">
-                  <div className="space-y-2">
-                    <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Yearbook Awards · AI Certified</div>
-                    <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
-                      The Official<br />Superlatives
-                    </h2>
-                  </div>
+                <section className="py-4 space-y-6">
+                  <StickyChapter number="Chapter 05" title="The Official Superlatives" accent="#D49E2D" />
                   <div className="space-y-4">
                     {lore.superlatives.slice(0, 4).map((sup: any, i: number) => (
                       <SuperlativeCard key={i} sup={sup} index={i} />
@@ -301,8 +250,32 @@ export default function TripRoomPage() {
               {lore && <ClosingVerdict lore={lore} />}
             </div>
 
-            {/* ── RIGHT: light sticky Letterboxd panel ──────────────────────── */}
-            <div className="lg:sticky lg:top-[73px] space-y-4">
+            {/* ── RIGHT: case dossier panel ─────────────────────────────── */}
+            <div className="lg:sticky lg:top-[73px] space-y-3">
+              {/* Dossier header stamp */}
+              <div className="px-6 py-4 rounded-[2rem] bg-[#FAF1E4] border border-[#E8E0D0] space-y-1">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-[7px] font-mono text-black/25 uppercase tracking-[0.5em] mb-1">
+                      WWT Dossier · Classified
+                    </div>
+                    <h3 className="text-sm font-cinematic font-black tracking-tight text-lore-ink uppercase leading-none">
+                      {trip?.name}
+                    </h3>
+                  </div>
+                  <div
+                    className="text-[7px] font-mono text-cooked-accent/60 uppercase tracking-[0.3em] border border-cooked-accent/30 px-2 py-1 rounded"
+                    style={{ transform: 'rotate(5deg)' }}
+                  >
+                    {lore?.cooked_verdict ? 'Confirmed' : 'Pending'}
+                  </div>
+                </div>
+                <div className="text-[8px] font-mono text-black/20 uppercase tracking-[0.3em]">
+                  {trip?.destination && `${trip.destination} · `}
+                  {trip?.total_photos || 0} photos · {members.length} subjects
+                </div>
+              </div>
+
               <CookedScoreLight trip={trip} />
               <BadFeelingsChart trip={trip} />
               <DonutChart trip={trip} />
