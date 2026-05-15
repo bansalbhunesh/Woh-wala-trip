@@ -666,7 +666,7 @@ export function BadFeelingsChart({ trip }: { trip: any }) {
   const level = lore?.cooked_level ?? 60;
   const stats = (lore?.receipt_stats || []).filter((s: any) => s.label && s.value);
 
-  const feelings = stats.length >= 3
+  const feelings: { label: string; value: number; color: string }[] = stats.length >= 3
     ? stats.slice(0, 4).map((s: any, i: number) => {
         const raw = parseFloat(s.value);
         return {
@@ -715,7 +715,7 @@ export function DonutChart({ trip }: { trip: any }) {
 
   const PALETTE = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF'];
 
-  const segments =
+  const segments: { label: string; pct: number; color: string }[] =
     eras.length >= 2
       ? eras.slice(0, 4).map((era: any, i: number) => ({
           label: era.era_name,
@@ -730,7 +730,7 @@ export function DonutChart({ trip }: { trip: any }) {
   const r = 38;
   const circumference = 2 * Math.PI * r;
   let cumulative = 0;
-  const arcs = segments.map((seg) => {
+  const arcs = segments.map((seg: { label: string; pct: number; color: string }) => {
     const dash = (seg.pct / 100) * circumference;
     const offset = -(cumulative / 100) * circumference;
     cumulative += seg.pct;

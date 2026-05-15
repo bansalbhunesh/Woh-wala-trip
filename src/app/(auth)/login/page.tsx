@@ -122,8 +122,8 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Dev skip */}
-        {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
+        {/* Dev skip — only rendered client-side to avoid hydration mismatch */}
+        {process.env.NODE_ENV === 'development' && (
           <div className="pt-8 border-t border-white/5 text-center">
             <button
               onClick={() => router.push('/trips')}
