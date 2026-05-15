@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { FilmGrain } from '@/components/ui/atoms';
@@ -291,13 +291,23 @@ export default function TripRoomPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UPLOAD STATE
+// CINEMATIC UPLOAD STATE
 // ─────────────────────────────────────────────────────────────────────────────
-interface UploadToast { id: number; name: string; status: 'uploading' | 'done' | 'error'; }
+type UploadPhase = 'idle' | 'scanning' | 'uploading' | 'absorbing' | 'error';
+
+interface ActiveUpload {
+  file: File;
+  preview: string;
+  phase: UploadPhase;
+  progress: number;
+}
 
 function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: string; onPhotosChanged: () => void }) {
   const router = useRouter();
-  const [toasts, setToasts] = useState<UploadToast[]>([]);
+  const [active, setActive] = useState<ActiveUpload | null>(null);
+  const [queue, setQueue] = useState<File[]>([]);
+  const [errorMsg, setErrorMsg] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const { data: photos, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
   const getUploadUrl = trpc.photos.getUploadUrl.useMutation();
   const confirmUpload = trpc.photos.confirmUpload.useMutation();
@@ -305,112 +315,296 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
     onSuccess: () => router.push(`/trips/${tripId}/generating`),
   });
 
-  const addToast = (id: number, name: string, status: UploadToast['status']) => {
-    setToasts(prev => {
-      const existing = prev.findIndex(t => t.id === id);
-      if (existing >= 0) {
-        const next = [...prev]; next[existing] = { id, name, status }; return next;
-      }
-      return [...prev, { id, name, status }];
-    });
-    if (status !== 'uploading') {
-      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2200);
-    }
-  };
+  // Process one file: scanning → uploading → absorbing
+  const processFile = useCallback(async (file: File) => {
+    const preview = URL.createObjectURL(file);
+    setErrorMsg('');
 
-  const handleFiles = async (files: FileList) => {
-    let toastId = Date.now();
-    for (const file of Array.from(files)) {
-      const tid = toastId++;
-      addToast(tid, file.name, 'uploading');
-      try {
-        const { uploadUrl, storagePath } = await getUploadUrl.mutateAsync({
-          tripId, fileName: file.name, contentType: file.type as any,
-        });
-        await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-        await confirmUpload.mutateAsync({ tripId, storagePath, fileSize: file.size, mimeType: file.type });
-        addToast(tid, file.name, 'done');
-      } catch {
-        addToast(tid, file.name, 'error');
-      }
+    // Phase 1: scanning (show preview + scan animation)
+    setActive({ file, preview, phase: 'scanning', progress: 0 });
+    await new Promise(r => setTimeout(r, 900));
+
+    // Phase 2: uploading
+    setActive(prev => prev ? { ...prev, phase: 'uploading', progress: 0 } : prev);
+    try {
+      const { uploadUrl, storagePath } = await getUploadUrl.mutateAsync({
+        tripId, fileName: file.name, contentType: file.type as any,
+      });
+
+      // Simulate progress during upload
+      const progressInterval = setInterval(() => {
+        setActive(prev => prev ? { ...prev, progress: Math.min(prev.progress + 12, 88) } : prev);
+      }, 180);
+
+      await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      clearInterval(progressInterval);
+      setActive(prev => prev ? { ...prev, progress: 100 } : prev);
+
+      await confirmUpload.mutateAsync({ tripId, storagePath, fileSize: file.size, mimeType: file.type });
+      await refetchPhotos();
+      onPhotosChanged();
+
+      // Phase 3: absorbing — image flies into lore engine
+      setActive(prev => prev ? { ...prev, phase: 'absorbing' } : prev);
+      await new Promise(r => setTimeout(r, 900));
+
+    } catch {
+      setActive(prev => prev ? { ...prev, phase: 'error' } : prev);
+      setErrorMsg('Upload failed. Tap to retry.');
+      URL.revokeObjectURL(preview);
+      await new Promise(r => setTimeout(r, 1800));
     }
-    onPhotosChanged(); refetchPhotos();
+
+    URL.revokeObjectURL(preview);
+    setActive(null);
+  }, [tripId, getUploadUrl, confirmUpload, refetchPhotos, onPhotosChanged]);
+
+  // Drain the queue
+  useEffect(() => {
+    if (active || queue.length === 0) return;
+    const [next, ...rest] = queue;
+    setQueue(rest);
+    processFile(next);
+  }, [active, queue, processFile]);
+
+  const handleFiles = (files: FileList) => {
+    const arr = Array.from(files);
+    if (!active) {
+      const [first, ...rest] = arr;
+      setQueue(rest);
+      processFile(first);
+    } else {
+      setQueue(q => [...q, ...arr]);
+    }
   };
 
   const photoCount = photos?.length || 0;
   const canGenerate = photoCount >= 5;
+  const needed = Math.max(0, 5 - photoCount);
+  const isActive = !!active;
+
+  // SVG ring circumference for progress
+  const R = 52; const C = 2 * Math.PI * R;
+  const dash = active ? C * (active.progress / 100) : 0;
 
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-12 py-20">
-      <div className="text-center space-y-4">
-        <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-vibe font-black">Upload Evidence</p>
-        <h2 className="text-6xl font-cinematic font-black tracking-tighter text-[#F5F0E8] uppercase leading-none">
+    <div className="min-h-screen flex flex-col items-center justify-center py-16 px-6 relative overflow-hidden">
+      {/* Atmospheric background glow that pulses during upload */}
+      <div className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
+           style={{ opacity: isActive ? 1 : 0 }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px]"
+             style={{ background: 'radial-gradient(circle, rgba(255,77,77,0.08) 0%, transparent 70%)' }} />
+      </div>
+
+      {/* Header */}
+      <div className="text-center space-y-3 mb-12 relative z-10">
+        <p className="font-mono text-[8px] uppercase tracking-[0.5em]" style={{ color: 'rgba(255,77,77,0.5)' }}>
+          ● FEEDING THE LORE ENGINE
+        </p>
+        <h2 className="font-display font-black tracking-tighter uppercase leading-none"
+            style={{ fontSize: 'clamp(32px, 6vw, 64px)', color: 'rgba(245,240,232,0.92)' }}>
           {trip.name}
         </h2>
-        <p className="text-white/30 font-cinematic italic text-lg">The lore engine needs your photo dump.</p>
+        <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)' }}>
+          "Upload your recovered memories. The archive is hungry."
+        </p>
       </div>
 
-      <div className="grid grid-cols-4 md:grid-cols-6 gap-3 max-w-lg w-full px-6">
-        {(photos || []).map((photo: any) => (
-          <div key={photo.id} className="aspect-square rounded-2xl bg-white/5 overflow-hidden border border-white/10">
-            {photo.thumbnailUrl && <img src={photo.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
-          </div>
-        ))}
-        <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-white/20 hover:bg-white/5 transition-all group">
-          <Plus size={20} className="text-white/20 group-hover:text-white/40 transition-colors mb-1" />
-          <span className="text-[8px] text-white/20 font-vibe font-black uppercase tracking-wider">Add</span>
-          <input type="file" accept="image/*" multiple className="hidden"
-            onChange={e => e.target.files && handleFiles(e.target.files)} />
-        </label>
-      </div>
+      {/* Central upload slot — this is the cinematic core */}
+      <div className="relative flex flex-col items-center gap-8 mb-12 z-10">
 
-      {/* Per-file upload toasts — bottom-right stack */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2" style={{ maxWidth: 280 }}>
-          {toasts.map(toast => (
-            <div
-              key={toast.id}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl font-mono text-[9px] uppercase tracking-[0.25em] animate-slide-up"
-              style={{
-                background: toast.status === 'error' ? 'rgba(255,77,77,0.12)' : toast.status === 'done' ? 'rgba(45,158,139,0.12)' : 'rgba(245,240,232,0.06)',
-                border: `1px solid ${toast.status === 'error' ? 'rgba(255,77,77,0.3)' : toast.status === 'done' ? 'rgba(45,158,139,0.3)' : 'rgba(245,240,232,0.12)'}`,
-                backdropFilter: 'blur(12px)',
-              }}
-            >
-              {/* Status indicator */}
-              <div className="flex-shrink-0">
-                {toast.status === 'uploading' && (
-                  <div className="w-3 h-3 rounded-full border border-white/30 border-t-white/80"
-                       style={{ animation: 'spin 0.8s linear infinite' }} />
+        {/* The upload portal */}
+        <div className="relative" style={{ width: 160, height: 160 }}>
+
+          {/* Progress ring SVG */}
+          {isActive && (
+            <svg className="absolute inset-0 w-full h-full -rotate-90" style={{ zIndex: 3 }}>
+              {/* Track */}
+              <circle cx="80" cy="80" r={R} fill="none" stroke="rgba(255,77,77,0.12)" strokeWidth="2.5" />
+              {/* Progress */}
+              <circle cx="80" cy="80" r={R}
+                fill="none"
+                stroke={active?.phase === 'absorbing' ? '#2D9E8B' : '#FF4D4D'}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${C}`}
+                style={{ transition: 'stroke-dasharray 0.2s ease, stroke 0.4s ease', filter: 'drop-shadow(0 0 4px rgba(255,77,77,0.5))' }}
+              />
+            </svg>
+          )}
+
+          {/* The slot itself */}
+          <label
+            className="absolute inset-3 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer"
+            style={{
+              background: isActive ? 'transparent' : 'rgba(245,240,232,0.03)',
+              border: isActive ? 'none' : '1.5px dashed rgba(245,240,232,0.1)',
+              transition: 'all 0.4s ease',
+            }}
+          >
+            {/* Active upload — image preview */}
+            {active && active.preview && (
+              <div className="absolute inset-0"
+                   style={{
+                     opacity: active.phase === 'absorbing' ? 0 : 1,
+                     transform: active.phase === 'absorbing' ? 'scale(0.1)' : 'scale(1)',
+                     transition: 'opacity 0.7s cubic-bezier(0.4,0,1,1), transform 0.7s cubic-bezier(0.4,0,1,1)',
+                   }}>
+                {/* Photo */}
+                <img src={active.preview} alt="" className="w-full h-full object-cover" />
+
+                {/* Dark overlay during upload */}
+                <div className="absolute inset-0 transition-opacity duration-500"
+                     style={{ background: 'rgba(6,6,4,0.45)', opacity: active.phase === 'uploading' ? 1 : 0 }} />
+
+                {/* Scan line sweep */}
+                {active.phase === 'scanning' && (
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute left-0 right-0 h-0.5"
+                         style={{
+                           background: 'linear-gradient(90deg, transparent, rgba(255,77,77,0.8), transparent)',
+                           boxShadow: '0 0 8px rgba(255,77,77,0.6)',
+                           animation: 'scan-sweep 0.9s ease-in-out forwards',
+                         }} />
+                  </div>
                 )}
-                {toast.status === 'done' && <span style={{ color: '#2D9E8B' }}>✓</span>}
-                {toast.status === 'error' && <span style={{ color: '#FF4D4D' }}>✕</span>}
               </div>
-              <span
-                className="truncate"
-                style={{ color: toast.status === 'error' ? 'rgba(255,77,77,0.8)' : toast.status === 'done' ? 'rgba(45,158,139,0.8)' : 'rgba(245,240,232,0.5)' }}
-              >
-                {toast.status === 'uploading' ? 'Uploading' : toast.status === 'done' ? 'Uploaded' : 'Failed'}{' '}
-                <span className="opacity-70">{toast.name.length > 18 ? toast.name.slice(0, 16) + '…' : toast.name}</span>
+            )}
+
+            {/* Idle — "+" plus */}
+            {!active && (
+              <>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all group-hover:scale-110"
+                     style={{ border: '1px solid rgba(245,240,232,0.1)', background: 'rgba(245,240,232,0.04)' }}>
+                  <Plus size={16} style={{ color: 'rgba(245,240,232,0.25)' }} />
+                </div>
+                <span className="font-mono text-[7px] uppercase tracking-[0.35em]"
+                      style={{ color: 'rgba(245,240,232,0.2)' }}>
+                  Upload
+                </span>
+              </>
+            )}
+
+            <input ref={inputRef} type="file" accept="image/*" multiple className="hidden"
+                   onChange={e => e.target.files && handleFiles(e.target.files)} />
+          </label>
+
+          {/* Phase label below ring */}
+          {active && (
+            <div className="absolute -bottom-8 left-0 right-0 text-center">
+              <span className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
+                    key={active.phase}
+                    style={{
+                      color: active.phase === 'absorbing' ? 'rgba(45,158,139,0.7)' : active.phase === 'error' ? 'rgba(255,77,77,0.7)' : 'rgba(255,77,77,0.5)',
+                      animation: 'fade-in 0.3s ease',
+                    }}>
+                {active.phase === 'scanning' && '● SCANNING'}
+                {active.phase === 'uploading' && `● ${active.progress}% ARCHIVED`}
+                {active.phase === 'absorbing' && '● FRAGMENT ABSORBED'}
+                {active.phase === 'error' && '● SIGNAL LOST'}
               </span>
             </div>
-          ))}
+          )}
+        </div>
+
+        {/* Queue indicator */}
+        {queue.length > 0 && (
+          <p className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
+             style={{ color: 'rgba(245,240,232,0.2)', marginTop: 16 }}>
+            {queue.length} FRAGMENT{queue.length !== 1 ? 'S' : ''} QUEUED
+          </p>
+        )}
+
+        {errorMsg && (
+          <p className="font-mono text-[8px] uppercase tracking-[0.25em] cursor-pointer hover:opacity-80"
+             onClick={() => { setActive(null); setErrorMsg(''); }}
+             style={{ color: 'rgba(255,77,77,0.7)', marginTop: 8 }}>
+            {errorMsg}
+          </p>
+        )}
+      </div>
+
+      {/* Archived fragments grid — confirmed photos */}
+      {photoCount > 0 && (
+        <div className="w-full max-w-md px-4 mb-10 z-10">
+          <p className="font-mono text-[7.5px] uppercase tracking-[0.5em] mb-4 text-center"
+             style={{ color: 'rgba(245,240,232,0.2)' }}>
+            {photoCount} FRAGMENT{photoCount !== 1 ? 'S' : ''} IN ARCHIVE
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {(photos || []).map((photo: any) => (
+              <div key={photo.id}
+                   className="rounded-xl overflow-hidden"
+                   style={{
+                     width: 48, height: 48,
+                     border: '1px solid rgba(245,240,232,0.08)',
+                     background: 'rgba(245,240,232,0.04)',
+                     animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
+                   }}>
+                {photo.thumbnailUrl && <img src={photo.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {!canGenerate && photoCount > 0 && (
-        <p className="text-[10px] text-white/25 font-data">
-          {5 - photoCount} more photo{5 - photoCount !== 1 ? 's' : ''} needed
-        </p>
+      {/* Progress toward lore generation */}
+      {needed > 0 && photoCount > 0 && (
+        <div className="flex items-center gap-3 mb-8 z-10">
+          <div className="flex gap-1">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="w-6 h-1 rounded-full transition-all duration-500"
+                   style={{ background: i < photoCount ? '#FF4D4D' : 'rgba(245,240,232,0.1)', boxShadow: i < photoCount ? '0 0 4px rgba(255,77,77,0.4)' : 'none' }} />
+            ))}
+          </div>
+          <span className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
+                style={{ color: 'rgba(245,240,232,0.25)' }}>
+            {needed} MORE TO UNLOCK LORE
+          </span>
+        </div>
       )}
 
-      <button
-        onClick={() => generateLore.mutate({ tripId })}
-        disabled={!canGenerate || generateLore.isPending}
-        className="px-14 py-6 bg-[#F5F0E8] text-black rounded-full text-[11px] font-vibe font-black uppercase tracking-[0.4em] disabled:opacity-20 hover:scale-105 active:scale-95 transition-all shadow-3xl"
-      >
-        {generateLore.isPending ? 'Starting...' : 'Start the Lore Engine'}
-      </button>
+      {/* Lore engine CTA */}
+      <div className="z-10">
+        <button
+          onClick={() => generateLore.mutate({ tripId })}
+          disabled={!canGenerate || generateLore.isPending || isActive}
+          className="px-12 py-5 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-20 flex items-center gap-3"
+          style={{
+            background: canGenerate ? 'rgba(255,77,77,0.12)' : 'rgba(245,240,232,0.04)',
+            border: `1px solid ${canGenerate ? 'rgba(255,77,77,0.4)' : 'rgba(245,240,232,0.08)'}`,
+            color: canGenerate ? 'rgba(255,77,77,0.95)' : 'rgba(245,240,232,0.2)',
+            boxShadow: canGenerate ? '0 0 30px rgba(255,77,77,0.12)' : 'none',
+          }}
+          onMouseEnter={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 50px rgba(255,77,77,0.3)'; }}
+          onMouseLeave={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 30px rgba(255,77,77,0.12)'; }}
+        >
+          {generateLore.isPending ? (
+            <><div style={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid rgba(255,77,77,0.3)', borderTopColor: '#FF4D4D', animation: 'spin 0.8s linear infinite' }} /> IGNITING...</>
+          ) : generateLore.error ? (
+            '⚠ ' + (generateLore.error.message?.slice(0, 40) ?? 'Error')
+          ) : 'IGNITE THE LORE ENGINE →'}
+        </button>
+        {needed === 0 && (
+          <p className="text-center font-mono text-[7.5px] uppercase tracking-[0.3em] mt-3"
+             style={{ color: 'rgba(245,240,232,0.15)' }}>
+            {photoCount} FRAGMENTS READY
+          </p>
+        )}
+      </div>
+
+      <style jsx>{`
+        @keyframes scan-sweep {
+          from { top: -2px; opacity: 1; }
+          to   { top: 100%; opacity: 0.4; }
+        }
+        @keyframes fragment-in {
+          from { opacity: 0; transform: scale(0.6); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </div>
   );
 }
