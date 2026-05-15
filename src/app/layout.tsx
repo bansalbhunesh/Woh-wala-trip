@@ -43,7 +43,7 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bricolage.variable} ${nunito.variable} ${firaMono.variable} antialiased`}>
-      <body className="bg-[--bg] text-[--text] overflow-x-hidden">
+      <body className="overflow-x-hidden" style={{ background: '#060604', color: '#F5F0E8' }}>
         <TRPCProvider>{children}</TRPCProvider>
       </body>
     </html>
