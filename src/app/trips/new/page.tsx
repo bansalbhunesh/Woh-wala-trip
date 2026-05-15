@@ -3,153 +3,91 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { FilmGrain, AtmosphericBlob, CinematicText } from '@/components/ui/atoms';
-import { ChevronLeft, Sparkles, Calendar, MapPin, Type } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ChevronLeft, Sparkles } from 'lucide-react';
 
 export default function NewTripPage() {
   const router = useRouter();
-  const [name, setName] = useState('');
+  const [name, setName]             = useState('');
   const [destination, setDestination] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate]   = useState('');
+  const [endDate, setEndDate]       = useState('');
 
   const createTrip = trpc.trips.create.useMutation({
-    onSuccess: (trip) => {
-      router.push(`/trips/${trip.id}/invite`);
-    },
+    onSuccess: (trip) => router.push(`/trips/${trip.id}/invite`),
   });
 
-  const isReady = name && startDate && endDate && !createTrip.isPending;
+  const isReady = name.trim() && startDate && endDate && !createTrip.isPending;
 
   return (
-    <div className="min-h-screen bg-black text-[#F5F0E8] font-cinematic selection:bg-cooked-accent selection:text-white pb-32 overflow-hidden relative">
-      <FilmGrain />
-      <AtmosphericBlob color="#FF3B2F" className="top-[-10%] left-[-10%] w-[500px] h-[500px] opacity-20" />
-      <AtmosphericBlob color="#D49E2D" className="bottom-[-10%] right-[-10%] w-[400px] h-[400px] opacity-10" />
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+      <div className="light-grain" />
 
-      <header className="max-w-2xl mx-auto px-6 pt-16 pb-12 relative z-10">
-        <button 
-          onClick={() => router.back()} 
-          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors mb-8 group"
-        >
-          <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Cancel Archive
+      <div className="relative z-10 max-w-xl mx-auto px-6 pt-10 pb-20">
+
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 mb-10 text-[10px] font-ui font-bold uppercase tracking-widest transition-colors group"
+          style={{ color: 'var(--text-muted)' }}>
+          <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+          Back
         </button>
-        
-        <div className="space-y-4">
-          <CinematicText variant="eyebrow" className="text-white/40">The Setup</CinematicText>
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-none font-cinematic">
-            New<br />
-            <span className="italic text-cooked-accent">Season</span>
+
+        <div className="space-y-2 mb-10">
+          <p className="text-[9px] font-ui font-bold uppercase tracking-[0.45em]"
+             style={{ color: 'var(--text-muted)' }}>New Archive</p>
+          <h1 className="font-display font-black tracking-tighter leading-[0.85]"
+              style={{ fontSize: 'clamp(36px, 6vw, 64px)', color: 'var(--text)' }}>
+            New <em className="italic" style={{ color: 'var(--accent)' }}>Season</em>
           </h1>
-          <p className="text-lg text-white/40 italic max-w-sm">
-            "Every disaster starts with a group chat and a date. Let's initialize yours."
+          <p className="text-sm font-display italic" style={{ color: 'var(--text-muted)' }}>
+            "Every disaster starts with a group chat and a date."
           </p>
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-6 space-y-12 relative z-10">
-        <div className="space-y-8">
-          <CinematicField 
-            label="Season Title" 
-            icon={<Type size={18} />}
-            value={name} 
-            onChange={setName} 
-            placeholder="e.g. The Bus That Betrayed Us" 
-          />
-
-          <CinematicField
-            label="Filming Location"
-            icon={<MapPin size={18} />}
-            value={destination}
-            onChange={setDestination}
-            placeholder="e.g. Midnight Coimbatore"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <CinematicField 
-              label="Season Premiere" 
-              icon={<Calendar size={18} />}
-              value={startDate} 
-              onChange={setStartDate} 
-              type="date" 
-            />
-            <CinematicField 
-              label="Season Finale" 
-              icon={<Calendar size={18} />}
-              value={endDate} 
-              onChange={setEndDate} 
-              type="date" 
-            />
-          </div>
+        <div className="space-y-0" style={{ border: '1.5px solid var(--border)', borderRadius: '1.5rem', overflow: 'hidden', background: 'var(--bg-surface)' }}>
+          <Field label="Season Title" value={name} onChange={setName}
+                 placeholder="e.g. The Bus That Betrayed Us" first />
+          <Field label="Location" value={destination} onChange={setDestination}
+                 placeholder="e.g. Coimbatore at 2 AM" />
+          <Field label="Start Date" value={startDate} onChange={setStartDate} type="date" />
+          <Field label="End Date" value={endDate} onChange={setEndDate} type="date" last />
         </div>
 
-        <div className="pt-8">
-          <button
-            onClick={() =>
-              createTrip.mutate({
-                name,
-                destination: destination || undefined,
-                startDate,
-                endDate,
-              })
-            }
-            disabled={!isReady}
-            className={cn(
-              "w-full py-8 rounded-[2rem] flex items-center justify-center gap-4 transition-all duration-500",
-              isReady 
-                ? "bg-cooked-accent text-white shadow-[0_0_50px_rgba(255,59,47,0.3)] hover:scale-[1.02] active:scale-95" 
-                : "bg-white/5 border border-white/10 text-white/20 cursor-not-allowed"
-            )}
-          >
-            <Sparkles size={20} className={cn(createTrip.isPending && "animate-spin")} />
-            <span className="text-[11px] font-black uppercase tracking-[0.4em]">
-              {createTrip.isPending ? 'Initializing Lore...' : 'Launch the Season'}
-            </span>
-          </button>
+        <button
+          onClick={() => createTrip.mutate({ name, destination: destination || undefined, startDate, endDate })}
+          disabled={!isReady}
+          className="mt-6 w-full py-4 rounded-2xl text-[11px] font-ui font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-35 flex items-center justify-center gap-3"
+          style={{ background: isReady ? 'var(--text)' : 'var(--bg-surface)', color: isReady ? 'var(--bg)' : 'var(--text-muted)', border: isReady ? 'none' : '1.5px solid var(--border)' }}>
+          <Sparkles size={16} className={createTrip.isPending ? 'animate-spin' : ''} />
+          {createTrip.isPending ? 'Creating…' : 'Launch the Season →'}
+        </button>
 
-          {createTrip.error && (
-            <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-cooked-accent font-black">
-              Error: {createTrip.error.message}
-            </p>
-          )}
-        </div>
-      </main>
-
-      {/* Decorative Floor */}
-      <div className="mt-20 border-t border-white/5 pt-12 text-center opacity-20">
-         <span className="text-[8px] uppercase tracking-[0.5em] font-black">Lore Pipeline v.2 Active</span>
+        {createTrip.error && (
+          <p className="mt-4 text-center text-sm font-ui" style={{ color: 'var(--accent)' }}>
+            {createTrip.error.message}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-function CinematicField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  icon,
-  type = 'text',
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  icon?: React.ReactNode;
-  type?: string;
+function Field({ label, value, onChange, placeholder, type = 'text', first, last }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string; first?: boolean; last?: boolean;
 }) {
   return (
-    <div className="space-y-3 group">
-      <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/40 font-black ml-1 group-focus-within:text-cooked-accent transition-colors">
-        {icon} {label}
-      </label>
+    <div className="px-6 py-5" style={!last ? { borderBottom: '1px solid var(--border)' } : {}}>
+      <label className="block text-[9px] font-ui font-bold uppercase tracking-[0.35em] mb-2"
+             style={{ color: 'var(--text-muted)' }}>{label}</label>
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-white/[0.03] border border-white/10 rounded-[1.5rem] px-8 py-6 text-xl font-cinematic font-medium text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-cooked-accent/30 focus:bg-white/[0.07] focus:border-cooked-accent/50 transition-all selection:bg-cooked-accent"
+        className="w-full bg-transparent text-base font-ui font-semibold outline-none"
+        style={{ color: 'var(--text)' }}
+        autoFocus={first}
       />
     </div>
   );
