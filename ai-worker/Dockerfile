@@ -7,9 +7,10 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY ai-worker/pyproject.toml ./
+# Works whether built from ai-worker/ OR from project root
+COPY pyproject.toml ./
 RUN pip install --no-cache-dir .
 
-COPY ai-worker/src ./src
+COPY src ./src
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
