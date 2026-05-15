@@ -1,187 +1,241 @@
 'use client';
-
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
-import { Plus, Search } from 'lucide-react';
+import { CinematicShell } from '@/components/experience/CinematicShell';
+import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
-const POSTER_PALETTES = [
-  ['oklch(60% 0.22 25)', 'oklch(72% 0.16 35)'],
-  ['oklch(65% 0.12 180)', 'oklch(76% 0.10 195)'],
-  ['oklch(70% 0.12 85)', 'oklch(82% 0.10 95)'],
-  ['oklch(62% 0.18 280)', 'oklch(74% 0.14 290)'],
-  ['oklch(60% 0.14 155)', 'oklch(72% 0.12 165)'],
-  ['oklch(58% 0.16 320)', 'oklch(72% 0.12 330)'],
+const CHAOS_COLORS: Record<string, string> = {
+  ready: '#FF4D4D',
+  processing: '#D49E2D',
+  default: '#2D9E8B',
+};
+
+const SEASON_GLOWS: string[] = [
+  'rgba(255,77,77,0.15)',
+  'rgba(45,158,139,0.15)',
+  'rgba(124,106,255,0.15)',
+  'rgba(212,158,45,0.15)',
+  'rgba(201,75,158,0.15)',
 ];
 
-function posterPalette(name: string) {
+function seasonGlow(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
-  return POSTER_PALETTES[Math.abs(h) % POSTER_PALETTES.length];
+  return SEASON_GLOWS[Math.abs(h) % SEASON_GLOWS.length];
 }
 
-// Card widths vary to create rhythm
-const CARD_WIDTHS = ['240px', '200px', '260px', '210px', '230px', '195px'];
+function seasonAccent(name: string) {
+  const glows = ['#FF4D4D', '#2D9E8B', '#7C6AFF', '#D49E2D', '#C94B9E'];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return glows[Math.abs(h) % glows.length];
+}
 
 export default function TripsPage() {
   const { data: trips, isLoading } = trpc.trips.listMine.useQuery();
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setRevealed(true), 200);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
-      <div className="light-grain" />
+    <CinematicShell intensity={0.25}>
+      {/* Film grain */}
+      <div className="film-grain" />
 
       {/* Header */}
-      <header className="relative z-10 flex items-end justify-between px-8 pt-12 pb-8 flex-shrink-0"
-              style={{ borderBottom: '1px solid var(--border)' }}>
+      <header className="relative px-8 pt-12 pb-8 flex items-end justify-between"
+              style={{ borderBottom: '1px solid rgba(245,240,232,0.05)' }}>
         <div className="space-y-1">
-          <p className="text-[9px] font-ui font-bold uppercase tracking-[0.45em]"
-             style={{ color: 'var(--text-muted)' }}>The Dossier</p>
-          <h1 className="font-display font-black tracking-tighter leading-[0.85]"
-              style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text)' }}>
-            The <em className="italic" style={{ color: 'var(--accent)' }}>Seasons</em>
+          <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
+             style={{ color: 'rgba(255,77,77,0.5)' }}>
+            ● RECOVERED ARCHIVES
+          </p>
+          <h1 className="font-display font-black uppercase tracking-tighter leading-[0.85]"
+              style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'rgba(245,240,232,0.92)' }}>
+            THE <em className="italic" style={{ color: '#FF4D4D' }}>SEASONS</em>
           </h1>
         </div>
-        <div className="flex items-center gap-3 pb-1">
-          <button className="p-3 rounded-full transition-all hover:scale-105"
-                  style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-            <Search size={16} style={{ color: 'var(--text-muted)' }} />
-          </button>
-          <Link href="/trips/new"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-ui font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
-                style={{ background: 'var(--text)', color: 'var(--bg)' }}>
-            <Plus size={14} /> New Season
-          </Link>
-        </div>
+
+        <Link
+          href="/trips/new"
+          className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+          style={{
+            border: '1px solid rgba(255,77,77,0.4)',
+            background: 'rgba(255,77,77,0.08)',
+            color: 'rgba(255,77,77,0.9)',
+            boxShadow: '0 0 20px rgba(255,77,77,0.1)',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 40px rgba(255,77,77,0.3)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 20px rgba(255,77,77,0.1)'; }}
+        >
+          <Plus size={14} /> INITIALIZE SEASON
+        </Link>
       </header>
 
-      {/* Horizontal scroll track */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center">
+      {/* Content */}
+      <main className="px-8 py-10 pb-24">
         {isLoading ? (
-          <div className="flex gap-5 px-8 overflow-hidden">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex-shrink-0 rounded-3xl animate-pulse"
-                   style={{ width: CARD_WIDTHS[i % CARD_WIDTHS.length], height: '65vh', background: 'var(--bg-surface)' }} />
-            ))}
+          <div className="flex flex-col items-center justify-center py-32 space-y-6">
+            <div className="relative w-16 h-16">
+              {[1, 0.7, 0.4].map((s, i) => (
+                <div key={i} className="absolute inset-0 rounded-full"
+                     style={{
+                       border: '1px solid rgba(255,77,77,0.3)',
+                       transform: `scale(${s})`,
+                       animation: `spin ${1.5 + i * 0.6}s linear infinite ${i % 2 ? 'reverse' : ''}`,
+                     }} />
+              ))}
+            </div>
+            <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
+               style={{ color: 'rgba(245,240,232,0.2)' }}>ACCESSING ARCHIVE...</p>
           </div>
         ) : trips?.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-8 py-24">
-            <div className="text-5xl mb-5">📭</div>
-            <h2 className="font-display font-black text-3xl tracking-tight mb-2" style={{ color: 'var(--text)' }}>
-              No lore detected.
-            </h2>
-            <p className="text-sm font-ui mb-8 max-w-xs" style={{ color: 'var(--text-muted)' }}>
-              Your archive is empty. Start a new season to begin documenting the chaos.
-            </p>
+          <div className="flex flex-col items-center justify-center py-32 space-y-8 text-center max-w-sm mx-auto">
+            <div className="w-px h-16 mx-auto" style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,77,77,0.5), transparent)' }} />
+            <div className="space-y-3">
+              <p className="font-mono text-[8px] uppercase tracking-[0.6em]" style={{ color: 'rgba(255,77,77,0.4)' }}>
+                NO LORE DETECTED
+              </p>
+              <h2 className="font-display font-black text-3xl uppercase" style={{ color: 'rgba(245,240,232,0.8)' }}>
+                ARCHIVE EMPTY
+              </h2>
+              <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)' }}>
+                "No friendship has been documented yet."
+              </p>
+            </div>
             <Link href="/trips/new"
-                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[10px] font-ui font-black uppercase tracking-widest transition-all hover:scale-105"
-                  style={{ background: 'var(--text)', color: 'var(--bg)' }}>
-              Start First Season →
+                  className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105"
+                  style={{ border: '1px solid rgba(255,77,77,0.4)', background: 'rgba(255,77,77,0.08)', color: 'rgba(255,77,77,0.9)' }}>
+              INITIALIZE FIRST SEASON →
             </Link>
           </div>
         ) : (
-          <>
-            {/* Scroll hint label */}
-            <div className="px-8 mb-4 flex items-center gap-3">
-              <p className="text-[9px] font-ui font-bold uppercase tracking-[0.4em]"
-                 style={{ color: 'var(--text-muted)' }}>
-                {trips?.length} Season{trips?.length !== 1 ? 's' : ''} in the archive
-              </p>
-              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-              <p className="text-[9px] font-ui font-bold uppercase tracking-[0.3em]"
-                 style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
-                scroll →
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {trips?.map((trip, idx) => {
+              const accent = seasonAccent(trip.name ?? '');
+              const glow = seasonGlow(trip.name ?? '');
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const loreStatus = (trip as any).lore_status ?? 'default';
+              const statusColor = CHAOS_COLORS[loreStatus] ?? CHAOS_COLORS.default;
+              const animDelay = idx * 0.08;
 
-            {/* Horizontal scroll container */}
-            <div className="flex gap-5 px-8 pb-6 overflow-x-auto scrollbar-hide">
-              {trips?.map((trip, idx) => {
-                const [from, to] = posterPalette(trip.name ?? 'trip');
-                const cardW = CARD_WIDTHS[idx % CARD_WIDTHS.length];
-                const isReady = (trip as { lore_status?: string }).lore_status === 'ready';
+              return (
+                <Link
+                  key={trip.id}
+                  href={`/trips/${trip.id}`}
+                  className="group relative block rounded-2xl overflow-hidden transition-all duration-500"
+                  style={{
+                    background: 'rgba(245,240,232,0.03)',
+                    border: `1px solid rgba(245,240,232,0.07)`,
+                    boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)`,
+                    opacity: revealed ? 1 : 0,
+                    transform: revealed ? 'translateY(0)' : 'translateY(20px)',
+                    transition: `opacity 0.6s ease ${animDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, box-shadow 0.3s ease, border-color 0.3s ease`,
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = `${accent}40`;
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 16px 48px rgba(0,0,0,0.4), 0 0 40px ${glow}, inset 0 1px 0 rgba(245,240,232,0.06)`;
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(245,240,232,0.07)';
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)';
+                  }}
+                >
+                  {/* Color glow panel */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl transition-opacity duration-500 group-hover:opacity-100"
+                       style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, opacity: 0.5 }} />
 
-                return (
-                  <Link
-                    key={trip.id}
-                    href={`/trips/${trip.id}`}
-                    className="group flex-shrink-0 flex flex-col rounded-3xl overflow-hidden light-card"
-                    style={{ width: cardW, height: '62vh', minHeight: 380, boxShadow: '0 4px 16px rgba(0,0,0,0.07)' }}
-                  >
-                    {/* Full-height poster */}
-                    <div className="relative flex-1"
-                         style={{ background: `linear-gradient(160deg, ${from}, ${to})` }}>
-                      {/* Status pill */}
-                      <div className="absolute top-4 left-4 px-2.5 py-1 rounded-full text-[7.5px] font-ui font-bold uppercase tracking-widest"
-                           style={{ background: 'oklch(100% 0 0 / 0.2)', color: 'oklch(97% 0.005 60)' }}>
-                        {isReady ? '✓ Lore Ready' : 'Active'}
-                      </div>
-
-                      {/* Big trip initial watermark */}
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <p className="font-display font-black leading-tight"
-                           style={{
-                             fontSize: 'clamp(18px, 3.5vw, 28px)',
-                             color: 'oklch(97% 0.005 60)',
-                             opacity: 0.95,
-                             textShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                           }}>
-                          {trip.name}
+                  {/* Card content */}
+                  <div className="p-7 space-y-6">
+                    {/* Top row */}
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <p className="font-mono text-[7px] uppercase tracking-[0.5em]"
+                           style={{ color: `${statusColor}60` }}>
+                          {loreStatus === 'ready' ? '✓ LORE ARCHIVED' : loreStatus === 'processing' ? '◌ PROCESSING' : '● SEASON ACTIVE'}
                         </p>
-                        {trip.destination && (
-                          <p className="text-[9px] font-ui mt-0.5" style={{ color: 'oklch(97% 0.005 60)', opacity: 0.65 }}>
-                            {trip.destination}
-                          </p>
-                        )}
+                        <h3 className="font-display font-black text-xl leading-tight"
+                            style={{ color: 'rgba(245,240,232,0.9)' }}>
+                          {trip.name}
+                        </h3>
                       </div>
+                      {/* Lore status indicator */}
+                      <div className="w-2 h-2 rounded-full mt-1"
+                           style={{ background: statusColor, boxShadow: `0 0 8px ${statusColor}`, animation: loreStatus === 'processing' ? 'pulse-soft 1.5s ease-in-out infinite' : 'none' }} />
                     </div>
 
-                    {/* Footer strip */}
-                    <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-                         style={{ background: 'var(--bg-surface)', borderTop: '1px solid var(--border)' }}>
-                      <p className="text-[9px] font-ui font-bold uppercase tracking-widest truncate"
-                         style={{ color: 'var(--text-muted)' }}>
-                        {trip.start_date ? new Date(trip.start_date).toLocaleDateString('en', { month: 'short', year: 'numeric' }) : 'Timeless'}
+                    {/* Metadata */}
+                    <div className="space-y-2">
+                      {trip.destination && (
+                        <p className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.3)' }}>
+                          ◎ {trip.destination}
+                        </p>
+                      )}
+                      {trip.start_date && (
+                        <p className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.2)' }}>
+                          {new Date(trip.start_date).toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Bottom — enter cue */}
+                    <div className="flex items-center justify-between pt-2"
+                         style={{ borderTop: '1px solid rgba(245,240,232,0.05)' }}>
+                      <p className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
+                         style={{ color: 'rgba(245,240,232,0.15)' }}>
+                        ENTER ARCHIVE
                       </p>
-                      <span className="text-sm opacity-30 group-hover:translate-x-1 transition-transform"
-                            style={{ color: 'var(--text)' }}>→</span>
+                      <span className="font-mono text-[11px] transition-transform duration-300 group-hover:translate-x-1"
+                            style={{ color: `${accent}80` }}>→</span>
                     </div>
-                  </Link>
-                );
-              })}
+                  </div>
+                </Link>
+              );
+            })}
 
-              {/* Add new season card at end */}
-              <Link href="/trips/new"
-                    className="flex-shrink-0 flex flex-col items-center justify-center gap-4 rounded-3xl transition-all hover:scale-[1.02] active:scale-95"
-                    style={{
-                      width: '180px', height: '62vh', minHeight: 380,
-                      border: '2px dashed var(--border)',
-                      background: 'transparent',
-                    }}>
-                <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                  <Plus size={20} style={{ color: 'var(--text-muted)' }} />
+            {/* Add new card */}
+            <Link href="/trips/new"
+                  className="group flex flex-col items-center justify-center rounded-2xl transition-all duration-400 hover:scale-[1.02]"
+                  style={{
+                    minHeight: 200,
+                    border: '1px dashed rgba(245,240,232,0.08)',
+                    background: 'rgba(245,240,232,0.02)',
+                    opacity: revealed ? 1 : 0,
+                    transition: `opacity 0.6s ease ${(trips?.length ?? 0) * 0.08}s`,
+                  }}>
+              <div className="space-y-3 text-center">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto transition-all group-hover:scale-110"
+                     style={{ border: '1px solid rgba(255,77,77,0.25)', background: 'rgba(255,77,77,0.05)' }}>
+                  <Plus size={18} style={{ color: 'rgba(255,77,77,0.5)' }} />
                 </div>
-                <p className="text-[9px] font-ui font-bold uppercase tracking-widest text-center"
-                   style={{ color: 'var(--text-muted)' }}>
-                  New<br />Season
+                <p className="font-mono text-[8px] uppercase tracking-[0.4em]" style={{ color: 'rgba(245,240,232,0.2)' }}>
+                  NEW SEASON
                 </p>
-              </Link>
-            </div>
-          </>
+              </div>
+            </Link>
+          </div>
         )}
-      </div>
+      </main>
 
       {/* Footer */}
-      <footer className="relative z-10 flex-shrink-0 py-4 px-8 flex items-center justify-between"
-              style={{ borderTop: '1px solid var(--border)' }}>
-        <p className="text-[8px] font-ui font-bold uppercase tracking-[0.4em]"
-           style={{ color: 'var(--text-muted)', opacity: 0.4 }}>
-          Lore Pipeline v2.0
+      <footer className="fixed bottom-0 left-0 right-0 flex items-center justify-between px-8 py-3 z-20"
+              style={{ borderTop: '1px solid rgba(245,240,232,0.04)', background: 'rgba(6,6,4,0.8)', backdropFilter: 'blur(12px)' }}>
+        <p className="font-mono text-[7.5px] uppercase tracking-[0.5em]" style={{ color: 'rgba(245,240,232,0.15)' }}>
+          WOH WALA TRIP
         </p>
-        <p className="text-[8px] font-ui font-bold uppercase tracking-[0.4em]"
-           style={{ color: 'var(--text-muted)', opacity: 0.4 }}>
-          AI Friendship Archive
+        <p className="font-mono text-[7.5px] uppercase tracking-[0.5em]" style={{ color: 'rgba(245,240,232,0.1)' }}>
+          LORE PIPELINE V2 · ACTIVE
         </p>
       </footer>
-    </div>
+
+      <style jsx>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse-soft { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
+    </CinematicShell>
   );
 }

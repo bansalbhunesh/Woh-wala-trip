@@ -1,8 +1,8 @@
 'use client';
-
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import { CinematicShell } from '@/components/experience/CinematicShell';
 import { Copy, Check, MessageCircle, ArrowRight } from 'lucide-react';
 
 export default function InvitePage({ params }: { params: Promise<{ tripId: string }> }) {
@@ -16,7 +16,7 @@ export default function InvitePage({ params }: { params: Promise<{ tripId: strin
   const inviteCode = trip?.invite_code || '––––';
   const tripName = trip?.name || 'this trip';
   const inviteLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/trips/join?code=${inviteCode}`;
-  const whatsappMsg = `Yaar, ${tripName} ka archive bana raha hoon 📸 Apne photos upload karo: ${inviteLink}`;
+  const whatsappMsg = `Yaar, ${tripName} ka archive ban raha hai 📸 Join karo: ${inviteLink}`;
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(inviteCode);
@@ -25,69 +25,66 @@ export default function InvitePage({ params }: { params: Promise<{ tripId: strin
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: 'var(--bg)' }}>
-      <div className="light-grain" />
+    <CinematicShell intensity={0.3}>
+      <div className="film-grain" />
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm space-y-10 text-center">
 
-      <div className="relative z-10 w-full max-w-sm space-y-8 text-center">
+          <div className="space-y-2">
+            <p className="font-mono text-[8px] uppercase tracking-[0.6em]" style={{ color: 'rgba(255,77,77,0.5)' }}>
+              ● ARCHIVE INITIALIZED
+            </p>
+            <h1 className="font-display font-black uppercase tracking-tighter leading-[0.85]"
+                style={{ fontSize: 'clamp(32px, 6vw, 60px)', color: 'rgba(245,240,232,0.92)' }}>
+              GATHER <em className="italic" style={{ color: '#FF4D4D' }}>THE CAST</em>
+            </h1>
+            <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.25)' }}>
+              "Lore is a team sport."
+            </p>
+          </div>
 
-        <div className="space-y-2">
-          <p className="text-[9px] font-ui font-bold uppercase tracking-[0.45em]"
-             style={{ color: 'var(--text-muted)' }}>Archive Initialized</p>
-          <h1 className="font-display font-black tracking-tighter leading-[0.85]"
-              style={{ fontSize: 'clamp(36px, 7vw, 64px)', color: 'var(--text)' }}>
-            Gather <em className="italic" style={{ color: 'var(--accent)' }}>The Cast</em>
-          </h1>
-          <p className="text-sm font-display italic" style={{ color: 'var(--text-muted)' }}>
-            "Lore is a team sport."
+          {/* Code reveal */}
+          <div className="rounded-2xl py-10 px-6 space-y-6"
+               style={{ background: 'rgba(245,240,232,0.03)', border: '1px solid rgba(245,240,232,0.07)' }}>
+            <p className="font-mono text-[7.5px] uppercase tracking-[0.5em]" style={{ color: 'rgba(245,240,232,0.2)' }}>
+              ACCESS CODE
+            </p>
+            <p className="font-display font-black tracking-[0.25em] leading-none"
+               style={{ fontSize: 'clamp(36px, 9vw, 60px)', color: 'rgba(245,240,232,0.9)', textShadow: '0 0 40px rgba(255,77,77,0.15)' }}>
+              {inviteCode}
+            </p>
+            <button onClick={copyCode}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      border: `1px solid ${copied ? 'rgba(45,158,139,0.5)' : 'rgba(245,240,232,0.1)'}`,
+                      background: copied ? 'rgba(45,158,139,0.1)' : 'rgba(245,240,232,0.04)',
+                      color: copied ? 'rgba(45,158,139,0.9)' : 'rgba(245,240,232,0.4)',
+                    }}>
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+              <span className="font-mono text-[8px] uppercase tracking-widest">
+                {copied ? 'COPIED' : 'COPY CODE'}
+              </span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`, '_blank')}
+                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-[1.02]"
+                    style={{ background: '#25D366', color: '#fff', boxShadow: '0 8px 32px rgba(37,211,102,0.2)' }}>
+              <MessageCircle size={16} /> SHARE ON WHATSAPP
+            </button>
+            <button onClick={() => router.push(`/trips/${tripId}`)}
+                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-[1.02]"
+                    style={{ border: '1px solid rgba(255,77,77,0.3)', background: 'rgba(255,77,77,0.08)', color: 'rgba(255,77,77,0.9)' }}>
+              ENTER ARCHIVE <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <p className="font-mono text-[7px] uppercase tracking-[0.4em]" style={{ color: 'rgba(245,240,232,0.1)' }}>
+            THEATRICAL RELEASE PENDING CAST CONFIRMATION
           </p>
         </div>
-
-        {/* Code card */}
-        <div className="rounded-3xl p-8 space-y-6"
-             style={{ background: 'var(--bg-surface)', border: '1.5px solid var(--border)' }}>
-          <p className="text-[9px] font-ui font-bold uppercase tracking-widest"
-             style={{ color: 'var(--text-muted)' }}>Secret Access Key</p>
-
-          <p className="font-display font-black tracking-[0.2em] leading-none"
-             style={{ fontSize: 'clamp(40px, 10vw, 64px)', color: 'var(--text)' }}>
-            {inviteCode}
-          </p>
-
-          <button
-            onClick={copyCode}
-            className="mx-auto flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-ui font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
-            style={{
-              background: copied ? 'oklch(65% 0.12 180 / 0.15)' : 'var(--bg)',
-              border: `1.5px solid ${copied ? 'oklch(65% 0.12 180)' : 'var(--border)'}`,
-              color: copied ? 'oklch(65% 0.12 180)' : 'var(--text-muted)',
-            }}>
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'Copied!' : 'Copy Key'}
-          </button>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`, '_blank')}
-            className="flex items-center justify-center gap-3 py-4 rounded-2xl text-[11px] font-ui font-black uppercase tracking-widest transition-all hover:scale-[1.02]"
-            style={{ background: '#25D366', color: '#fff' }}>
-            <MessageCircle size={17} /> Share on WhatsApp
-          </button>
-
-          <button
-            onClick={() => router.push(`/trips/${tripId}`)}
-            className="flex items-center justify-center gap-3 py-4 rounded-2xl text-[11px] font-ui font-black uppercase tracking-widest transition-all hover:scale-[1.02]"
-            style={{ background: 'var(--text)', color: 'var(--bg)' }}>
-            Go to Archive <ArrowRight size={17} />
-          </button>
-        </div>
-
-        <p className="text-[9px] font-ui font-bold uppercase tracking-[0.35em]"
-           style={{ color: 'var(--text-muted)', opacity: 0.35 }}>
-          Theatrical Release Pending Cast Confirmation
-        </p>
       </div>
-    </div>
+    </CinematicShell>
   );
 }
