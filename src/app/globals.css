@@ -54,26 +54,24 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 /* z-index: 2 — above backgrounds, BELOW all interactive content */
 .film-grain {
   position: fixed; inset: 0; z-index: 2;
-  pointer-events: none; opacity: 0.045;
+  pointer-events: none; opacity: 0.035;
   mix-blend-mode: overlay;
-  will-change: transform;
-  animation: grain 0.8s steps(1) infinite;
+  /* steps(3) instead of steps(1) — smoother grain movement, no harsh flicker */
+  animation: grain 1.2s steps(3) infinite;
   background-image: url('data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27/%3E%3C/svg%3E');
   background-size: 180px 180px;
 }
 .light-grain {
   position: fixed; inset: 0; z-index: 2;
-  pointer-events: none; opacity: 0.018;
+  pointer-events: none; opacity: 0.015;
   mix-blend-mode: multiply;
-  will-change: transform;
-  animation: grain 1.2s steps(1) infinite;
+  animation: grain 1.6s steps(3) infinite;
   background-image: url('data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27/%3E%3C/svg%3E');
   background-size: 180px 180px;
 }
-/* Reduce grain intensity on mobile for performance */
 @media (max-width: 768px) {
-  .film-grain  { opacity: 0.025; animation-duration: 1.2s; }
-  .light-grain { opacity: 0.010; animation-duration: 1.8s; }
+  .film-grain  { opacity: 0.02; animation-duration: 1.8s; }
+  .light-grain { opacity: 0.008; animation-duration: 2.4s; }
 }
 
 /* ─── Keyframes ──────────────────────────────────────────────── */

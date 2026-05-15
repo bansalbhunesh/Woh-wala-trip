@@ -159,47 +159,52 @@ export default function TripsPage() {
                        style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, opacity: 0.5 }} />
 
                   {/* Card content */}
-                  <div className="p-7 space-y-6">
+                  <div className="p-6 space-y-5">
                     {/* Top row */}
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <p className="font-mono text-[7px] uppercase tracking-[0.5em]"
-                           style={{ color: `${statusColor}60` }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2 min-w-0">
+                        {/* Status — bigger, bolder, clearly readable */}
+                        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em]"
+                           style={{ color: statusColor, opacity: 0.85 }}>
                           {loreStatus === 'ready' ? '✓ LORE ARCHIVED' : loreStatus === 'processing' ? '◌ PROCESSING' : '● SEASON ACTIVE'}
                         </p>
-                        <h3 className="font-display font-black text-xl leading-tight"
-                            style={{ color: 'rgba(245,240,232,0.9)' }}>
+                        {/* Trip name */}
+                        <h3 className="font-display font-black text-2xl leading-tight"
+                            style={{ color: 'rgba(245,240,232,0.95)' }}>
                           {trip.name}
                         </h3>
                       </div>
-                      {/* Lore status indicator */}
-                      <div className="w-2 h-2 rounded-full mt-1"
-                           style={{ background: statusColor, boxShadow: `0 0 8px ${statusColor}`, animation: loreStatus === 'processing' ? 'pulse-soft 1.5s ease-in-out infinite' : 'none' }} />
+                      {/* Status dot */}
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
+                           style={{ background: statusColor, boxShadow: `0 0 10px ${statusColor}`, animation: loreStatus === 'processing' ? 'pulse-soft 1.5s ease-in-out infinite' : 'none' }} />
                     </div>
 
                     {/* Metadata */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {trip.destination && (
-                        <p className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.3)' }}>
+                        <p className="font-mono text-[10px] font-medium" style={{ color: 'rgba(245,240,232,0.5)' }}>
                           ◎ {trip.destination}
                         </p>
                       )}
                       {trip.start_date && (
-                        <p className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.2)' }}>
+                        <p className="font-mono text-[10px]" style={{ color: 'rgba(245,240,232,0.35)' }}>
                           {new Date(trip.start_date).toLocaleDateString('en', { month: 'long', year: 'numeric' })}
                         </p>
                       )}
                     </div>
 
                     {/* Bottom — enter cue */}
-                    <div className="flex items-center justify-between pt-2"
-                         style={{ borderTop: '1px solid rgba(245,240,232,0.05)' }}>
-                      <p className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
-                         style={{ color: 'rgba(245,240,232,0.15)' }}>
+                    <div className="flex items-center justify-between pt-3"
+                         style={{ borderTop: '1px solid rgba(245,240,232,0.08)' }}>
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em]"
+                         style={{ color: 'rgba(245,240,232,0.45)' }}>
                         ENTER ARCHIVE
                       </p>
-                      <span className="font-mono text-[11px] transition-transform duration-300 group-hover:translate-x-1"
-                            style={{ color: `${accent}80` }}>→</span>
+                      {/* Arrow — fully visible, accent color, clear */}
+                      <span className="font-mono text-base font-bold transition-transform duration-300 group-hover:translate-x-1.5"
+                            style={{ color: accent }}>
+                        →
+                      </span>
                     </div>
                   </div>
                 </Link>

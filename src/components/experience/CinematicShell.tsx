@@ -33,7 +33,9 @@ export function CinematicShell({ children, intensity = 0.3 }: { children: React.
       t += 0.004; // slow global tick
 
       // Near-opaque background — particles fade in slowly, no harsh cuts
-      ctx.fillStyle = 'rgba(6,6,4,0.94)';
+      // clearRect first to prevent semi-transparent edge artifacts / border glitch
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#060604';
       ctx.fillRect(0, 0, W, H);
 
       particles.forEach(p => {
