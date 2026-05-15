@@ -1,201 +1,277 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { use, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import Link from 'next/link';
+import type { LoreJson } from '@/lib/types';
 
-export default function StoryPage() {
+type Slide =
+  | { type: 'title'; lore: LoreJson }
+  | { type: 'cooked'; lore: LoreJson }
+  | { type: 'recap'; lore: LoreJson }
+  | { type: 'era'; lore: LoreJson; idx: number }
+  | { type: 'character'; member: any }
+  | { type: 'superlative'; sup: any; idx: number; lore: LoreJson }
+  | { type: 'verdict'; lore: LoreJson }
+  | { type: 'share'; tripId: string };
+
+function buildSlides(tripId: string, lore: LoreJson, members: any[]): Slide[] {
+  const slides: Slide[] = [];
+  slides.push({ type: 'title', lore });
+  slides.push({ type: 'cooked', lore });
+  if (lore.season_recap?.full_narrative) slides.push({ type: 'recap', lore });
+  (lore.trip_eras || []).slice(0, 3).forEach((_, i) => slides.push({ type: 'era', lore, idx: i }));
+  members.filter(m => m.role_title).forEach(m => slides.push({ type: 'character', member: m }));
+  (lore.superlatives || []).slice(0, 3).forEach((sup, i) => slides.push({ type: 'superlative', sup, idx: i, lore }));
+  slides.push({ type: 'verdict', lore });
+  slides.push({ type: 'share', tripId });
+  return slides;
+}
+
+export default function StoryPage({ params }: { params: Promise<{ tripId: string }> }) {
+  const { tripId } = use(params);
   const router = useRouter();
-  const params = useParams();
-  const tripId = params.tripId as string;
-  const [index, setIndex] = useState(0);
+  const [idx, setIdx] = useState(0);
+  const touchStart = useRef<number | null>(null);
 
   const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
-  const trip = (tripData as any)?.trip;
-  // getFull returns `members`, not `cast`
+  const lore = (tripData as any)?.trip?.lore_json as LoreJson | null;
   const members = (tripData as any)?.members || [];
 
-  const lore = trip?.lore_json;
+  if (!lore) {
+    return (
+      <div className="min-h-screen bg-[#060604] flex flex-col items-center justify-center gap-4">
+        <div className="w-8 h-8 rounded-full border border-cooked-accent/30 border-t-cooked-accent animate-spin" />
+        <p className="text-white/30 font-vibe text-xs uppercase tracking-widest">Opening archive...</p>
+        <button onClick={() => router.push(`/trips/${tripId}`)}
+                className="mt-6 text-[9px] uppercase tracking-widest text-white/15 font-vibe hover:text-white/30 transition-colors">
+          ← Return to archive
+        </button>
+      </div>
+    );
+  }
 
-  const slides = [
-    {
-      type: 'title',
-      eyebrow: 'The Official Archive',
-      title: trip?.name || 'Loading...',
-      italic: lore?.tagline || 'Analyzing your trip data...',
-      body: `Season ${new Date().getFullYear()} · ${members.length} Cast Members · ${trip?.total_photos || 0} Photos`,
-    },
-    {
-      type: 'chaos',
-      eyebrow: 'How Cooked?',
-      score: lore?.cooked_level ?? trip?.chaos_score ?? 0,
-      verdict: lore?.cooked_verdict || 'Processing...',
-      body: 'The algorithm has analyzed every incident. There is no appeal process.',
-    },
-    {
-      type: 'recap',
-      eyebrow: 'Season Recap',
-      title: 'Act I → Act II → Act III',
-      body: lore?.season_recap?.full_narrative || 'Generating narrative...',
-    },
-    ...members.slice(0, 3).map((m: any) => ({
-      type: 'character',
-      eyebrow: 'Character Role',
-      name: m.display_name || 'Cast Member',
-      avatar: (m.display_name || '??').split(' ').map((n: string) => n[0]).join('').slice(0, 2),
-      role: m.role_archetype_tag || m.role_title || '??',
-      tag: m.role_title || '??',
-      body: m.role_description || 'The algorithm is still processing this persona.',
-      score: m.role_chaos_rating ?? 0,
-    })),
-    {
-      type: 'final',
-      eyebrow: 'The Lore is Sealed',
-      title: 'Share the Chaos',
-      body: lore?.closing_line || 'Screenshot this. Tag your group. Let them defend themselves.',
-    },
-  ];
+  const slides = buildSlides(tripId, lore, members);
+  const current = slides[idx];
+  const isFirst = idx === 0;
+
+  const advance = () => setIdx(i => Math.min(i + 1, slides.length - 1));
+  const retreat = () => setIdx(i => Math.max(i - 1, 0));
 
   const handleTap = (e: React.MouseEvent) => {
     const x = e.clientX;
     const w = window.innerWidth;
-    if (x < w * 0.33) {
-      setIndex((i) => Math.max(i - 1, 0));
-    } else {
-      if (index === slides.length - 1) {
-        router.push(`/trips/${tripId}`);
-      } else {
-        setIndex((i) => i + 1);
-      }
-    }
+    if (x < w * 0.33) retreat();
+    else advance();
   };
 
-  const slide = slides[index];
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = e.touches[0].clientX;
+  };
 
-  if (!trip) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="animate-pulse text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe">Opening Archive...</div>
-    </div>
-  );
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current;
+    if (Math.abs(dx) > 50) dx < 0 ? advance() : retreat();
+    touchStart.current = null;
+  };
 
   return (
-    <div className="h-screen bg-black text-[#F5F0E8] overflow-hidden select-none touch-none flex flex-col relative">
-      {/* Progress Bars */}
-      <div className="flex gap-1.5 p-4 pt-6 z-50">
+    <div
+      className="min-h-screen bg-[#060604] overflow-hidden relative select-none"
+      onClick={handleTap}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Progress bars */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-4">
         {slides.map((_, i) => (
           <div key={i} className="flex-1 h-0.5 bg-white/10 rounded-full overflow-hidden">
             <div
-              className={`h-full bg-[#F5F0E8] transition-all duration-300 ${i <= index ? 'w-full' : 'w-0'}`}
-              style={{ opacity: i === index ? 1 : i < index ? 0.3 : 0 }}
+              className="h-full bg-white/60 rounded-full transition-all duration-300"
+              style={{ width: i < idx ? '100%' : i === idx ? '50%' : '0%' }}
             />
           </div>
         ))}
       </div>
 
-      {/* Exit Button */}
+      {/* Exit */}
       <button
-        onClick={() => router.push(`/trips/${tripId}`)}
-        className="absolute top-4 right-4 z-50 text-[10px] font-vibe font-bold uppercase tracking-[0.2em] text-white/20 hover:text-white"
+        onClick={e => { e.stopPropagation(); router.push(`/trips/${tripId}`); }}
+        className="absolute top-8 right-4 z-50 text-white/25 text-xs font-vibe uppercase tracking-wider hover:text-white/50 transition-colors"
       >
         Exit
       </button>
 
-      {/* Tap Zones Overlay */}
-      <div className="absolute inset-0 z-40 cursor-pointer" onClick={handleTap} />
+      {/* Slide content */}
+      <div className="min-h-screen flex flex-col items-center justify-center px-8 py-20">
+        <SlideRenderer
+          slide={current}
+          router={router}
+          tripId={tripId}
+          onShare={() => router.push(`/trips/${tripId}/share`)}
+        />
+      </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 relative">
-        <div key={index} className="animate-fade-in flex flex-col items-center max-w-sm">
-          {slide.type === 'title' && (
-            <>
-              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
-              <h1 className="text-6xl font-cinematic font-black tracking-tighter leading-[0.85] text-[#F5F0E8] mb-6 uppercase">
-                {(slide.title as string).split(' ').map((w: string, i: number) =>
-                  i === 1
-                    ? <span key={i} className="italic text-chill-accent"><br />{w}</span>
-                    : <span key={i}>{w} </span>
-                )}
-              </h1>
-              <div className="text-xl font-cinematic italic text-chill-accent mb-6 leading-tight">{slide.italic as string}</div>
-              <div className="text-[13px] font-vibe text-white/35 leading-relaxed">{slide.body as string}</div>
-            </>
-          )}
-
-          {slide.type === 'chaos' && (
-            <>
-              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
-              <div className="text-[28vw] font-vibe font-black tracking-tighter text-cooked-accent leading-none mb-4">
-                {slide.score as number}
-              </div>
-              <div className="text-xl font-vibe font-black uppercase tracking-[0.05em] text-white/80 mb-4">
-                {(slide.score as number) >= 76
-                  ? 'Historically Cooked'
-                  : (slide.score as number) >= 51
-                  ? 'Peak Delusion'
-                  : (slide.score as number) >= 26
-                  ? 'Emotionally Unstable'
-                  : 'Mildly Simmering'}
-              </div>
-              <div className="text-[13px] font-vibe text-white/35 leading-relaxed max-w-[280px]">{slide.body as string}</div>
-            </>
-          )}
-
-          {slide.type === 'recap' && (
-            <>
-              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
-              <div className="text-2xl font-cinematic font-black text-[#F5F0E8] mb-6 tracking-tight uppercase">{slide.title as string}</div>
-              <div className="text-[15px] font-cinematic italic text-white/50 leading-relaxed text-center px-4">
-                &ldquo;{slide.body as string}&rdquo;
-              </div>
-            </>
-          )}
-
-          {slide.type === 'character' && (
-            <>
-              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
-              <div className="w-20 h-20 rounded-full bg-cooked-accent/15 border border-cooked-accent/30 flex items-center justify-center text-3xl font-vibe font-black text-cooked-accent mb-6">
-                {slide.avatar as string}
-              </div>
-              <h2 className="text-5xl font-cinematic font-black tracking-tighter text-[#F5F0E8] mb-2 uppercase">{slide.name as string}</h2>
-              <div className="text-lg font-cinematic italic text-chill-accent mb-6">&ldquo;{slide.role as string}&rdquo;</div>
-              <div className="px-4 py-1.5 rounded-full bg-cooked-accent/10 border border-cooked-accent/30 text-[9px] font-vibe font-bold uppercase tracking-[0.2em] text-cooked-accent mb-6">
-                ⚡ {slide.tag as string} · {slide.score as number}/10
-              </div>
-              <div className="text-[13px] font-vibe text-white/35 leading-relaxed">{slide.body as string}</div>
-            </>
-          )}
-
-          {slide.type === 'final' && (
-            <>
-              <div className="text-[9px] font-vibe font-bold uppercase tracking-[0.4em] text-white/20 mb-8">{slide.eyebrow}</div>
-              <h2 className="text-5xl font-cinematic font-black tracking-tighter text-chill-accent mb-6 uppercase">
-                Share<br />the Chaos
-              </h2>
-              <div className="text-[13px] font-vibe text-white/35 leading-relaxed mb-10">{slide.body as string}</div>
-              <div className="flex gap-3 z-50 pointer-events-auto">
-                <Link
-                  href={`/trips/${tripId}/share`}
-                  className="px-8 py-4 bg-[#F5F0E8] text-black rounded-full text-[10px] font-vibe font-black uppercase tracking-[0.15em] hover:scale-[1.05] transition-all"
-                >
-                  Export Cards
-                </Link>
-                <button
-                  onClick={() => router.push(`/trips/${tripId}`)}
-                  className="px-8 py-4 border border-white/15 bg-transparent text-white/50 rounded-full text-[10px] font-vibe font-bold uppercase tracking-[0.15em] hover:bg-white/5"
-                >
-                  Back to Archive
-                </button>
-              </div>
-            </>
-          )}
+      {isFirst && (
+        <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8 pointer-events-none">
+          <span className="text-white/12 text-xs font-vibe uppercase tracking-wider">← tap</span>
+          <span className="text-white/12 text-xs font-vibe uppercase tracking-wider">tap →</span>
         </div>
-      </div>
-
-      {/* Nav Hints */}
-      <div className="flex justify-between p-8 pt-0 z-30 pointer-events-none opacity-20">
-        <span className="text-[9px] font-vibe uppercase tracking-[0.2em]">← tap</span>
-        <span className="text-[9px] font-vibe uppercase tracking-[0.2em]">tap →</span>
-      </div>
+      )}
     </div>
   );
+}
+
+function SlideRenderer({ slide, router, tripId, onShare }: {
+  slide: Slide; router: any; tripId: string; onShare: () => void;
+}) {
+  switch (slide.type) {
+    case 'title':
+      return (
+        <div className="text-center space-y-8 max-w-sm animate-fade-in">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Official Archive</p>
+          <h1 className="text-5xl font-cinematic font-medium text-white leading-[0.9]">
+            {slide.lore.trip_title || (slide.lore as any).name}
+          </h1>
+          <p className="text-xl font-cinematic italic text-chill-accent leading-relaxed">
+            &ldquo;{slide.lore.tagline || 'Your friendship, documented.'}&rdquo;
+          </p>
+          {(slide.lore as any).opening_line && (
+            <p className="text-sm text-white/35 font-data font-light">{(slide.lore as any).opening_line}</p>
+          )}
+        </div>
+      );
+
+    case 'cooked':
+      return (
+        <div className="text-center space-y-8 max-w-sm animate-fade-in">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">How Cooked?</p>
+          <div className="space-y-2">
+            <div className="text-[20vw] font-vibe font-bold tracking-tighter text-cooked-accent leading-none">
+              {slide.lore.cooked_level ?? (slide.lore as any).chaos_score ?? 84}
+            </div>
+            <p className="text-2xl font-vibe font-bold uppercase tracking-tight text-white/90">
+              {slide.lore.cooked_verdict || 'Historically Cooked'}
+            </p>
+          </div>
+          {(slide.lore as any).cooked_explanation && (
+            <p className="text-base font-data font-light text-white/45 italic leading-relaxed">
+              {(slide.lore as any).cooked_explanation}
+            </p>
+          )}
+        </div>
+      );
+
+    case 'recap':
+      return (
+        <div className="space-y-8 max-w-sm animate-fade-in">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Season Recap</p>
+          <p className="text-xl font-data font-light text-white/75 leading-relaxed">
+            {slide.lore.season_recap?.full_narrative}
+          </p>
+        </div>
+      );
+
+    case 'era': {
+      const era = slide.lore.trip_eras![slide.idx];
+      return (
+        <div className="space-y-8 max-w-sm animate-fade-in">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Era {slide.idx + 1}</p>
+          <h2 className="text-4xl font-cinematic font-medium text-white leading-tight">{era.era_name}</h2>
+          {era.timeframe && <p className="text-[10px] uppercase tracking-wider text-chill-accent font-vibe">{era.timeframe}</p>}
+          <p className="text-lg font-data font-light text-white/65 leading-relaxed">{era.description}</p>
+          {era.defining_moment && (
+            <p className="text-base font-cinematic italic text-white/35 border-l-2 border-chill-accent/25 pl-4">
+              &ldquo;{era.defining_moment}&rdquo;
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    case 'character': {
+      const m = slide.member;
+      const name = m.display_name || m.role_archetype_tag || '?';
+      return (
+        <div className="text-center space-y-8 max-w-sm animate-fade-in">
+          <div className="w-20 h-20 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 flex items-center justify-center mx-auto">
+            <span className="text-2xl font-vibe font-bold text-cooked-accent">{name[0].toUpperCase()}</span>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-white/25 font-vibe">{name}</p>
+            <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">
+              {m.role_title}
+            </h2>
+          </div>
+          <p className="text-base font-data font-light text-white/55 leading-relaxed">
+            {m.role_description}
+          </p>
+          {(m.role_chaos_rating != null) && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cooked-accent/10 border border-cooked-accent/15">
+              <span className="text-cooked-accent font-vibe font-bold text-sm">
+                Chaos {m.role_chaos_rating}/10
+              </span>
+            </div>
+          )}
+          {m.role_most_likely_said && (
+            <p className="text-sm font-cinematic italic text-white/35">
+              &ldquo;{m.role_most_likely_said}&rdquo;
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    case 'superlative': {
+      const s = slide.sup;
+      return (
+        <div className="space-y-8 max-w-sm animate-fade-in">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Award #{slide.idx + 1}</p>
+          <div className="space-y-3">
+            <p className="text-lg font-cinematic italic text-white/45">most likely to</p>
+            <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{s.question}</h2>
+          </div>
+          <div className="w-12 h-0.5 bg-chill-accent" />
+          <p className="text-5xl font-vibe font-bold text-white">{s.winner_name}</p>
+          {s.reason && (
+            <p className="text-sm font-data font-light text-white/45 italic leading-relaxed">{s.reason}</p>
+          )}
+        </div>
+      );
+    }
+
+    case 'verdict':
+      return (
+        <div className="text-center space-y-12 max-w-sm animate-fade-in">
+          <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
+          <p className="text-2xl font-cinematic italic text-white/75 leading-relaxed">
+            &ldquo;{(slide.lore as any).closing_line || slide.lore.cooked_verdict}&rdquo;
+          </p>
+          <div className="w-12 h-0.5 bg-chill-accent mx-auto" />
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/15 font-vibe">The Final Verdict</p>
+        </div>
+      );
+
+    case 'share':
+      return (
+        <div className="text-center space-y-10 max-w-sm animate-fade-in">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Your Lore is Ready</p>
+          <h2 className="text-4xl font-cinematic font-medium text-white">Export your identity</h2>
+          <p className="text-sm font-data font-light text-white/35">Pick your card and expose your friend group.</p>
+          <button
+            onClick={e => { e.stopPropagation(); onShare(); }}
+            className="w-full py-5 bg-white text-[#060604] rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] transition-transform shadow-2xl"
+          >
+            Pick Your Card
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); router.push(`/trips/${slide.tripId}`); }}
+            className="text-[10px] uppercase tracking-widest font-vibe text-white/15 hover:text-white/35 transition-colors"
+          >
+            View full archive →
+          </button>
+        </div>
+      );
+  }
 }
