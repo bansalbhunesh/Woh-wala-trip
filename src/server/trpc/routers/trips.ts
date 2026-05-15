@@ -14,6 +14,14 @@ export const tripsRouter = router({
     .input(TripCreateInput)
     .mutation(async ({ ctx, input }) => {
       const supabase = ctx.supabase as any;
+
+      // Ensure profile row exists (FK requirement) — safe upsert on every trip create
+      await supabase.from('profiles').upsert({
+        id: ctx.user.id,
+        email: ctx.user.email ?? null,
+        display_name: ctx.user.user_metadata?.name ?? ctx.user.email?.split('@')[0] ?? null,
+      }, { onConflict: 'id', ignoreDuplicates: true });
+
       const { data, error } = await supabase
         .from('trips')
         .insert({
