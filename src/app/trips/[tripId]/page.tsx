@@ -11,7 +11,8 @@ import {
 } from '@/components/cinematic/ArchiveRoom';
 import {
   CinematicBreak, CookedLevelReveal, FriendshipExpose,
-  DocumentaryEra, PlotTwistMoment, FriendshipVerdict, ClosingVerdict
+  DocumentaryEra, PlotTwistMoment, FriendshipVerdict, ClosingVerdict,
+  EmotionalTimestamp, RecoveredArtifact, MemoryCollage, SuperlativeCard,
 } from '@/components/cinematic/Documentary';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -173,37 +174,84 @@ export default function TripRoomPage() {
                 </section>
               )}
 
-              {/* ④ Cinematic break before chaos rankings */}
+              {/* ④ Emotional timestamp + memory collage */}
+              <EmotionalTimestamp
+                day="Day 1"
+                text="Everyone was still behaving normally."
+                accent="#2D9E8B"
+              />
+
+              <MemoryCollage
+                label="Photos Recovered From Device Storage"
+                count={6}
+                accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
+              />
+
+              {/* ⑤ Cinematic break before chaos rankings */}
               {members.some((m: any) => m.role_chaos_rating != null) && (
-                <CinematicBreak
-                  text="The AI has identified a primary chaos source. The data is not flattering."
-                  sub="Cross-referenced · 247 incident reports · 0 appeals accepted"
-                  accent="#FF4D4D"
-                />
+                <>
+                  <EmotionalTimestamp
+                    time="2:13 AM"
+                    text="The AI identified a primary chaos source. The data is not flattering."
+                    accent="#FF4D4D"
+                  />
+                  <CinematicBreak
+                    text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
+                    sub="AI Findings · Cross-referenced · 0 appeals accepted"
+                    accent="#FF4D4D"
+                  />
+                </>
               )}
 
-              {/* ⑤ Friendship Expose — chaos rankings */}
+              {/* ⑥ Friendship Expose — chaos rankings */}
               <div className="py-4">
                 <FriendshipExpose members={members} />
               </div>
 
-              {/* ⑥ Plot Twist moment */}
+              {/* ⑦ Recovered evidence artifacts */}
+              {(lore?.season_recap?.act_1 || lore?.cooked_explanation) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                  {lore?.season_recap?.act_1 && (
+                    <RecoveredArtifact
+                      label="Witness Statement · Act I"
+                      content={lore.season_recap.act_1.slice(0, 160) + (lore.season_recap.act_1.length > 160 ? '...' : '')}
+                      type="note"
+                      rotation={-1.5}
+                    />
+                  )}
+                  {lore?.cooked_level && (
+                    <RecoveredArtifact
+                      label="WWT Chaos Receipt · Official"
+                      content={`Trip: ${trip?.name || '—'}\nChaos Score: ${lore.cooked_level}/100\nVerdict: ${lore.cooked_verdict || '—'}\nPhotos Analyzed: ${trip?.total_photos || 0}\nCast Members: ${members.length}`}
+                      subtext={`Archive ID: ${trip?.id?.slice(0, 8)?.toUpperCase() || '——'}`}
+                      type="receipt"
+                      rotation={1}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* ⑧ Plot Twist moment */}
               {lore && (
-                <div className="py-4">
+                <div className="py-2">
                   <PlotTwistMoment lore={lore} />
                 </div>
               )}
 
-              {/* ⑦ Season Timeline as documentary eras */}
+              {/* ⑨ Season Timeline as documentary scenes */}
               {lore?.trip_eras?.length > 0 && (
                 <section className="py-8 space-y-6">
+                  <EmotionalTimestamp
+                    text="The timeline of events, reconstructed."
+                    accent="#7C6AFF"
+                  />
                   <div className="space-y-2">
                     <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Documentary Timeline</div>
                     <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
                       How It All<br />Unfolded
                     </h2>
                   </div>
-                  <div className="space-y-0 pt-4">
+                  <div className="pt-4">
                     {lore.trip_eras.map((era: any, i: number) => (
                       <DocumentaryEra
                         key={i}
@@ -216,14 +264,31 @@ export default function TripRoomPage() {
                 </section>
               )}
 
-              {/* ⑧ AI Psychological Profile */}
+              {/* ⑩ AI Psychological Profile */}
               {lore && (
                 <div className="py-6">
                   <FriendshipVerdict lore={lore} />
                 </div>
               )}
 
-              {/* ⑨ Closing cinematic break */}
+              {/* ⑪ Superlatives — yearbook awards */}
+              {lore?.superlatives?.length > 0 && (
+                <section className="py-8 space-y-6">
+                  <div className="space-y-2">
+                    <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Yearbook Awards · AI Certified</div>
+                    <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
+                      The Official<br />Superlatives
+                    </h2>
+                  </div>
+                  <div className="space-y-4">
+                    {lore.superlatives.slice(0, 4).map((sup: any, i: number) => (
+                      <SuperlativeCard key={i} sup={sup} index={i} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* ⑫ Closing cinematic break */}
               {lore && (
                 <CinematicBreak
                   text={lore.what_this_trip_was_really_about || `${trip?.name} happened. The rest is mythology.`}
@@ -232,7 +297,7 @@ export default function TripRoomPage() {
                 />
               )}
 
-              {/* ⑩ Final verdict */}
+              {/* ⑬ Final verdict */}
               {lore && <ClosingVerdict lore={lore} />}
             </div>
 

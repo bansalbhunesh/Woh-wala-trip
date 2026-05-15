@@ -103,6 +103,21 @@ const config: Config = {
           '0%':   { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        flicker: {
+          '0%, 90%, 100%': { opacity: '1' },
+          '91%':            { opacity: '0.5' },
+          '92%':            { opacity: '1' },
+          '94%':            { opacity: '0.15' },
+          '95%':            { opacity: '1' },
+        },
+        'float-up': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%':      { transform: 'translateY(-8px)' },
+        },
+        scan: {
+          '0%':   { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(100vh)' },
+        },
       },
       animation: {
         marquee:      'marquee 35s linear infinite',
@@ -115,6 +130,9 @@ const config: Config = {
         grain:        'grain 0.8s steps(1) infinite',
         'pulse-soft': 'pulse-soft 2.5s ease-in-out infinite',
         shimmer:      'shimmer 2s linear infinite',
+        flicker:      'flicker 8s ease-in-out infinite',
+        'float-up':   'float-up 5s ease-in-out infinite',
+        scan:         'scan 6s linear infinite',
       },
       boxShadow: {
         '3xl': '0 35px 60px -15px rgba(0,0,0,0.5)',

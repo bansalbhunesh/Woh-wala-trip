@@ -77,14 +77,26 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
         style={{ background: `radial-gradient(ellipse at 40% 60%, ${accentColor}, transparent 65%)` }}
       />
 
+      {/* Scanline overlay — VHS signal feel */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2rem]">
+        <div
+          className="absolute left-0 right-0 h-8 opacity-[0.04]"
+          style={{
+            background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent)',
+            animation: 'scan 6s linear infinite',
+          }}
+        />
+      </div>
+
       <div className="relative z-10 flex flex-col md:flex-row md:items-end gap-8">
         <div className="space-y-2">
           <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">
             AI Delusion Index · Peer Reviewed
           </div>
-          {/* Giant number */}
+          {/* Giant glitch number */}
           <div
-            className="font-vibe font-black leading-[0.82] tracking-tighter select-none"
+            className="glitch-text font-vibe font-black leading-[0.82] tracking-tighter select-none"
+            data-text={String(level)}
             style={{
               fontSize: 'clamp(100px, 18vw, 200px)',
               color: accentColor,
@@ -402,6 +414,295 @@ export function FriendshipVerdict({ lore }: { lore: any }) {
         ))}
       </div>
     </motion.section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMOTIONAL TIMESTAMP — "Day 3 · 2:13 AM · Nobody was okay."
+// ─────────────────────────────────────────────────────────────────────────────
+export function EmotionalTimestamp({
+  day,
+  time,
+  text,
+  accent = '#FF4D4D',
+}: {
+  day?: string;
+  time?: string;
+  text: string;
+  accent?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6 }}
+      className="flex items-center gap-5 py-6"
+    >
+      <div className="flex-1 h-px bg-white/[0.04]" />
+      <div className="text-center space-y-1 flex-shrink-0">
+        {(day || time) && (
+          <div className="font-mono text-[8px] text-white/15 uppercase tracking-[0.45em]">
+            {day}{day && time ? ' · ' : ''}{time}
+          </div>
+        )}
+        <div className="font-cinematic italic text-[13px]" style={{ color: `${accent}75` }}>
+          {text}
+        </div>
+      </div>
+      <div className="flex-1 h-px bg-white/[0.04]" />
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECOVERED ARTIFACT — fake evidence card (receipt / note / screenshot)
+// ─────────────────────────────────────────────────────────────────────────────
+export function RecoveredArtifact({
+  label,
+  content,
+  subtext,
+  type = 'note',
+  rotation = 0,
+}: {
+  label?: string;
+  content: string;
+  subtext?: string;
+  type?: 'note' | 'receipt' | 'screenshot';
+  rotation?: number;
+}) {
+  const isReceipt = type === 'receipt';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, rotate: rotation - 4, scale: 0.96 }}
+      whileInView={{ opacity: 1, rotate: rotation, scale: 1 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.55, type: 'spring', stiffness: 120 }}
+      className="relative tape-strip"
+      style={{ '--r': `${rotation}deg` } as React.CSSProperties}
+    >
+      {/* Paper card */}
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-2xl p-6 space-y-3 border shadow-3xl',
+          isReceipt
+            ? 'bg-[#FAF1E4] border-[#E8E0D0] text-lore-ink'
+            : 'bg-[#0E0E0C] border-white/[0.07] text-[#F5F0E8]'
+        )}
+      >
+        {/* VHS scanlines on dark cards */}
+        {!isReceipt && <div className="absolute inset-0 vhs-lines pointer-events-none" />}
+
+        {/* Header */}
+        {label && (
+          <div
+            className={cn(
+              'text-[7px] font-mono uppercase tracking-[0.45em]',
+              isReceipt ? 'text-black/30' : 'text-white/20'
+            )}
+          >
+            {label}
+          </div>
+        )}
+
+        {/* Content */}
+        <p
+          className={cn(
+            'leading-relaxed',
+            isReceipt
+              ? 'font-mono text-[11px] text-black/60'
+              : 'font-cinematic italic text-sm text-white/60'
+          )}
+        >
+          {content}
+        </p>
+
+        {subtext && (
+          <p className={cn('text-[10px]', isReceipt ? 'text-black/30' : 'text-white/25')}>
+            {subtext}
+          </p>
+        )}
+
+        {/* Stamp */}
+        <div
+          className={cn(
+            'absolute bottom-3 right-4 text-[7px] font-mono uppercase tracking-[0.3em] border px-2 py-0.5 rounded rotate-12 opacity-40',
+            isReceipt ? 'text-cooked-accent border-cooked-accent' : 'text-white/40 border-white/20'
+          )}
+        >
+          Evidence
+        </div>
+
+        {/* Perforated bottom on receipts */}
+        {isReceipt && (
+          <div className="absolute bottom-0 left-0 right-0 h-2 overflow-hidden">
+            <div
+              className="flex gap-1.5 px-2"
+              style={{ marginTop: '-4px' }}
+            >
+              {Array.from({ length: 24 }).map((_, i) => (
+                <div key={i} className="w-1.5 h-3 rounded-full bg-[#FAF1E4]" />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MEMORY COLLAGE — blurred/grainy photo placeholders (recovered memories)
+// ─────────────────────────────────────────────────────────────────────────────
+export function MemoryCollage({
+  label = 'Recovered Evidence',
+  count = 6,
+  accent = '#FF4D4D',
+}: {
+  label?: string;
+  count?: number;
+  accent?: string;
+}) {
+  const ROTATIONS = [-3, 1.5, -1, 2.5, -2, 1];
+  const OPACITIES = [0.4, 0.25, 0.35, 0.2, 0.3, 0.25];
+  const POSITIONS = [
+    { top: '10%', left: '5%' },
+    { top: '5%', left: '40%' },
+    { top: '12%', right: '8%' },
+    { bottom: '15%', left: '15%' },
+    { bottom: '10%', left: '50%' },
+    { bottom: '18%', right: '6%' },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      className="relative h-48 overflow-hidden rounded-[2rem] border border-white/[0.04] bg-[#0A0A08]"
+    >
+      {/* Atmospheric glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)`,
+        }}
+      />
+
+      {/* Fake memory polaroids */}
+      {Array.from({ length: Math.min(count, 6) }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, scale: 0.8, rotate: ROTATIONS[i] - 10 }}
+          whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
+          viewport={{ once: true }}
+          transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
+          className="absolute w-20 h-24 bg-white/5 border border-white/8 rounded-sm flex flex-col overflow-hidden"
+          style={POSITIONS[i] as React.CSSProperties}
+        >
+          {/* Blurry image placeholder */}
+          <div
+            className="flex-1"
+            style={{
+              background: `linear-gradient(${135 + i * 30}deg, ${accent}15, rgba(45,158,139,0.08))`,
+              filter: 'blur(8px)',
+              transform: 'scale(1.1)',
+            }}
+          />
+          {/* Polaroid bottom */}
+          <div className="h-5 bg-white/[0.04] flex items-center justify-center">
+            <div className="w-8 h-px bg-white/10" />
+          </div>
+        </motion.div>
+      ))}
+
+      {/* Label */}
+      <div className="absolute bottom-4 left-0 right-0 text-center">
+        <span className="text-[7px] font-mono text-white/15 uppercase tracking-[0.5em]">{label}</span>
+      </div>
+
+      {/* Film grain over everything */}
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px] animate-grain" />
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLITCH REVEAL — number/text with glitch effect on scroll-in
+// ─────────────────────────────────────────────────────────────────────────────
+export function GlitchText({
+  text,
+  className,
+  style,
+}: {
+  text: string | number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span
+      className={cn('glitch-text relative inline-block', className)}
+      data-text={String(text)}
+      style={style}
+    >
+      {text}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPERLATIVE CARD — yearbook-style "most likely to..." moment
+// ─────────────────────────────────────────────────────────────────────────────
+export function SuperlativeCard({
+  sup,
+  index,
+}: {
+  sup: { winner_name: string; question: string; reason?: string; archetype?: string };
+  index: number;
+}) {
+  const COLORS = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF', '#FF6B35'];
+  const color = COLORS[index % COLORS.length];
+  const rotations = [-1.5, 1, -0.5, 2, -1];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12, rotate: rotations[index % rotations.length] - 3 }}
+      whileInView={{ opacity: 1, y: 0, rotate: rotations[index % rotations.length] }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.5, delay: index * 0.07, type: 'spring', stiffness: 150 }}
+      className="relative tape-strip doc-card overflow-hidden rounded-[2rem] bg-[#0E0E0C] border border-white/[0.06] p-8 space-y-4"
+    >
+      {/* Yearbook label */}
+      <div className="text-[8px] font-mono text-white/15 uppercase tracking-[0.4em]">
+        Yearbook Award #{index + 1} · AI Certified
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-base font-cinematic italic text-white/40">most likely to</p>
+        <h3 className="text-[26px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-tight">
+          {sup.question}
+        </h3>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="w-0.5 h-8 rounded-full" style={{ backgroundColor: color }} />
+        <div>
+          <p className="text-2xl font-vibe font-black text-[#F5F0E8]">{sup.winner_name}</p>
+          {sup.archetype && (
+            <p className="text-[9px] uppercase tracking-widest font-vibe font-black" style={{ color: `${color}70` }}>
+              {sup.archetype}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {sup.reason && (
+        <p className="text-[11px] text-white/30 font-data font-light italic leading-relaxed border-l border-white/8 pl-4">
+          {sup.reason}
+        </p>
+      )}
+    </motion.div>
   );
 }
 

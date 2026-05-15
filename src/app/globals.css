@@ -40,3 +40,117 @@ html {
   background: #FF4D4D;
   color: white;
 }
+
+/* ─── Glitch animation ─────────────────────────────────────── */
+@keyframes glitch-1 {
+  0%, 100% { clip-path: inset(0 0 100% 0); transform: translateX(0); }
+  10%       { clip-path: inset(8% 0 82% 0); transform: translateX(-4px); }
+  20%       { clip-path: inset(40% 0 43% 0); transform: translateX(4px); }
+  30%       { clip-path: inset(72% 0 12% 0); transform: translateX(-2px); }
+  40%       { clip-path: inset(0 0 100% 0); transform: translateX(0); }
+}
+@keyframes glitch-2 {
+  0%, 100% { clip-path: inset(0 0 100% 0); transform: translateX(0); }
+  10%       { clip-path: inset(55% 0 28% 0); transform: translateX(5px); }
+  20%       { clip-path: inset(15% 0 70% 0); transform: translateX(-3px); }
+  30%       { clip-path: inset(80% 0 5%  0); transform: translateX(2px); }
+  40%       { clip-path: inset(0 0 100% 0); transform: translateX(0); }
+}
+@keyframes flicker {
+  0%, 90%, 100% { opacity: 1; }
+  91%           { opacity: 0.5; }
+  92%           { opacity: 1; }
+  94%           { opacity: 0.15; }
+  95%           { opacity: 1; }
+}
+@keyframes scan {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes float-up {
+  0%   { transform: translateY(0px) rotate(var(--r, 0deg)); }
+  50%  { transform: translateY(-8px) rotate(var(--r, 0deg)); }
+  100% { transform: translateY(0px) rotate(var(--r, 0deg)); }
+}
+
+/* ─── Glitch text utility ─────────────────────────────────── */
+.glitch-text {
+  position: relative;
+}
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: inherit;
+}
+.glitch-text::before {
+  color: #FF4D4D;
+  animation: glitch-1 4s infinite linear;
+  opacity: 0.7;
+}
+.glitch-text::after {
+  color: #2D9E8B;
+  animation: glitch-2 4s infinite linear;
+  animation-delay: 0.1s;
+  opacity: 0.7;
+}
+
+/* ─── Tape strip utility ──────────────────────────────────── */
+.tape-strip {
+  position: relative;
+}
+.tape-strip::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-1.5deg);
+  width: 72px;
+  height: 20px;
+  background: rgba(245, 240, 232, 0.07);
+  border: 1px solid rgba(245, 240, 232, 0.05);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.tape-strip-left::before {
+  left: 24px;
+  transform: rotate(-2deg);
+}
+.tape-strip-right::before {
+  left: auto;
+  right: 24px;
+  transform: rotate(1.5deg);
+}
+
+/* ─── VHS scanline overlay ────────────────────────────────── */
+.vhs-lines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+}
+
+/* ─── Documentary card hover ──────────────────────────────── */
+.doc-card {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+}
+.doc-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ─── Scrollbar hide ──────────────────────────────────────── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
