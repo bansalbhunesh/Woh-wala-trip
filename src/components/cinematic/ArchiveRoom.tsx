@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CinematicText, AtmosphericBlob } from '@/components/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Play, Plus, X, ChevronRight, Zap, Star, Shield, Share2, Download } from 'lucide-react';
+import { Play, Plus, X, ChevronRight, Share2 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE NAVBAR
@@ -59,173 +59,103 @@ export function ArchiveNavbar({ trip }: { trip: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ARCHIVE HERO — Matches reference image layout
+// ARCHIVE HERO — full-width immersive documentary hero
 // ─────────────────────────────────────────────────────────────────────────────
 export function ArchiveHero({ trip }: { trip: any }) {
   const lore = trip?.lore_json;
-  const cookedLevel = lore?.cooked_level ?? trip?.chaos_score ?? 0;
   const tagline = lore?.tagline || 'The lore is still being written...';
   const name = trip?.name || 'Untitled Season';
   const destination = trip?.destination || '';
   const verdict = lore?.cooked_verdict || '';
-
-  // Palette based on cooked level
-  const isCooked = cookedLevel >= 76;
-  const isPeak = cookedLevel >= 51;
+  const memberCount = trip?.member_count || 0;
+  const photoCount = trip?.total_photos || 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* LEFT: Main story block */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-7 relative rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] overflow-hidden flex flex-col"
-      >
-        {/* Cover image with overlay */}
-        <div className="h-[280px] relative overflow-hidden">
-          {trip?.cover_photo ? (
-            <img
-              src={trip.cover_photo}
-              alt=""
-              className="w-full h-full object-cover grayscale opacity-50 contrast-125 scale-105"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-cooked-accent/10 via-transparent to-lore-accent/5" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0C] via-[#0E0E0C]/30 to-transparent" />
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="relative overflow-hidden rounded-[2.5rem] bg-[#0A0A08] border border-white/[0.05] min-h-[420px] flex flex-col justify-end"
+    >
+      {/* Cover photo or atmospheric gradient */}
+      <div className="absolute inset-0">
+        {trip?.cover_photo ? (
+          <img
+            src={trip.cover_photo}
+            alt=""
+            className="w-full h-full object-cover opacity-30 grayscale contrast-125 scale-[1.03]"
+          />
+        ) : (
+          <div
+            className="w-full h-full"
+            style={{
+              background: 'radial-gradient(ellipse at 30% 40%, rgba(255,77,77,0.12) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(45,158,139,0.06) 0%, transparent 50%)',
+            }}
+          />
+        )}
+        {/* Cinematic gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A08] via-[#0A0A08]/60 to-transparent" />
+        {/* Film grain */}
+        <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px] animate-grain" />
+      </div>
 
-          {/* Floating badges */}
-          <div className="absolute top-6 left-6 flex gap-2 flex-wrap">
-            {verdict && (
-              <span className="px-3 py-1.5 rounded-full bg-cooked-accent text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]">
-                {verdict}
-              </span>
-            )}
-            {destination && (
-              <span className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white/60 text-[8px] font-vibe font-black uppercase tracking-[0.2em]">
-                {destination}
-              </span>
-            )}
-            <span className="px-3 py-1.5 rounded-full bg-[#0E0E0C]/60 backdrop-blur-md text-white/40 text-[8px] font-vibe font-black uppercase tracking-[0.2em] border border-white/10">
-              {trip?.member_count || 0} cast members
+      {/* Top meta */}
+      <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-10">
+        <div className="flex gap-2 flex-wrap">
+          {verdict && (
+            <span className="px-3 py-1.5 rounded-full bg-cooked-accent text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]">
+              {verdict}
             </span>
-          </div>
+          )}
+          {destination && (
+            <span className="px-3 py-1.5 rounded-full bg-white/8 backdrop-blur-md text-white/50 text-[8px] font-vibe font-black uppercase tracking-[0.2em] border border-white/10">
+              {destination}
+            </span>
+          )}
         </div>
+        <span className="text-[8px] font-mono text-white/15 uppercase tracking-[0.3em]">
+          {memberCount} cast · {photoCount} photos
+        </span>
+      </div>
 
-        {/* Content */}
-        <div className="p-10 space-y-6 flex-1">
-          <div className="space-y-3">
-            <h1 className="text-5xl md:text-7xl font-cinematic font-black tracking-tighter leading-[0.85] text-[#F5F0E8] uppercase">
-              {name}
-            </h1>
-            <p className="text-lg text-white/35 font-cinematic italic max-w-lg leading-relaxed">
-              &ldquo;{tagline}&rdquo;
-            </p>
-          </div>
-
-          {/* Narrative excerpt */}
+      {/* Main content */}
+      <div className="relative z-10 p-10 space-y-6">
+        <div className="space-y-4">
+          <h1 className="text-[56px] md:text-[72px] font-cinematic font-black tracking-tighter leading-[0.82] text-[#F5F0E8] uppercase">
+            {name}
+          </h1>
+          <p className="text-lg text-white/40 font-cinematic italic max-w-xl leading-relaxed">
+            &ldquo;{tagline}&rdquo;
+          </p>
           {lore?.season_recap?.full_narrative && (
-            <p className="text-sm text-white/40 font-data font-light leading-relaxed line-clamp-3 border-l-2 border-white/10 pl-4">
+            <p className="text-sm text-white/25 font-data font-light leading-relaxed line-clamp-2 max-w-lg">
               {lore.season_recap.full_narrative}
             </p>
           )}
-
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Link
-              href={`/trips/${trip?.id}/share`}
-              className="flex items-center gap-2 px-7 py-3.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow-red"
-            >
-              <Download size={14} /> Save Poster
-            </Link>
-            <Link
-              href={`/trips/${trip?.id}/story`}
-              className="flex items-center gap-2 px-7 py-3.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-            >
-              <Play size={14} fill="currentColor" /> Story Mode
-            </Link>
-            <Link
-              href={`/trips/${trip?.id}/share`}
-              className="flex items-center gap-2 px-7 py-3.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-            >
-              <Share2 size={14} /> Share O.G.
-            </Link>
-          </div>
         </div>
-      </motion.div>
 
-      {/* RIGHT: Stats column */}
-      <div className="lg:col-span-5 space-y-5">
-        {/* Delusion Index */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] flex flex-col justify-between gap-4"
-        >
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block mb-3">Delusion Index</span>
-              <div className="text-8xl font-vibe font-black leading-none" style={{
-                color: isCooked ? '#FF4D4D' : isPeak ? '#D49E2D' : '#2D9E8B'
-              }}>
-                {cookedLevel}
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-cooked-accent/10 flex items-center justify-center">
-              <Zap size={20} className="text-cooked-accent" />
-            </div>
-          </div>
-          <p className="text-[11px] text-white/30 font-data leading-relaxed italic">
-            {lore?.cooked_explanation || 'The AI historian is still processing the evidence.'}
-          </p>
-        </motion.div>
-
-        {/* Emotional Damage */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-          className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-4"
-        >
-          <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">Emotional Damage</span>
-          <div className="flex items-baseline gap-3">
-            <span className="text-5xl font-vibe font-black text-unstable-accent">
-              {trip?.total_photos || 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-widest text-white/20 font-vibe font-black">photos archived</span>
-          </div>
-          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-chill-accent to-cooked-accent rounded-full transition-all duration-1000"
-              style={{ width: `${Math.min(100, (trip?.total_photos || 0) / 2)}%` }}
-            />
-          </div>
-        </motion.div>
-
-        {/* Plot Twist block */}
-        {lore?.season_recap?.act_2 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="p-8 rounded-[2.5rem] border border-cooked-accent/20 bg-cooked-accent/5 space-y-3"
+        <div className="flex flex-wrap gap-3 pt-1">
+          <Link
+            href={`/trips/${trip?.id}/story`}
+            className="flex items-center gap-2.5 px-7 py-3.5 bg-[#F5F0E8] text-black rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-[1.03] active:scale-95 transition-all shadow-3xl"
           >
-            <span className="text-[9px] uppercase tracking-[0.3em] text-cooked-accent/60 font-vibe font-black">Plot Twist</span>
-            <p className="text-sm text-white/60 font-data font-light leading-relaxed italic">
-              &ldquo;{lore.season_recap.act_2.slice(0, 120)}...&rdquo;
-            </p>
-            <div className="flex gap-2 pt-2">
-              <button className="px-5 py-2 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 text-cooked-accent text-[9px] font-vibe font-black uppercase tracking-widest hover:bg-cooked-accent/20 transition-all">
-                Group Therapy Hours
-              </button>
-              <button className="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-white/40 text-[9px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                Save as Lore
-              </button>
-            </div>
-          </motion.div>
-        )}
+            <Play size={13} fill="currentColor" /> Play Documentary
+          </Link>
+          <Link
+            href={`/trips/${trip?.id}/share`}
+            className="flex items-center gap-2.5 px-7 py-3.5 bg-white/6 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+          >
+            <Share2 size={13} /> Share Archive
+          </Link>
+          <Link
+            href={`/trips/${trip?.id}/invite`}
+            className="flex items-center gap-2.5 px-7 py-3.5 bg-white/6 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+          >
+            <Plus size={13} /> Invite Cast
+          </Link>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

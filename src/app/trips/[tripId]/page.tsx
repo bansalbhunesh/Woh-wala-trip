@@ -9,6 +9,10 @@ import {
   CookedScoreLight, BadFeelingsChart, DonutChart, LightCastWidget,
   ArchiveFooter, LoreWrapped
 } from '@/components/cinematic/ArchiveRoom';
+import {
+  CinematicBreak, CookedLevelReveal, FriendshipExpose,
+  DocumentaryEra, PlotTwistMoment, FriendshipVerdict, ClosingVerdict
+} from '@/components/cinematic/Documentary';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -107,102 +111,129 @@ export default function TripRoomPage() {
           {/* Letterboxd 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
 
-            {/* ── LEFT: dark cinematic column ─────────────────────────────── */}
-            <div className="space-y-12">
+            {/* ── LEFT: documentary scroll column ──────────────────────── */}
+            <div className="space-y-0">
 
-              {/* Emotional Reveals */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-6">
-                  <div className="space-y-1">
-                    <h2 className="text-3xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase">
-                      Emotional Reveals
+              {/* ① Delusion Index — giant emotional beat */}
+              <CookedLevelReveal trip={trip} />
+
+              {/* ② Cinematic break */}
+              <CinematicBreak
+                text="The following is a reconstruction of documented events. Some memories have been enhanced for dramatic effect."
+                sub="Archive Reconstruction · AI Narration Active"
+                accent="#FF4D4D"
+                timestamp={`Archive No. ${trip?.id?.slice(0, 6)?.toUpperCase() || '——'} · Classified`}
+              />
+
+              {/* ③ Character reveals — MVP / Villain / Inside Joke */}
+              {(mvp || villain || insideJoke) && (
+                <section className="space-y-4 py-4">
+                  <div className="space-y-1 mb-8">
+                    <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Emotional Reveals</div>
+                    <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
+                      Moments You<br />Can&apos;t Unsee
                     </h2>
-                    <p className="text-[9px] text-white/20 uppercase tracking-[0.4em] font-vibe font-black">
-                      Moments You Can&apos;t Unsee
-                    </p>
                   </div>
-                  <div className="h-px flex-1 bg-white/[0.04]" />
+
+                  {mvp && (
+                    <ArchiveReveal
+                      category="Trip MVP"
+                      name={`${mvp.display_name || 'Unknown'} – ${mvp.role_title || 'The Anchor'}`}
+                      subtitle={mvp.role_archetype_tag}
+                      desc={mvp.role_description}
+                      cta="Canon File"
+                      challengeCta="Make Poster"
+                      color="#2D9E8B"
+                    />
+                  )}
+
+                  {villain && (
+                    <ArchiveReveal
+                      category="Trip Villain"
+                      name={`${villain.display_name || 'Unknown'} – ${villain.role_title || 'The Source'}`}
+                      subtitle={villain.role_archetype_tag}
+                      desc={villain.role_description}
+                      cta="Blame"
+                      challengeCta="Challenge to Duel"
+                      color="#FF4D4D"
+                    />
+                  )}
+
+                  {insideJoke && (
+                    <ArchiveReveal
+                      category="Top Inside Joke"
+                      name={insideJoke}
+                      subtitle="Core memory confirmed by AI"
+                      desc={lore?.what_this_trip_was_really_about}
+                      cta="Save Clip"
+                      challengeCta="Save Snippet"
+                      color="#D49E2D"
+                    />
+                  )}
+                </section>
+              )}
+
+              {/* ④ Cinematic break before chaos rankings */}
+              {members.some((m: any) => m.role_chaos_rating != null) && (
+                <CinematicBreak
+                  text="The AI has identified a primary chaos source. The data is not flattering."
+                  sub="Cross-referenced · 247 incident reports · 0 appeals accepted"
+                  accent="#FF4D4D"
+                />
+              )}
+
+              {/* ⑤ Friendship Expose — chaos rankings */}
+              <div className="py-4">
+                <FriendshipExpose members={members} />
+              </div>
+
+              {/* ⑥ Plot Twist moment */}
+              {lore && (
+                <div className="py-4">
+                  <PlotTwistMoment lore={lore} />
                 </div>
+              )}
 
-                {mvp && (
-                  <ArchiveReveal
-                    category="Trip MVP"
-                    name={`${mvp.display_name || 'Unknown'} – ${mvp.role_title || 'The Anchor'}`}
-                    subtitle={mvp.role_archetype_tag}
-                    desc={mvp.role_description}
-                    cta="Canon File"
-                    challengeCta="Make Poster"
-                    color="#2D9E8B"
-                  />
-                )}
-
-                {villain && (
-                  <ArchiveReveal
-                    category="Trip Villain"
-                    name={`${villain.display_name || 'Unknown'} – ${villain.role_title || 'The Source'}`}
-                    subtitle={villain.role_archetype_tag}
-                    desc={villain.role_description}
-                    cta="Blame"
-                    challengeCta="Challenge to Duel"
-                    color="#FF4D4D"
-                  />
-                )}
-
-                {insideJoke && (
-                  <ArchiveReveal
-                    category="Top Inside Joke"
-                    name={insideJoke}
-                    subtitle="Core memory confirmed by AI"
-                    desc={lore?.what_this_trip_was_really_about}
-                    cta="Save Clip"
-                    challengeCta="Save Snippet"
-                    color="#D49E2D"
-                  />
-                )}
-              </section>
-
-              {/* Season Timeline */}
+              {/* ⑦ Season Timeline as documentary eras */}
               {lore?.trip_eras?.length > 0 && (
-                <section className="space-y-6">
-                  <div className="flex items-center gap-6">
-                    <h2 className="text-3xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase">
-                      Season Timeline
+                <section className="py-8 space-y-6">
+                  <div className="space-y-2">
+                    <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">Documentary Timeline</div>
+                    <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
+                      How It All<br />Unfolded
                     </h2>
-                    <div className="h-px flex-1 bg-white/[0.04]" />
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-0 pt-4">
                     {lore.trip_eras.map((era: any, i: number) => (
-                      <motion.div
+                      <DocumentaryEra
                         key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.08 }}
-                        className="flex gap-5 p-6 rounded-[2rem] bg-[#0E0E0C] border border-white/[0.06] hover:border-white/10 transition-all"
-                      >
-                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                          <span className="text-[9px] font-vibe font-black text-white/25">{i + 1}</span>
-                        </div>
-                        <div className="space-y-1 flex-1">
-                          <p className="text-[9px] uppercase tracking-widest text-chill-accent font-vibe font-black">
-                            {era.timeframe}
-                          </p>
-                          <h3 className="text-xl font-cinematic font-black tracking-tight text-[#F5F0E8]">
-                            {era.era_name}
-                          </h3>
-                          <p className="text-sm text-white/40 font-data font-light leading-relaxed">
-                            {era.description}
-                          </p>
-                          {era.defining_moment && (
-                            <p className="text-[11px] text-white/20 italic font-cinematic mt-1.5">
-                              &ldquo;{era.defining_moment}&rdquo;
-                            </p>
-                          )}
-                        </div>
-                      </motion.div>
+                        era={era}
+                        index={i}
+                        total={lore.trip_eras.length}
+                      />
                     ))}
                   </div>
                 </section>
               )}
+
+              {/* ⑧ AI Psychological Profile */}
+              {lore && (
+                <div className="py-6">
+                  <FriendshipVerdict lore={lore} />
+                </div>
+              )}
+
+              {/* ⑨ Closing cinematic break */}
+              {lore && (
+                <CinematicBreak
+                  text={lore.what_this_trip_was_really_about || `${trip?.name} happened. The rest is mythology.`}
+                  sub="What this trip was really about"
+                  accent="#2D9E8B"
+                />
+              )}
+
+              {/* ⑩ Final verdict */}
+              {lore && <ClosingVerdict lore={lore} />}
             </div>
 
             {/* ── RIGHT: light sticky Letterboxd panel ──────────────────────── */}
