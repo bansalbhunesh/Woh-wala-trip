@@ -293,9 +293,11 @@ export default function TripRoomPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 // UPLOAD STATE
 // ─────────────────────────────────────────────────────────────────────────────
+interface UploadToast { id: number; name: string; status: 'uploading' | 'done' | 'error'; }
+
 function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: string; onPhotosChanged: () => void }) {
   const router = useRouter();
-  const [uploading, setUploading] = useState(0);
+  const [toasts, setToasts] = useState<UploadToast[]>([]);
   const { data: photos, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
   const getUploadUrl = trpc.photos.getUploadUrl.useMutation();
   const confirmUpload = trpc.photos.confirmUpload.useMutation();
@@ -303,17 +305,34 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
     onSuccess: () => router.push(`/trips/${tripId}/generating`),
   });
 
+  const addToast = (id: number, name: string, status: UploadToast['status']) => {
+    setToasts(prev => {
+      const existing = prev.findIndex(t => t.id === id);
+      if (existing >= 0) {
+        const next = [...prev]; next[existing] = { id, name, status }; return next;
+      }
+      return [...prev, { id, name, status }];
+    });
+    if (status !== 'uploading') {
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2200);
+    }
+  };
+
   const handleFiles = async (files: FileList) => {
-    setUploading(files.length);
+    let toastId = Date.now();
     for (const file of Array.from(files)) {
+      const tid = toastId++;
+      addToast(tid, file.name, 'uploading');
       try {
         const { uploadUrl, storagePath } = await getUploadUrl.mutateAsync({
           tripId, fileName: file.name, contentType: file.type as any,
         });
         await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
         await confirmUpload.mutateAsync({ tripId, storagePath, fileSize: file.size, mimeType: file.type });
-        setUploading(n => n - 1);
-      } catch { setUploading(n => n - 1); }
+        addToast(tid, file.name, 'done');
+      } catch {
+        addToast(tid, file.name, 'error');
+      }
     }
     onPhotosChanged(); refetchPhotos();
   };
@@ -345,10 +364,38 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
         </label>
       </div>
 
-      {uploading > 0 && (
-        <p className="text-[10px] uppercase tracking-widest text-chill-accent font-vibe font-black animate-pulse-soft">
-          Uploading {uploading} file{uploading !== 1 ? 's' : ''}...
-        </p>
+      {/* Per-file upload toasts — bottom-right stack */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2" style={{ maxWidth: 280 }}>
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl font-mono text-[9px] uppercase tracking-[0.25em] animate-slide-up"
+              style={{
+                background: toast.status === 'error' ? 'rgba(255,77,77,0.12)' : toast.status === 'done' ? 'rgba(45,158,139,0.12)' : 'rgba(245,240,232,0.06)',
+                border: `1px solid ${toast.status === 'error' ? 'rgba(255,77,77,0.3)' : toast.status === 'done' ? 'rgba(45,158,139,0.3)' : 'rgba(245,240,232,0.12)'}`,
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              {/* Status indicator */}
+              <div className="flex-shrink-0">
+                {toast.status === 'uploading' && (
+                  <div className="w-3 h-3 rounded-full border border-white/30 border-t-white/80"
+                       style={{ animation: 'spin 0.8s linear infinite' }} />
+                )}
+                {toast.status === 'done' && <span style={{ color: '#2D9E8B' }}>✓</span>}
+                {toast.status === 'error' && <span style={{ color: '#FF4D4D' }}>✕</span>}
+              </div>
+              <span
+                className="truncate"
+                style={{ color: toast.status === 'error' ? 'rgba(255,77,77,0.8)' : toast.status === 'done' ? 'rgba(45,158,139,0.8)' : 'rgba(245,240,232,0.5)' }}
+              >
+                {toast.status === 'uploading' ? 'Uploading' : toast.status === 'done' ? 'Uploaded' : 'Failed'}{' '}
+                <span className="opacity-70">{toast.name.length > 18 ? toast.name.slice(0, 16) + '…' : toast.name}</span>
+              </span>
+            </div>
+          ))}
+        </div>
       )}
 
       {!canGenerate && photoCount > 0 && (

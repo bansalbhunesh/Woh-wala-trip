@@ -15,44 +15,61 @@ export function CinematicShell({ children, intensity = 0.3 }: { children: React.
     const onResize = () => { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; };
     window.addEventListener('resize', onResize);
 
-    const particles = Array.from({ length: 300 }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
-      size: Math.random() * 1.4 + 0.2,
+    // Particles — slow sine oscillation, minimal glow spread
+    const particles = Array.from({ length: 220 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.08,  // very slow drift
+      vy: (Math.random() - 0.5) * 0.08,
+      size: Math.random() * 1.3 + 0.2,
       hue: [10, 185, 280][Math.floor(Math.random() * 3)] as number,
-      life: Math.random() * Math.PI * 2,
+      // Offset phase so not all particles pulse together
+      phase: Math.random() * Math.PI * 2,
     }));
 
     let t = 0;
     const draw = () => {
       rafRef.current = requestAnimationFrame(draw);
-      t += 0.006;
-      ctx.fillStyle = 'rgba(6,6,4,0.92)';
+      t += 0.004; // slow global tick
+
+      // Near-opaque background — particles fade in slowly, no harsh cuts
+      ctx.fillStyle = 'rgba(6,6,4,0.94)';
       ctx.fillRect(0, 0, W, H);
 
       particles.forEach(p => {
-        p.life += 0.018;
-        const alpha = ((Math.sin(p.life) + 1) / 2) * intensity;
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-        if (alpha < 0.01) return;
+        // Very slow individual oscillation — no visible flicker
+        p.phase += 0.005;
+        const alpha = ((Math.sin(p.phase) + 1) / 2) * intensity * 0.7;
 
-        const colors: Record<number, string> = {
-          10: `rgba(255,77,77,${alpha})`,
-          185: `rgba(45,158,139,${alpha})`,
-          280: `rgba(124,106,255,${alpha})`,
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < -4) p.x = W + 4;
+        if (p.x > W + 4) p.x = -4;
+        if (p.y < -4) p.y = H + 4;
+        if (p.y > H + 4) p.y = -4;
+
+        if (alpha < 0.012) return;
+
+        const cols: Record<number, [number,number,number]> = {
+          10:  [255, 77, 77],
+          185: [45, 158, 139],
+          280: [124, 106, 255],
         };
-        if (p.size > 1.1) {
-          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
-          g.addColorStop(0, colors[p.hue]); g.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = g;
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2); ctx.fill();
+        const [r, g, b] = cols[p.hue] ?? [245, 240, 232];
+
+        // Only larger particles get a halo — smaller radius to avoid border bleed
+        if (p.size > 1.3) {
+          const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+          grd.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.6})`);
+          grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = grd;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = colors[p.hue];
+
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
       });
     };
+
     draw();
     return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('resize', onResize); };
   }, [intensity]);

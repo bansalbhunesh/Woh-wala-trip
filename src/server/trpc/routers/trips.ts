@@ -178,19 +178,43 @@ export const tripsRouter = router({
         });
       }
 
+      // Only set processing AFTER confirming worker is reachable
+      const workerUrl = process.env.AI_WORKER_URL;
+      if (!workerUrl || workerUrl.includes('localhost')) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Lore engine is offline. Make sure AI_WORKER_URL is set to your deployed worker.',
+        });
+      }
+
       await supabase
         .from('trips')
         .update({ lore_status: 'processing' })
         .eq('id', input.tripId);
 
-      await fetch(`${process.env.AI_WORKER_URL!}/generate-lore`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-        },
-        body: JSON.stringify({ trip_id: input.tripId }),
-      });
+      try {
+        const resp = await fetch(`${workerUrl}/generate-lore`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+          },
+          body: JSON.stringify({ trip_id: input.tripId }),
+          signal: AbortSignal.timeout(8000), // 8s connection timeout
+        });
+        if (!resp.ok) throw new Error(`Worker returned ${resp.status}`);
+      } catch (err) {
+        // Reset status so user can retry
+        await supabase
+          .from('trips')
+          .update({ lore_status: 'pending' })
+          .eq('id', input.tripId);
+        console.error('[generateLore] worker failed:', err);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Lore engine failed to start. Check AI_WORKER_URL is reachable and retry.',
+        });
+      }
 
       return { status: 'processing' };
     }),

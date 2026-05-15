@@ -158,6 +158,8 @@ input[type="number"]::-webkit-outer-spin-button {
   box-shadow: 0 12px 40px rgba(0,0,0,0.10);
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ─── Stagger helpers ────────────────────────────────────────── */
 .delay-100{ animation-delay:0.10s; }
 .delay-200{ animation-delay:0.20s; }
