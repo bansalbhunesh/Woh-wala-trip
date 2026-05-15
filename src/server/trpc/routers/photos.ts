@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
+import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
 export const photosRouter = router({
   getUploadUrl: protectedProcedure
@@ -43,7 +44,9 @@ export const photosRouter = router({
       const ext = input.fileName.split('.').pop() || 'jpg';
       const storagePath = `${input.tripId}/${ctx.user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-      const { data, error } = await supabase.storage
+      // Use service role for storage — RLS on storage.objects blocks the user session client
+      const adminSupabase = createSupabaseServiceClient();
+      const { data, error } = await adminSupabase.storage
         .from('trip-photos')
         .createSignedUploadUrl(storagePath);
 
@@ -125,14 +128,15 @@ export const photosRouter = router({
           message: error.message,
         });
 
+      const adminSupabase = createSupabaseServiceClient();
       const photosWithUrls = await Promise.all(
         (data as any[] || []).map(async (photo) => {
-          const { data: urlData } = await supabase.storage
+          const { data: urlData } = await adminSupabase.storage
             .from('trip-photos')
             .createSignedUrl(photo.storage_path, 3600);
 
           const { data: thumbData } = photo.thumbnail_path
-            ? await supabase.storage
+            ? await adminSupabase.storage
                 .from('trip-photos')
                 .createSignedUrl(photo.thumbnail_path, 3600)
             : { data: null };
