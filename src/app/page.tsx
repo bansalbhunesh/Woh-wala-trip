@@ -1,178 +1,167 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { FilmGrain, AtmosphericBlob, CinematicText } from '@/components/ui/atoms';
-import { ChevronRight, Sparkles, Play, Users } from 'lucide-react';
+import { FilmGrain } from '@/components/ui/atoms';
 
 export default async function LandingPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (session) {
-    redirect('/trips');
-  }
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) redirect('/trips');
 
   return (
-    <div className="min-h-screen bg-black text-[#F5F0E8] font-cinematic selection:bg-cooked-accent selection:text-white overflow-x-hidden">
+    <div className="h-screen overflow-hidden bg-[#060604] text-[#F5F0E8] flex flex-col select-none">
       <FilmGrain />
-      
-      {/* Cinematic Hero */}
-      <section className="relative h-[100vh] flex flex-col items-center justify-center px-6 text-center overflow-hidden">
-        {/* Explosive Ambient Glows */}
-        <AtmosphericBlob color="#FF3B2F" className="top-[-10%] left-[-15%] w-[60vw] h-[60vw] opacity-10 animate-float-a" />
-        <AtmosphericBlob color="#1FA882" className="bottom-[10%] right-[-10%] w-[50vw] h-[50vw] opacity-5 animate-float-b" />
-        <AtmosphericBlob color="#D49E2D" className="top-[40%] left-[30%] w-[40vw] h-[40vw] opacity-5 animate-float-c" />
-        
-        {/* Floating Archetype Cards */}
-        <div className="absolute inset-0 z-1 pointer-events-none hidden lg:block">
-           <FloatingCard emoji="⚡" name="Chaos Source" score="9/10" color="var(--cooked-accent)" className="top-[15%] left-[10%] rotate-[-4deg] animate-float-a" />
-           <FloatingCard emoji="🐈‍⬛" name="Black Cat" score="7/10" color="var(--chill-accent)" className="top-[20%] right-[12%] rotate-[3deg] animate-float-b delay-700" />
-           <FloatingCard emoji="🧍" name="NPC Energy" score="2/10" color="#6B6860" className="bottom-[25%] left-[15%] rotate-[2deg] animate-float-c delay-1000" />
-           <FloatingCard emoji="🐕" name="Golden Retriever" score="5/10" color="#D49E2D" className="bottom-[30%] right-[10%] rotate-[-3deg] animate-float-a delay-1500" />
-        </div>
 
-        <div className="relative z-10 space-y-12 max-w-6xl">
-          <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-2xl text-[10px] font-black uppercase tracking-[0.4em] text-white/40 shadow-2xl">
-            <span className="w-2 h-2 rounded-full bg-cooked-accent animate-pulse" />
-            Season 2026 Archive Now Open
+      {/* Ambient glows */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-5%] w-[55vw] h-[55vw] rounded-full bg-cooked-accent/[0.07] blur-[160px] animate-float-a" />
+        <div className="absolute bottom-[-15%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-chill-accent/[0.05] blur-[140px] animate-float-b" />
+        <div className="absolute top-[40%] left-[40%] w-[30vw] h-[30vw] rounded-full bg-lore-accent/[0.04] blur-[120px] animate-float-c" />
+      </div>
+
+      {/* ── NAV ────────────────────────────────────────────── */}
+      <nav className="relative z-10 flex items-center justify-between px-8 py-4 border-b border-white/[0.05]">
+        <span className="font-cinematic italic text-cooked-accent text-lg tracking-tight">woh wala trip</span>
+        <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.35em] text-white/25 font-vibe font-black">
+          <span className="w-1.5 h-1.5 rounded-full bg-cooked-accent animate-pulse" />
+          Season 2026 · Archive Open
+        </div>
+        <Link
+          href="/login"
+          className="px-5 py-2 border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest text-white/40 hover:bg-white/[0.06] hover:text-white hover:border-white/20 transition-all"
+        >
+          Enter →
+        </Link>
+      </nav>
+
+      {/* ── MAIN GRID ──────────────────────────────────────── */}
+      <div className="relative z-10 flex-1 grid grid-cols-[1fr_1.1fr] overflow-hidden">
+
+        {/* LEFT — Title + CTA */}
+        <div className="flex flex-col justify-center px-12 xl:px-16 py-6 gap-7">
+          <div className="space-y-1">
+            <p className="text-[9px] font-vibe font-black uppercase tracking-[0.45em] text-white/20 mb-4">
+              AI Friendship Documentary
+            </p>
+            <h1 className="font-cinematic font-black tracking-tighter leading-[0.82] uppercase text-[#F5F0E8]"
+                style={{ fontSize: 'clamp(52px, 8.5vw, 112px)' }}>
+              Woh<br />Wala<br /><em className="italic text-cooked-accent not-italic">Trip</em>
+            </h1>
           </div>
-          
-          <h1 className="text-[18vw] md:text-[14vw] font-black tracking-tighter leading-[0.78] text-[#F5F0E8] uppercase font-cinematic">
-            Woh<br />Wala<br /><span className="italic text-cooked-accent">Trip</span>
-          </h1>
-          
-          <p className="text-lg md:text-xl text-white/30 max-w-sm mx-auto italic font-medium leading-relaxed">
+
+          <p className="text-sm text-white/35 max-w-[280px] font-cinematic italic leading-relaxed">
             "Your photo dumps become cinematic lore. Your friends become roasted archetypes."
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center pt-12">
+
+          <div className="flex gap-3 flex-wrap">
             <Link
               href="/login"
-              className="group flex items-center gap-4 px-12 py-7 bg-[#F5F0E8] text-black rounded-full text-[11px] font-black uppercase tracking-[0.3em] hover:scale-110 active:scale-95 transition-all shadow-3xl"
+              className="flex items-center gap-2 px-7 py-3.5 bg-[#F5F0E8] text-black rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 active:scale-95 transition-all shadow-glow-red"
             >
               Start the Lore
-              <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              <span className="text-base">→</span>
             </Link>
             <Link
-              href="#demo"
-              className="flex items-center gap-4 px-12 py-7 border border-white/10 bg-white/5 text-white/40 rounded-full text-[11px] font-black uppercase tracking-[0.3em] hover:bg-white/10 hover:text-white transition-all"
+              href="/trips/join"
+              className="flex items-center gap-2 px-7 py-3.5 border border-white/10 bg-white/[0.03] text-white/40 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/[0.07] hover:text-white/70 transition-all"
             >
-              <Play size={16} /> View Demo
+              Join a Season
             </Link>
+          </div>
+
+          {/* Feature chips */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {['AI Archetypes', 'Story Mode', 'Chaos Scores', 'Export Posters'].map((f) => (
+              <span
+                key={f}
+                className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.07] text-[8.5px] uppercase tracking-widest text-white/25 font-vibe font-black"
+              >
+                {f}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce opacity-20">
-          <span className="text-2xl text-white/30 font-light">↓</span>
-        </div>
-      </section>
+        {/* RIGHT — Visual card collage */}
+        <div className="relative overflow-hidden border-l border-white/[0.04]">
 
-      {/* Scrolling Ticker */}
-      <section className="relative z-10 border-y border-white/5 overflow-hidden bg-white/[0.02] backdrop-blur-md py-6">
-        <div className="flex gap-0 animate-marquee whitespace-nowrap">
-           {[...Array(2)].map((_, i) => (
-             <div key={i} className="flex gap-0 items-center">
-                <TickerItem text="Black Cat" />
-                <TickerItem text="Chaos Source" />
-                <TickerItem text="Emotional Support NPC" />
-                <TickerItem text="Main Character" />
-                <TickerItem text="Golden Retriever" />
-                <TickerItem text="Historically Cooked" />
-                <TickerItem text="Peak Delusion" />
-             </div>
-           ))}
-        </div>
-      </section>
-
-      {/* Feature Section */}
-      <section id="demo" className="relative z-10 py-60 px-6">
-        <div className="max-w-6xl mx-auto text-center space-y-32">
-           <div className="space-y-6">
-             <CinematicText variant="eyebrow" className="text-white/20">The Algorithm</CinematicText>
-             <h2 className="text-7xl md:text-[10vw] font-black tracking-tighter leading-[0.8] text-[#F5F0E8] uppercase">
-               Exposing<br />Everyone.
-             </h2>
-           </div>
-
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             <FeatureCard 
-               icon={<Sparkles size={24} className="text-cooked-accent" />} 
-               title="Archetypes" 
-               desc="AI analyzes your group dynamic and assigns roasting roles." 
-             />
-             <FeatureCard 
-               icon={<Play size={24} className="text-chill-accent" />} 
-               title="Story Mode" 
-               desc="Tap-through cinematic slides generated from your photo dumps." 
-             />
-             <FeatureCard 
-               icon={<Users size={24} className="text-lore-accent" />} 
-               title="Cast List" 
-               desc="Track everyone's chaos score and collective cooked rating." 
-             />
-             <FeatureCard 
-               icon={<ChevronRight size={24} className="text-white/40" />} 
-               title="Posters" 
-               desc="Export high-fidelity season posters for your social release." 
-             />
-           </div>
-        </div>
-      </section>
-
-      {/* Final Call */}
-      <section className="relative py-80 px-6 text-center overflow-hidden border-t border-white/5">
-        <AtmosphericBlob color="#FF3B2F" className="bottom-[-20%] left-1/2 -translate-x-1/2 w-[60vw] h-[40vw] opacity-10" />
-        
-        <div className="relative z-10 max-w-4xl mx-auto space-y-12">
-          <h2 className="text-7xl md:text-[10vw] font-black tracking-tighter leading-[0.8] text-[#F5F0E8] uppercase">
-            Stop being boring. <br /> <span className="italic text-cooked-accent">Start the lore.</span>
-          </h2>
-          <div className="flex flex-col items-center gap-8 pt-12">
-            <Link
-              href="/login"
-              className="px-16 py-8 bg-[#F5F0E8] text-black rounded-full text-[12px] font-black uppercase tracking-[0.4em] hover:scale-110 active:scale-95 transition-all shadow-3xl"
-            >
-              Access the Archive
-            </Link>
-            <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
-               <span>Open Beta</span>
-               <span className="w-1.5 h-1.5 rounded-full bg-white/10" />
-               <span>v2.0 Cinematic Pipeline</span>
+          {/* Chaos Source — large, center-left */}
+          <div className="absolute top-[10%] left-[8%] w-[175px] p-5 rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl rotate-[-4deg] shadow-2xl hover:rotate-[-2deg] transition-transform duration-700">
+            <div className="text-3xl mb-3">⚡</div>
+            <div className="text-[8px] uppercase tracking-widest text-white/35 font-vibe font-black mb-1">Chaos Source</div>
+            <div className="text-4xl font-cinematic font-black text-cooked-accent leading-none">9/10</div>
+            <div className="mt-2 text-[8px] text-white/20 font-cinematic italic leading-tight">
+              "Started 3 incidents<br />before Day 2"
             </div>
           </div>
+
+          {/* Cooked score badge — top-right */}
+          <div className="absolute top-[8%] right-[10%] w-[130px] p-4 rounded-3xl border border-cooked-accent/25 bg-cooked-accent/[0.07] backdrop-blur-xl rotate-[5deg] hover:rotate-[3deg] transition-transform duration-700">
+            <div className="text-[8px] uppercase tracking-widest text-cooked-accent/50 font-vibe font-black mb-1">Cooked Level</div>
+            <div className="text-5xl font-cinematic font-black text-cooked-accent leading-none">84</div>
+            <div className="mt-1 text-[8px] uppercase tracking-widest text-white/25 font-vibe">Historically</div>
+            <div className="text-[8px] uppercase tracking-widest text-cooked-accent font-vibe font-black">Cooked.</div>
+          </div>
+
+          {/* Black Cat — mid left */}
+          <div className="absolute top-[48%] left-[5%] w-[145px] p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl rotate-[3deg] hover:rotate-[1deg] transition-transform duration-700">
+            <div className="text-2xl mb-2">🐈‍⬛</div>
+            <div className="text-[8px] uppercase tracking-widest text-white/30 font-vibe font-black">Black Cat</div>
+            <div className="text-3xl font-cinematic font-black text-chill-accent">7/10</div>
+            <div className="text-[7px] text-white/15 italic mt-1 font-cinematic">"Everyone's bad decisions somehow"</div>
+          </div>
+
+          {/* Trip Receipt — mid right */}
+          <div className="absolute top-[42%] right-[7%] w-[155px] p-4 rounded-2xl border border-white/[0.08] bg-[#0E0E0C] rotate-[-2deg] hover:rotate-[0deg] transition-transform duration-700 shadow-xl">
+            <div className="text-[8px] uppercase tracking-widest text-white/30 font-vibe font-black mb-3 pb-2 border-b border-white/[0.08]">Trip Receipt</div>
+            <div className="space-y-1.5 font-mono text-[8px]">
+              <div className="flex justify-between text-white/35"><span>Photos dumped</span><span className="text-white/50">247</span></div>
+              <div className="flex justify-between text-white/35"><span>Incidents logged</span><span className="text-cooked-accent">11</span></div>
+              <div className="flex justify-between text-white/35"><span>Stars given</span><span className="text-white/50">⭐ 3/5</span></div>
+              <div className="flex justify-between text-white/35"><span>Group chaos %</span><span className="text-white/50">84%</span></div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-white/[0.08] text-[8px] uppercase tracking-widest text-cooked-accent font-vibe font-black">
+              VERDICT: COOKED ✓
+            </div>
+          </div>
+
+          {/* Golden Retriever — bottom */}
+          <div className="absolute bottom-[14%] left-[25%] w-[140px] p-4 rounded-2xl border border-unstable-accent/20 bg-unstable-accent/[0.05] rotate-[2deg] hover:rotate-[0deg] transition-transform duration-700">
+            <div className="text-2xl mb-2">🐕</div>
+            <div className="text-[8px] uppercase tracking-widest text-white/30 font-vibe font-black">Golden Retriever</div>
+            <div className="text-3xl font-cinematic font-black text-unstable-accent">5/10</div>
+          </div>
+
+          {/* NPC Energy — bottom right */}
+          <div className="absolute bottom-[10%] right-[6%] w-[130px] p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] rotate-[-3deg] hover:rotate-[-1deg] transition-transform duration-700">
+            <div className="text-2xl mb-2">🧍</div>
+            <div className="text-[8px] uppercase tracking-widest text-white/25 font-vibe font-black">NPC Energy</div>
+            <div className="text-3xl font-cinematic font-black text-white/40">2/10</div>
+            <div className="text-[7px] text-white/15 italic mt-1 font-cinematic">"Present, technically."</div>
+          </div>
+
+          {/* Case ID watermark */}
+          <div className="absolute bottom-4 left-4 text-[8px] uppercase tracking-[0.35em] text-white/8 font-vibe font-black pointer-events-none">
+            Case File · WWT-2026 · Classified
+          </div>
         </div>
-      </section>
-    </div>
-  );
-}
+      </div>
 
-function FloatingCard({ emoji, name, score, color, className }: { emoji: string; name: string; score: string; color: string; className: string }) {
-  return (
-    <div className={`absolute p-6 border border-white/10 rounded-[2.5rem] bg-white/[0.03] backdrop-blur-xl flex flex-col gap-3 w-44 transition-all duration-700 ${className}`}>
-      <div className="text-3xl">{emoji}</div>
-      <div className="text-[10px] font-black uppercase tracking-widest text-white/30">{name}</div>
-      <div className="text-2xl font-black" style={{ color }}>{score}</div>
-    </div>
-  );
-}
-
-function TickerItem({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-12 px-12">
-      <span className="text-4xl md:text-6xl font-black italic text-white/[0.03] uppercase whitespace-nowrap">{text}</span>
-      <div className="w-2 h-2 rounded-full bg-cooked-accent/40 flex-shrink-0" />
-    </div>
-  );
-}
-
-function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  return (
-    <div className="p-10 border border-white/5 bg-white/[0.02] rounded-[3rem] text-left hover:bg-white/[0.05] hover:border-white/10 transition-all duration-500 group">
-      <div className="mb-8 transform group-hover:scale-110 transition-transform duration-500">{icon}</div>
-      <h3 className="font-black text-2xl text-[#F5F0E8] leading-tight mb-4 uppercase">{title}</h3>
-      <p className="text-[11px] text-white/30 font-medium leading-relaxed italic">"{desc}"</p>
+      {/* ── TICKER ─────────────────────────────────────────── */}
+      <div className="relative z-10 border-t border-white/[0.05] overflow-hidden py-2.5 bg-white/[0.01]">
+        <div className="flex animate-marquee whitespace-nowrap">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center">
+              {['Black Cat', 'Chaos Source', 'Emotional Support NPC', 'Main Character', 'Golden Retriever', 'Historically Cooked', 'Peak Delusion', 'The Villain Arc'].map((t) => (
+                <span key={t} className="inline-flex items-center gap-4 px-6">
+                  <span className="text-[9px] uppercase tracking-[0.35em] text-white/[0.13] font-vibe font-black">{t}</span>
+                  <span className="w-1 h-1 rounded-full bg-cooked-accent/30 flex-shrink-0" />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
