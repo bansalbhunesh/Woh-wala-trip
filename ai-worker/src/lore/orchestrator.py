@@ -390,9 +390,8 @@ class LoreOrchestrator:
     def _save_lore(self, trip_id: str, lore: dict):
         supabase.table("trips").update({
             "lore_json": lore,
-            # Write cooked_level to chaos_score column for backwards compat
             "chaos_score": lore.get("cooked_level", 60),
-            "lore_generated_at": datetime.now(timezone.utc).isoformat(),
+            # lore_generated_at column does not exist in schema — removed
         }).eq("id", trip_id).execute()
 
         if lore.get("trip_eras"):
@@ -402,7 +401,7 @@ class LoreOrchestrator:
                     "era_name": era["era_name"],
                     "timeframe": era.get("timeframe"),
                     "description": era.get("description"),
-                    "defining_moment": era.get("defining_moment"),
+                    # defining_moment column does not exist in schema
                     "display_order": i,
                 }
                 for i, era in enumerate(lore["trip_eras"])
@@ -416,10 +415,8 @@ class LoreOrchestrator:
             supabase.table("trip_members").update({
                 "role_title": role.get("role_title"),
                 "role_description": role.get("role_description"),
-                "role_signature_move": role.get("signature_move"),
-                "role_most_likely_said": role.get("most_likely_said"),
-                "role_archetype_tag": role.get("archetype_tag") or role.get("archetype"),
                 "role_chaos_rating": role.get("chaos_rating"),
+                # role_signature_move, role_most_likely_said, role_archetype_tag not in schema
             }).eq("trip_id", trip_id).eq("user_id", role["user_id"]).execute()
 
     def _save_stats(self, trip_id: str, stats: list[dict]):
@@ -431,7 +428,7 @@ class LoreOrchestrator:
                 "label": s["label"],
                 "value": str(s["value"]),
                 "unit": s.get("unit"),
-                "note": s.get("note"),
+                # note column does not exist in schema
                 "display_order": i,
             }
             for i, s in enumerate(stats)
