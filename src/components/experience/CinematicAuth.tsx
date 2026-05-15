@@ -1,11 +1,11 @@
 'use client';
 /**
- * CinematicAuth — pure 6-digit OTP via custom API
+ * CinematicAuth — pure 8-digit OTP via custom API
  *
  * Flow:
  *   1. User enters email → POST /api/auth/send-otp
  *   2. OTP generated via Supabase admin, delivered via Resend (or console in dev)
- *   3. UI IMMEDIATELY shows 6-digit input
+ *   3. UI IMMEDIATELY shows 8-digit input
  *   4. User enters code → POST /api/auth/verify-otp
  *   5. Session created server-side, client picks it up
  *   6. Cinematic collapse → /trips
@@ -144,7 +144,7 @@ export default function CinematicAuth() {
 
   const [phase, setPhase] = useState(0); // 0=transit 1=email 2=otp 3=granted 4=wipe
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['','','','','','']);
+  const [otp, setOtp] = useState(['','','','','','','','']);
   const [inputFocused, setInputFocused] = useState(false);
   const [activeDigit, setActiveDigit] = useState(-1);
   const [sendLoading, setSendLoading] = useState(false);
@@ -233,7 +233,7 @@ export default function CinematicAuth() {
   // Verify OTP via our custom API
   const verifyOtp = useCallback(async (digits: string[]) => {
     const token = digits.join('');
-    if (token.length !== 6 || verifyLoading) return;
+    if (token.length !== 8 || verifyLoading) return;
     setVerifyLoading(true); setError('');
 
     try {
@@ -260,8 +260,8 @@ export default function CinematicAuth() {
   const handleDigitChange = (i: number, val: string) => {
     const digit = val.replace(/\D/g,'').slice(-1);
     const next = [...otp]; next[i] = digit; setOtp(next);
-    if (digit && i < 5) setTimeout(() => otpRefs.current[i+1]?.focus(), 40);
-    if (next.join('').length === 6) verifyOtp(next);
+    if (digit && i < 7) setTimeout(() => otpRefs.current[i+1]?.focus(), 40);
+    if (next.join('').length === 8) verifyOtp(next);
   };
 
   const handleDigitKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -274,8 +274,8 @@ export default function CinematicAuth() {
     const next = [...otp];
     digits.split('').forEach((d,i) => { next[i] = d; });
     setOtp(next);
-    otpRefs.current[Math.min(digits.length, 5)]?.focus();
-    if (next.join('').length === 6) setTimeout(() => verifyOtp(next), 50);
+    otpRefs.current[Math.min(digits.length, 7)]?.focus();
+    if (next.join('').length === 8) setTimeout(() => verifyOtp(next), 50);
   };
 
   // Dev-mode OTP: if running locally, OTP is printed to terminal
@@ -392,7 +392,7 @@ export default function CinematicAuth() {
         </div>
       </div>
 
-      {/* ── PHASE 2: 6-DIGIT OTP ── */}
+      {/* ── PHASE 2: 8-DIGIT OTP ── */}
       <div style={phaseStyle(2)}>
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-3">
@@ -405,7 +405,7 @@ export default function CinematicAuth() {
               ENTER THE<br /><em className="italic" style={{ color: '#FF4D4D' }}>CODE</em>
             </h2>
             <p className="font-mono text-[8.5px]" style={{ color: 'rgba(245,240,232,0.25)', letterSpacing: '0.1em' }}>
-              6-DIGIT CODE SENT TO {email.toUpperCase()}
+              8-DIGIT CODE SENT TO {email.toUpperCase()}
             </p>
             {isDevMode && (
               <p className="font-mono text-[8px]" style={{ color: 'rgba(255,77,77,0.45)' }}>
@@ -465,13 +465,13 @@ export default function CinematicAuth() {
           )}
 
           <div className="flex items-center justify-between">
-            <button onClick={() => { setPhase(1); setOtp(['','','','','','']); setError(''); }}
+            <button onClick={() => { setPhase(1); setOtp(['','','','','','','','']); setError(''); }}
                     className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
                     style={{ color: 'rgba(245,240,232,0.18)' }}>
               ← WRONG EMAIL
             </button>
             <button
-              onClick={() => { setOtp(['','','','','','']); sendOtp(); }}
+              onClick={() => { setOtp(['','','','','','','','']); sendOtp(); }}
               disabled={cooldown > 0 || sendLoading}
               className="font-mono text-[7.5px] uppercase tracking-[0.4em] disabled:opacity-30 hover:opacity-60 transition-opacity"
               style={{ color: 'rgba(245,240,232,0.18)' }}>

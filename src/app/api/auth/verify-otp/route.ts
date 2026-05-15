@@ -6,7 +6,7 @@ import type { Database } from '@/lib/database.types';
 export async function POST(req: NextRequest) {
   try {
     const { email, token } = await req.json();
-    if (!email || !token || token.length !== 6) {
+    if (!email || !token || token.length < 6 || token.length > 8) {
       return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
     }
 
