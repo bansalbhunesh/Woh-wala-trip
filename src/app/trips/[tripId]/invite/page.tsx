@@ -2,6 +2,7 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import { analytics } from '@/lib/analytics';
 import { CinematicShell } from '@/components/experience/CinematicShell';
 import { Copy, Check, MessageCircle, ArrowRight } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export default function InvitePage({ params }: { params: Promise<{ tripId: strin
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(inviteCode);
+    analytics.friendInvited(tripId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

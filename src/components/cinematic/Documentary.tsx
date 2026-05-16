@@ -465,7 +465,7 @@ export function EvidenceBoard({
   if (!mvp && !villain && !insideJoke) return null;
 
   // Stable ID derived from props — prevents Framer Motion re-animation on every refetch
-  const caseId = React.useRef(`WWT-${Math.random().toString(36).slice(-6).toUpperCase()}`).current;
+  const caseId = React.useRef(`YL-${Math.random().toString(36).slice(-6).toUpperCase()}`).current;
 
   return (
     <motion.div

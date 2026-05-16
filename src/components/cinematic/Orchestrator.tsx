@@ -56,7 +56,7 @@ export function TheatricalCredits({ trip }: { trip: any }) {
       </div>
       
       <div className="text-center opacity-10 font-cinematic italic text-xs tracking-[0.5em] uppercase">
-        woh wala trip
+        yaarlore
       </div>
     </footer>
   );

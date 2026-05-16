@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import { analytics } from '@/lib/analytics';
 import Link from 'next/link';
 
 export default function SharePage() {
@@ -48,7 +49,7 @@ export default function SharePage() {
         <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#14181C] to-black snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
           <div>
             <div className="text-[9px] uppercase tracking-[0.3em] text-white/20">Season Archive</div>
-            <div className="font-cinematic italic text-[10px] text-white/10 mt-1">woh wala trip</div>
+            <div className="font-cinematic italic text-[10px] text-white/10 mt-1">yaarlore</div>
           </div>
           <div>
             <h2 className="font-cinematic font-black text-4xl tracking-tighter leading-[0.85] text-[#F5F0E8] mb-4">
@@ -64,7 +65,7 @@ export default function SharePage() {
               <span className="text-[9px] uppercase tracking-[0.2em] text-white/20">Chaos</span>
             </div>
             <div className="flex justify-between items-end">
-              <div className="text-[8px] uppercase tracking-[0.2em] text-white/10">WWT © 2026</div>
+              <div className="text-[8px] uppercase tracking-[0.2em] text-white/10">YAARLORE © 2026</div>
               <div className="grid grid-cols-4 gap-0.5 p-1 bg-white/5 rounded-md">
                 {[...Array(8)].map((_, i) => <div key={i} className="w-1.5 h-1.5 bg-white/10 rounded-sm" />)}
               </div>
@@ -101,7 +102,7 @@ export default function SharePage() {
         {/* Card 3: Receipt (Light) */}
         <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#FAF1E4] to-[#F2E8D8] snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform text-black">
           <div>
-            <div className="text-[9px] uppercase tracking-[0.3em] text-black/30 font-mono">WWT · CHAOS RECEIPT</div>
+            <div className="text-[9px] uppercase tracking-[0.3em] text-black/30 font-mono">YAARLORE · CHAOS RECEIPT</div>
           </div>
           <div className="font-mono space-y-2">
             <div className="border-b border-black/10 pb-3 mb-3 text-[10px] text-black/40">
@@ -125,7 +126,7 @@ export default function SharePage() {
             </div>
           </div>
           <div>
-            <div className="font-mono text-[9px] text-black/20 uppercase tracking-widest">woh wala trip © 2026</div>
+            <div className="font-mono text-[9px] text-black/20 uppercase tracking-widest">yaarlore © 2026</div>
           </div>
         </div>
       </div>
@@ -147,6 +148,7 @@ export default function SharePage() {
           label="Share to Instagram"
           sub="Stories · 9:16 · Trip card"
           onClick={() => {
+            analytics.storyShared(tripId, 'instagram');
             if (navigator.share) {
               navigator.share({ title: tripName, text: shareText, url: window.location.href });
             } else {
@@ -158,13 +160,14 @@ export default function SharePage() {
           icon="💬"
           label="WhatsApp your group"
           sub="Caption pre-filled · Roast ready"
-          onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank')}
+          onClick={() => { analytics.storyShared(tripId, 'whatsapp'); window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank'); }}
         />
         <ShareActionButton
           icon="🔗"
           label="Copy invite link"
           sub="Join the archive · See your role"
           onClick={() => {
+            analytics.storyShared(tripId, 'link');
             const url = `${window.location.origin}/trips/join?code=${trip?.invite_code || ''}`;
             navigator.clipboard.writeText(url).then(() => alert('Invite link copied!'));
           }}

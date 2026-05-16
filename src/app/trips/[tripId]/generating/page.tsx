@@ -184,7 +184,7 @@ export default function GeneratingPage() {
       <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6">
         {/* Brand */}
         <p className="absolute top-8 left-0 right-0 text-center font-mono text-[8px] uppercase tracking-[0.6em]"
-           style={{ color: 'rgba(245,240,232,0.1)' }}>woh wala trip</p>
+           style={{ color: 'rgba(245,240,232,0.1)' }}>yaarlore</p>
 
         {/* Stage display */}
         <div className="text-center space-y-8 max-w-md"

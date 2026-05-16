@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       await sendViaResend(email.trim(), otp);
     } else {
       console.log('\n╔══════════════════════════════════════════╗');
-      console.log(`║  WWT OTP CODE: ${otp.padEnd(24)}║`);
+      console.log(`║  YAARLORE OTP: ${otp.padEnd(24)}║`);
       console.log(`║  Email: ${email.trim().padEnd(33)}║`);
       console.log('╚══════════════════════════════════════════╝\n');
     }

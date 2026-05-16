@@ -18,6 +18,7 @@ import {
   StickyChapter, EvidenceBoard,
 } from '@/components/cinematic/Documentary';
 import { AnimatePresence, motion } from 'framer-motion';
+import { analytics } from '@/lib/analytics';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,6 +36,7 @@ export default function TripRoomPage() {
     const hasSeen = localStorage.getItem(`wrapped_${tripId}`);
     if (!hasSeen) setShowWrapped(true);
     setLightMode(localStorage.getItem('archive_light_mode') === '1');
+    analytics.storyRevisited(tripId);
   }, [tripId]);
 
   const toggleLight = () => setLightMode(prev => {
@@ -211,7 +213,7 @@ export default function TripRoomPage() {
                   )}
                   {lore?.cooked_level && (
                     <RecoveredArtifact
-                      label="WWT Chaos Receipt · Official"
+                      label="Yaarlore Chaos Receipt · Official"
                       content={`Trip: ${trip?.name || '—'}\nChaos Score: ${lore.cooked_level}/100\nVerdict: ${lore.cooked_verdict || '—'}\nPhotos Analyzed: ${trip?.total_photos || 0}\nCast Members: ${members.length}`}
                       subtext={`Archive ID: ${trip?.id?.slice(0, 8)?.toUpperCase() || '——'}`}
                       type="receipt"
@@ -289,7 +291,7 @@ export default function TripRoomPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-[7px] font-mono text-black/25 uppercase tracking-[0.5em] mb-1">
-                      WWT Dossier · Classified
+                      Yaarlore Dossier · Classified
                     </div>
                     <h3 className="text-sm font-cinematic font-black tracking-tight text-lore-ink uppercase leading-none">
                       {trip?.name}

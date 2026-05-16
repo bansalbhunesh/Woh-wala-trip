@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import { analytics } from '@/lib/analytics';
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -9,7 +10,10 @@ export default function NewTripPage() {
   const [active, setActive] = useState<string | null>(null);
 
   const createTrip = trpc.trips.create.useMutation({
-    onSuccess: (trip) => router.push(`/trips/${trip.id}/invite`),
+    onSuccess: (trip) => {
+      analytics.tripCreated(trip.id, trip.name);
+      router.push(`/trips/${trip.id}/invite`);
+    },
   });
 
   const isReady = fields.name.trim() && fields.startDate && fields.endDate && !createTrip.isPending;
@@ -38,7 +42,7 @@ export default function NewTripPage() {
         </button>
         <span className="font-display italic font-black text-base tracking-tight"
               style={{ color: 'oklch(60% 0.22 25)' }}>
-          woh wala trip
+          yaarlore
         </span>
         <div className="w-12" />
       </nav>

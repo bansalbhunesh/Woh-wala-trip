@@ -81,7 +81,7 @@ export function CardFooter({ palette, qrDataUrl: inviteUrl, showWatermark, qrLab
       </div>
       {showWatermark && (
         <div style={{ display: 'flex', fontSize: 20, fontFamily: 'Space Grotesk', color: palette.inkMuted, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase' }}>
-          WWT
+          YL
         </div>
       )}
     </div>

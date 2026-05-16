@@ -325,18 +325,18 @@ export default function CinematicLanding() {
               textShadow: '0 0 60px rgba(255,77,77,0.15)',
             }}
           >
-            {['WOH', 'WALA', 'TRIP'].map((word, wi) => (
+            {['YAAR', 'LORE'].map((word, wi) => (
               <div key={word} className="block overflow-hidden">
                 {word.split('').map((char, ci) => {
-                  const charIdx = wi === 0 ? ci : wi === 1 ? 4 + ci : 9 + ci;
+                  const charIdx = wi === 0 ? ci : 4 + ci;
                   const revealed = titleChars.length > charIdx;
                   return (
                     <span
                       key={ci}
                       style={{
                         display: 'inline-block',
-                        color: wi === 2 ? '#FF4D4D' : 'rgba(245,240,232,0.92)',
-                        fontStyle: wi === 2 ? 'italic' : 'normal',
+                        color: wi === 1 ? '#FF4D4D' : 'rgba(245,240,232,0.92)',
+                        fontStyle: wi === 1 ? 'italic' : 'normal',
                         transform: revealed ? 'translateY(0)' : 'translateY(110%)',
                         opacity: revealed ? 1 : 0,
                         transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease',

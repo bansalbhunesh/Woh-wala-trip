@@ -62,7 +62,7 @@ export async function GET(
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 60 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 40, fontFamily: 'Space Grotesk', fontWeight: 700, color: palette.ink, letterSpacing: -1 }}>WWT LORE</div>
+            <div style={{ fontSize: 40, fontFamily: 'Space Grotesk', fontWeight: 700, color: palette.ink, letterSpacing: -1 }}>YAARLORE</div>
             <div style={{ fontSize: 24, fontFamily: 'Space Grotesk', color: palette.inkSoft, textTransform: 'uppercase', letterSpacing: 2 }}>Receipt of Downfall</div>
           </div>
           <div style={{ textAlign: 'right', fontSize: 24, fontFamily: 'Space Grotesk', color: palette.inkSoft }}>
