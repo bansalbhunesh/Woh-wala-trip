@@ -16,7 +16,7 @@ function ChaosBar({ score, label, delay = 0 }: { score: number; label: string; d
         <span className="text-[11px] font-vibe font-bold tabular-nums" style={{ color }}>{score}</span>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-        <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${width}%`, backgroundColor: color }} />
+        <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color, transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)' }} />
       </div>
     </div>
   );
@@ -61,8 +61,8 @@ export default function YearWrapPage({ params }: { params: Promise<{ year: strin
     <div className="fixed inset-0 bg-[#060604] overflow-hidden select-none"
          onClick={handleTap} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <FilmGrain />
-      <div className="absolute inset-0 pointer-events-none transition-all duration-1000"
-           style={{ background: `radial-gradient(ellipse at 50% 40%, ${glow}10 0%, transparent 65%)` }} />
+      <div className="absolute inset-0 pointer-events-none"
+           style={{ background: `radial-gradient(ellipse at 50% 40%, ${glow}10 0%, transparent 65%)`, transition: 'background 1.2s cubic-bezier(0.16,1,0.3,1)' }} />
 
       {/* Progress */}
       <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-3">
@@ -84,13 +84,13 @@ export default function YearWrapPage({ params }: { params: Promise<{ year: strin
       </button>
 
       <div key={animKey} className="absolute inset-0 flex items-center justify-center px-8 py-20"
-           style={{ animation: `${slideAnim} 0.35s cubic-bezier(0.16,1,0.3,1) both` }}>
+           style={{ animation: `${slideAnim} 0.6s cubic-bezier(0.16,1,0.3,1) both` }}>
 
         {current === 'intro' && (
-          <div className="text-center space-y-8 max-w-sm" style={{ animation: 'wrap-rise 0.65s cubic-bezier(0.16,1,0.3,1) both' }}>
-            <p className="text-[10px] uppercase tracking-[0.5em] text-white/30 font-vibe">Yaarlore</p>
+          <div className="text-center space-y-8 max-w-sm" style={{ animation: 'wrap-rise 0.75s cubic-bezier(0.16,1,0.3,1) 0.05s both' }}>
+            <p className="text-[10px] uppercase tracking-[0.5em] text-white/30 font-vibe" style={{ animation: 'wrap-rise 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both', opacity: 0 }}>Yaarlore</p>
             <h1 className="font-cinematic font-black uppercase leading-[0.82] tracking-tighter text-[#F5F0E8]"
-                style={{ fontSize: 'clamp(64px, 18vw, 120px)' }}>
+                style={{ fontSize: 'clamp(64px, 18vw, 120px)', animation: 'wrap-rise 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both', opacity: 0 }}>
               YOUR <span style={{ color: '#FF4D4D' }}>{year}</span><br />IN CHAOS
             </h1>
             {isLoading ? (
@@ -211,12 +211,30 @@ export default function YearWrapPage({ params }: { params: Promise<{ year: strin
       )}
 
       <style jsx>{`
-        @keyframes wrap-in-right { from{opacity:0.4;transform:translateX(60px) scale(0.96)} to{opacity:1;transform:translateX(0) scale(1)} }
-        @keyframes wrap-in-left  { from{opacity:0.4;transform:translateX(-60px) scale(0.96)} to{opacity:1;transform:translateX(0) scale(1)} }
-        @keyframes wrap-rise  { from{opacity:0;transform:translateY(28px);filter:blur(4px)} to{opacity:1;transform:none;filter:none} }
-        @keyframes score-slam { 0%{transform:scale(0.45);opacity:0} 60%{transform:scale(1.1);opacity:1} 80%{transform:scale(0.97)} 100%{transform:scale(1)} }
-        @keyframes card-flip  { from{opacity:0;transform:perspective(800px) rotateY(-90deg) scale(0.8)} to{opacity:1;transform:none} }
-        @keyframes fade-in    { from{opacity:0} to{opacity:1} }
+        @keyframes wrap-in-right {
+          from { opacity: 0; transform: translate3d(55px, 0, 0) scale(0.96); filter: blur(5px); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0)    scale(1);    filter: blur(0);   }
+        }
+        @keyframes wrap-in-left {
+          from { opacity: 0; transform: translate3d(-55px, 0, 0) scale(0.96); filter: blur(5px); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0)     scale(1);    filter: blur(0);   }
+        }
+        @keyframes wrap-rise {
+          from { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(6px); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0);    filter: blur(0);   }
+        }
+        @keyframes score-slam {
+          0%   { transform: scale(0.3);  opacity: 0; filter: blur(12px); }
+          55%  { transform: scale(1.07); opacity: 1; filter: blur(0);    }
+          75%  { transform: scale(0.97); }
+          90%  { transform: scale(1.01); }
+          100% { transform: scale(1);   }
+        }
+        @keyframes card-flip {
+          from { opacity: 0; transform: perspective(1000px) rotateY(-25deg) scale(0.92); filter: blur(6px); }
+          to   { opacity: 1; transform: perspective(1000px) rotateY(0deg)   scale(1);    filter: blur(0);   }
+        }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
     </div>
   );

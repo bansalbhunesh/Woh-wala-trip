@@ -271,8 +271,8 @@ export default function CinematicLanding() {
                 left: `${a.x}%`,
                 top: `${a.y}%`,
                 transform: `translate(${parallaxX + floatX}px, ${parallaxY + floatY}px) rotate(${a.rot}deg)`,
-                transition: 'transform 0.1s linear',
-                animation: `card-emerge 0.8s cubic-bezier(0.16,1,0.3,1) ${a.delay + 0.3}s both`,
+                transition: 'transform 0.12s cubic-bezier(0.25,1,0.5,1)',
+                animation: `card-emerge 1s cubic-bezier(0.16,1,0.3,1) ${a.delay + 0.2}s both`,
               }}
             >
               <div
@@ -337,9 +337,10 @@ export default function CinematicLanding() {
                         display: 'inline-block',
                         color: wi === 1 ? '#FF4D4D' : 'rgba(245,240,232,0.92)',
                         fontStyle: wi === 1 ? 'italic' : 'normal',
-                        transform: revealed ? 'translateY(0)' : 'translateY(110%)',
+                        transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,110%,0)',
                         opacity: revealed ? 1 : 0,
-                        transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease',
+                        filter: revealed ? 'blur(0)' : 'blur(4px)',
+                        transition: 'transform 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.35s cubic-bezier(0.16,1,0.3,1), filter 0.4s cubic-bezier(0.16,1,0.3,1)',
                       }}
                     >
                       {char}
@@ -367,33 +368,37 @@ export default function CinematicLanding() {
         {/* ── PORTAL CTA (bottom center) — z-30 keeps it above all cards ── */}
         <div
           className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-4 z-30"
-          style={{ animation: 'card-emerge 1s cubic-bezier(0.16,1,0.3,1) 1.5s both' }}
+          style={{ animation: 'lore-enter 1s cubic-bezier(0.16,1,0.3,1) 1.4s both' }}
         >
           <button
             onMouseEnter={() => setPortalHover(true)}
             onMouseLeave={() => setPortalHover(false)}
             onClick={handleEnter}
-            className="relative group flex items-center gap-3 px-10 py-5 rounded-full transition-all duration-500"
+            className="relative group flex items-center gap-3 px-10 py-5 rounded-full"
             style={{
               background: portalHover ? 'rgba(255,77,77,1)' : 'rgba(255,77,77,0.12)',
               border: '1px solid rgba(255,77,77,0.5)',
               boxShadow: portalHover
-                ? '0 0 60px rgba(255,77,77,0.5), 0 0 120px rgba(255,77,77,0.2)'
-                : '0 0 20px rgba(255,77,77,0.15)',
-              transform: portalHover ? 'scale(1.06)' : 'scale(1)',
+                ? '0 0 60px rgba(255,77,77,0.45), 0 0 120px rgba(255,77,77,0.18), 0 8px 32px rgba(0,0,0,0.3)'
+                : '0 0 24px rgba(255,77,77,0.18)',
+              transform: portalHover ? 'translate3d(0,-2px,0) scale(1.04)' : 'translate3d(0,0,0) scale(1)',
+              transition: 'background 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), transform 0.4s cubic-bezier(0.16,1,0.3,1)',
             }}
           >
             <span
               className="font-ui font-black uppercase tracking-[0.35em] text-[10px]"
-              style={{ color: portalHover ? '#060604' : 'rgba(255,77,77,0.9)' }}
+              style={{
+                color: portalHover ? '#060604' : 'rgba(255,77,77,0.9)',
+                transition: 'color 0.3s cubic-bezier(0.16,1,0.3,1)',
+              }}
             >
               Enter the Lore
             </span>
             <span
               style={{
                 color: portalHover ? '#060604' : 'rgba(255,77,77,0.7)',
-                transform: portalHover ? 'translateX(4px)' : 'translateX(0)',
-                transition: 'transform 0.3s ease',
+                transform: portalHover ? 'translate3d(6px,0,0)' : 'translate3d(0,0,0)',
+                transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1), color 0.3s cubic-bezier(0.16,1,0.3,1)',
                 display: 'inline-block',
               }}
             >→</span>

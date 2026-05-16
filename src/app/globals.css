@@ -110,42 +110,47 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   100%{ transform:translateY(100vh); }
 }
 
+/* GPU-accelerated float — sine wave on Y, gentle rotation variation */
 @keyframes float-up {
-  0%,100%{ transform:translateY(0px) rotate(var(--r,0deg)); }
-  50%    { transform:translateY(-8px) rotate(var(--r,0deg)); }
+  0%,100%{ transform:translate3d(0, 0px, 0) rotate(var(--r,0deg)); }
+  33%    { transform:translate3d(0, -7px, 0) rotate(calc(var(--r,0deg) + 0.4deg)); }
+  66%    { transform:translate3d(0, -12px, 0) rotate(calc(var(--r,0deg) - 0.3deg)); }
 }
 
 @keyframes spin { to { transform:rotate(360deg); } }
 
-/* Missing keyframes referenced in components */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
+  50%       { opacity: 0.45; }
 }
 
 @keyframes scan-flicker {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.25; }
+  50%       { opacity: 0.2; }
 }
 
 @keyframes pulse-text {
-  0%, 100% { opacity: 0.18; }
-  50%       { opacity: 0.4; }
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.45; }
 }
 
+/* More travel + gentle rotation gives it weight */
 @keyframes slow-drift {
-  0%, 100% { transform: translateY(0px) rotate(-2deg); }
-  50%       { transform: translateY(-18px) rotate(2deg); }
+  0%  { transform: translate3d(0, 0px, 0) rotate(-2deg); }
+  50% { transform: translate3d(0, -22px, 0) rotate(2.5deg); }
+  100%{ transform: translate3d(0, 0px, 0) rotate(-2deg); }
 }
 
+/* Blur + rise for small UI signals */
 @keyframes fade-signal {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translate3d(0, 10px, 0); filter: blur(3px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0);   filter: blur(0);   }
 }
 
+/* Card entry: blur + translate + scale — GPU accelerated */
 @keyframes card-emerge {
-  from { opacity: 0; transform: translateY(20px) scale(0.93) rotate(var(--r,0deg)); }
-  to   { opacity: 1; transform: translateY(0)    scale(1)    rotate(var(--r,0deg)); }
+  from { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.90) rotate(var(--r,0deg)); filter: blur(6px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0)    scale(1)    rotate(var(--r,0deg)); filter: blur(0);   }
 }
 
 @keyframes scan-sweep {
@@ -153,34 +158,43 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   to   { top: 100%; opacity: 0.3; }
 }
 
-@keyframes fragment-in {
-  from { opacity: 0; transform: scale(0.6) translateY(8px); }
-  to   { opacity: 1; transform: scale(1)   translateY(0); }
+/* Premium reveal: blur + rise + subtle scale */
+@keyframes lore-enter {
+  from { opacity: 0; transform: translate3d(0, 36px, 0) scale(0.96); filter: blur(8px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0)    scale(1);    filter: blur(0);   }
 }
 
+/* Fragment: scale-in from small with blur */
+@keyframes fragment-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.7);  filter: blur(4px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0)    scale(1);    filter: blur(0);   }
+}
+
+/* Standard stagger-in for list items */
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translate3d(0, 20px, 0); filter: blur(4px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0);    filter: blur(0);   }
 }
 
 @keyframes slide-down {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(8px); }
+  from { opacity: 1; transform: translate3d(0, 0, 0);   }
+  to   { opacity: 0; transform: translate3d(0, 10px, 0); }
 }
 
+/* Crisp opacity — no transform needed for already-in-place elements */
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
 @keyframes wwt-breathe {
-  0%, 100% { transform:scale(1); opacity:0.5; }
-  50%       { transform:scale(1.1); opacity:1; }
+  0%, 100% { transform:scale(1);   opacity:0.5; }
+  50%       { transform:scale(1.08); opacity:1; }
 }
 
 @keyframes wwt-breathe-dot {
-  0%, 100% { box-shadow:0 0 14px rgba(255,77,77,0.7); }
-  50%       { box-shadow:0 0 26px rgba(255,77,77,1); }
+  0%, 100% { box-shadow:0 0 12px rgba(255,77,77,0.6); }
+  50%       { box-shadow:0 0 28px rgba(255,77,77,1);   }
 }
 
 @keyframes wwt-spin { to { transform:rotate(360deg); } }
@@ -213,28 +227,31 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   pointer-events:none;
 }
 
-/* ─── Card hover ─────────────────────────────────────────────── */
+/* ─── Card hover — GPU translate, specific properties only ──── */
 .doc-card {
-  transition: transform 0.4s var(--ease-cinematic), border-color 0.3s ease;
+  transition: transform 0.45s var(--ease-cinematic), border-color 0.3s var(--ease-cinematic);
   will-change: transform;
 }
-.doc-card:hover { transform: translateY(-2px); }
+.doc-card:hover { transform: translate3d(0, -3px, 0); }
 
 .light-card {
-  transition: transform 0.35s var(--ease-cinematic), box-shadow 0.35s ease;
+  transition: transform 0.4s var(--ease-cinematic), box-shadow 0.4s var(--ease-cinematic);
   will-change: transform;
 }
 .light-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.10);
+  transform: translate3d(0, -4px, 0);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
 }
 
 /* ─── Stagger helpers ────────────────────────────────────────── */
+.delay-75  { animation-delay: 0.075s; }
 .delay-100 { animation-delay: 0.10s; }
+.delay-150 { animation-delay: 0.15s; }
 .delay-200 { animation-delay: 0.20s; }
 .delay-300 { animation-delay: 0.30s; }
 .delay-400 { animation-delay: 0.40s; }
 .delay-500 { animation-delay: 0.50s; }
+.delay-600 { animation-delay: 0.60s; }
 
 /* ─── Accessibility: respect reduced motion ──────────────────── */
 @media (prefers-reduced-motion: reduce) {
