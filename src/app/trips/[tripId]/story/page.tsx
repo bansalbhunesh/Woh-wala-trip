@@ -4,6 +4,7 @@ import { use, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import type { LoreJson } from '@/lib/types';
+import ReactionBar from '@/components/experience/ReactionBar';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }
@@ -349,7 +350,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
 
     case 'verdict':
       return (
-        <div className="text-center space-y-12 max-w-sm">
+        <div className="text-center space-y-8 max-w-sm">
           <div className="w-12 h-0.5 bg-chill-accent mx-auto rounded-full"
                style={{ boxShadow: '0 0 8px rgba(45,158,139,0.4)', animation: 'fade-in 0.4s ease both' }} />
           <p className="text-2xl font-cinematic italic text-white/80 leading-relaxed"
@@ -358,10 +359,9 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
           </p>
           <div className="w-12 h-0.5 bg-chill-accent mx-auto rounded-full"
                style={{ boxShadow: '0 0 8px rgba(45,158,139,0.4)', animation: 'fade-in 0.4s ease 0.4s both', opacity: 0 }} />
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/15 font-vibe"
-             style={{ animation: 'fade-in 0.4s ease 0.6s both', opacity: 0 }}>
-            The Final Verdict
-          </p>
+          <div style={{ animation: 'fade-in 0.4s ease 0.8s both', opacity: 0 }}>
+            <ReactionBar tripId={tripId} slideType="verdict" />
+          </div>
         </div>
       );
 
