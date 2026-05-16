@@ -81,6 +81,7 @@ export default function NewTripPage() {
                   onBlur={() => setActive(null)}
                   placeholder={HINTS[key]}
                   autoFocus={key === 'name'}
+                  max={key.includes('Date') ? new Date().toISOString().split('T')[0] : undefined}
                   className="w-full bg-transparent outline-none font-ui font-semibold text-base"
                   style={{ color: 'oklch(16% 0.015 60)', caretColor: 'oklch(60% 0.22 25)', colorScheme: 'light' }}
                 />

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
+import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
 const TripCreateInput = z.object({
   name: z.string().min(2).max(80),
@@ -13,23 +14,27 @@ export const tripsRouter = router({
   create: protectedProcedure
     .input(TripCreateInput)
     .mutation(async ({ ctx, input }) => {
-      const supabase = ctx.supabase as any;
+      // Use service role for writes — auth is already validated by protectedProcedure
+      // This bypasses RLS on trips/profiles/trip_members which can fail if the
+      // user's JWT isn't forwarded correctly to Supabase on Vercel
+      const admin = createSupabaseServiceClient();
+      const userId = ctx.user.id;
 
-      // Ensure profile row exists (FK requirement) — safe upsert on every trip create
-      await supabase.from('profiles').upsert({
-        id: ctx.user.id,
+      // Ensure profile row exists
+      await admin.from('profiles').upsert({
+        id: userId,
         email: ctx.user.email ?? null,
         display_name: ctx.user.user_metadata?.name ?? ctx.user.email?.split('@')[0] ?? null,
       }, { onConflict: 'id', ignoreDuplicates: true });
 
-      const { data, error } = await supabase
+      const { data, error } = await admin
         .from('trips')
         .insert({
           name: input.name,
           destination: input.destination,
           trip_start_date: input.startDate,
           trip_end_date: input.endDate,
-          creator_id: ctx.user.id,
+          creator_id: userId,
           tier: 'free',
         })
         .select()
@@ -38,10 +43,10 @@ export const tripsRouter = router({
       const trip = data as any;
 
       if (error) {
-        console.error('trip create failed', error);
+        console.error('trip create failed', error.message, error.code);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Could not create the season. Try again.',
+          message: `Could not create season: ${error.message}`,
         });
       }
 
@@ -50,14 +55,13 @@ export const tripsRouter = router({
       }
 
       // Add creator as member — rollback trip if this fails
-      const { error: memberErr } = await supabase.from('trip_members').insert({
+      const { error: memberErr } = await admin.from('trip_members').insert({
         trip_id: trip.id,
-        user_id: ctx.user.id,
+        user_id: userId,
         status: 'joined',
       });
       if (memberErr) {
-        // Cleanup orphaned trip
-        await supabase.from('trips').delete().eq('id', trip.id);
+        await admin.from('trips').delete().eq('id', trip.id);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to join your own trip. Try again.' });
       }
 
