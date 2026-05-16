@@ -33,7 +33,8 @@ export async function GET(
     return errorImage('Member role not found');
   }
 
-  const trip = member.trips as any; // Cast for the join
+  const trip = (member as any).trips;
+  if (!trip) return errorImage('Trip data not found'); // null-safe join guard
   const palette = paletteFor(trip?.chaos_score || 50);
   const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([

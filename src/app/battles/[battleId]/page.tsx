@@ -46,7 +46,7 @@ export default function BattlePage() {
               <h2 className="text-5xl md:text-7xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] group-hover:scale-[1.03] transition-transform duration-700">
                  {tripA.name}
               </h2>
-              <div className="font-cinematic italic text-sm text-white/40">{tripA.location}</div>
+              <div className="font-cinematic italic text-sm text-white/40">{tripA.destination || tripA.location || ''}</div>
               
               <div className="flex items-center justify-center gap-3">
                  <div className="px-4 py-2 bg-white/[0.03] border border-white/10 rounded-full text-xs font-vibe font-bold text-white/60">
@@ -83,7 +83,7 @@ export default function BattlePage() {
               <h2 className="text-5xl md:text-7xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] group-hover:scale-[1.03] transition-transform duration-700">
                  {tripB.name}
               </h2>
-              <div className="font-cinematic italic text-sm text-white/40">{tripB.location}</div>
+              <div className="font-cinematic italic text-sm text-white/40">{tripB.destination || tripB.location || ''}</div>
 
               <div className="flex items-center justify-center gap-3">
                  <div className="px-4 py-2 bg-white/[0.03] border border-white/10 rounded-full text-xs font-vibe font-bold text-white/60">

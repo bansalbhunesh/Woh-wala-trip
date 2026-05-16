@@ -5,7 +5,6 @@ import { paletteFor } from '../../../../../lib/og/colors';
 import { qrDataUrl } from '../../../../../lib/og/qr';
 import { renderCard, errorImage } from '../../../../../lib/og/render';
 import { CardFrame, CardFooter } from '../../../../../lib/og/components';
-import { ReceiptRow, DashedDivider } from '../../../../../lib/og/components-viral';
 
 export const runtime = 'nodejs';
 

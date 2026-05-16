@@ -59,14 +59,12 @@ export const battlesRouter = router({
           message: error.message,
         });
 
-      await fetch(`${process.env.AI_WORKER_URL!}/judge-battle`, {
+      fetch(`${process.env.AI_WORKER_URL ?? ''}/judge-battle`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}` },
         body: JSON.stringify({ battle_id: battle.id }),
-      });
+        signal: AbortSignal.timeout(8000),
+      }).catch(e => console.error('[challenge] worker failed:', e.message));
 
       return battle;
     }),

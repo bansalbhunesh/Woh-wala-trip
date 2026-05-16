@@ -29,14 +29,15 @@ export async function GET(
   }
 
   const trip = m.trips;
-  const palette = PALETTES.chaos; // Missing cards are always high-chaos alert themed
+  if (!trip) return errorImage('Trip data not found for absent user');
+
+  const palette = PALETTES.chaos;
   const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
-    loadCardFonts(origin),
-    qrDataUrl(`${origin}/trips/join?code=${trip.invite_code}`, {
-      dark: palette.ink,
-    }),
+    loadCardFonts(origin).catch(() => null),
+    qrDataUrl(`${origin}/trips/join?code=${trip.invite_code ?? ''}`, { dark: palette.ink }),
   ]);
+  if (!fonts) return errorImage('Failed to load fonts');
 
   const displayName = m.profiles?.display_name || 'Anonymous';
 

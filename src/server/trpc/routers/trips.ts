@@ -109,13 +109,15 @@ export const tripsRouter = router({
       if (res?.error) {
         const errorMap: Record<string, string> = {
           invalid_or_expired_code: 'Yaar this code is literally not working (invalid or expired).',
-          free_tier_member_limit_reached:
-            'This trip is at its 6-member limit. Upgrade to Digital Tier to let the whole group join the lore.',
+          free_tier_member_limit_reached: 'This trip is at its 6-member limit. Upgrade to let the whole group join.',
           not_authenticated: 'Please sign in first',
         };
+        // Never expose raw RPC error strings — map to known errors or use generic fallback
+        const knownError = errorMap[res.error as string];
+        if (!knownError) console.error('[joinByCode] unknown RPC error:', res.error);
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: errorMap[res.error] || res.error,
+          message: knownError ?? 'Could not join trip. Check the code and try again.',
         });
       }
 
