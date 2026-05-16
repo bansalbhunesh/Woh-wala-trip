@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { trpc } from '@/lib/trpc/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CINEMATIC BREAK — chapter card / documentary interstitial
@@ -781,19 +782,56 @@ export function RecoveredArtifact({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEMORY COLLAGE — blurred/grainy photo placeholders (recovered memories)
+// MEMORY COLLAGE — blurred/grainy photo collage with full-screen lightbox
+// Dwell time is tracked per photo and sent to the server on close.
 // ─────────────────────────────────────────────────────────────────────────────
 export function MemoryCollage({
   label = 'Recovered Evidence',
   count = 6,
   accent = '#FF4D4D',
   photos = [],
+  tripId,
 }: {
   label?: string;
   count?: number;
   accent?: string;
-  photos?: Array<{ thumbnailUrl?: string | null; url?: string | null }>;
+  photos?: Array<{ id?: string; thumbnailUrl?: string | null; url?: string | null }>;
+  tripId?: string;
 }) {
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const viewStartRef = useRef<number>(0);
+  const recordView = trpc.photos.recordView.useMutation();
+  const activePhotoId = activeIdx !== null ? (photos[activeIdx]?.id ?? null) : null;
+  const { data: echoes } = trpc.photos.findSimilar.useQuery(
+    { photoId: activePhotoId!, limit: 4 },
+    { enabled: !!activePhotoId }
+  );
+
+  const openPhoto = useCallback((idx: number) => {
+    setActiveIdx(idx);
+    viewStartRef.current = Date.now();
+  }, []);
+
+  const closePhoto = useCallback(() => {
+    if (activeIdx !== null) {
+      const durationMs = Date.now() - viewStartRef.current;
+      const photo = photos[activeIdx];
+      // Only record if viewed for at least 500ms and we have all IDs
+      if (photo?.id && tripId && durationMs >= 500) {
+        recordView.mutate({ photoId: photo.id, tripId, viewDurationMs: Math.min(durationMs, 300000) });
+      }
+    }
+    setActiveIdx(null);
+  }, [activeIdx, photos, tripId, recordView]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (activeIdx === null) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closePhoto(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [activeIdx, closePhoto]);
+
   const ROTATIONS = [-3, 1.5, -1, 2.5, -2, 1];
   const OPACITIES = [0.55, 0.4, 0.5, 0.35, 0.45, 0.4];
   const POSITIONS = [
@@ -806,68 +844,152 @@ export function MemoryCollage({
   ];
 
   const slots = Math.min(photos.length > 0 ? photos.length : count, 6);
+  const activePhoto = activeIdx !== null ? photos[activeIdx] : null;
+  const activeSrc = activePhoto?.url || activePhoto?.thumbnailUrl;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      className="relative h-48 overflow-hidden rounded-[2rem] border border-white/[0.04] bg-[#0A0A08]"
-    >
-      {/* Atmospheric glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)` }}
-      />
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="relative h-48 overflow-hidden rounded-[2rem] border border-white/[0.04] bg-[#0A0A08]"
+      >
+        {/* Atmospheric glow */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)` }}
+        />
 
-      {/* Polaroids — real thumbnails when available, gradient placeholders otherwise */}
-      {Array.from({ length: slots }).map((_, i) => {
-        const photo = photos[i];
-        const imgUrl = photo?.thumbnailUrl || photo?.url;
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.8, rotate: ROTATIONS[i] - 10 }}
-            whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
-            className="absolute w-20 h-24 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden"
-            style={POSITIONS[i] as React.CSSProperties}
-          >
-            <div className="flex-1 overflow-hidden">
-              {imgUrl ? (
-                <img
-                  src={imgUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  style={{ filter: 'blur(2px) grayscale(0.3)', transform: 'scale(1.08)' }}
-                />
-              ) : (
-                <div
-                  className="w-full h-full"
-                  style={{
-                    background: `linear-gradient(${135 + i * 30}deg, ${accent}15, rgba(45,158,139,0.08))`,
-                    filter: 'blur(8px)',
-                    transform: 'scale(1.1)',
-                  }}
-                />
+        {/* Polaroids */}
+        {Array.from({ length: slots }).map((_, i) => {
+          const photo = photos[i];
+          const imgUrl = photo?.thumbnailUrl || photo?.url;
+          const isClickable = !!(photo?.id && tripId);
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.8, rotate: ROTATIONS[i] - 10 }}
+              whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
+              whileHover={isClickable ? { opacity: 0.9, scale: 1.06, zIndex: 10 } : undefined}
+              onClick={isClickable ? () => openPhoto(i) : undefined}
+              className={cn(
+                'absolute w-20 h-24 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden',
+                isClickable && 'cursor-pointer'
               )}
-            </div>
-            <div className="h-5 bg-white/[0.04] flex items-center justify-center">
-              <div className="w-8 h-px bg-white/10" />
-            </div>
+              style={POSITIONS[i] as React.CSSProperties}
+            >
+              <div className="flex-1 overflow-hidden">
+                {imgUrl ? (
+                  <img
+                    src={imgUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{ filter: 'blur(2px) grayscale(0.3)', transform: 'scale(1.08)' }}
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      background: `linear-gradient(${135 + i * 30}deg, ${accent}15, rgba(45,158,139,0.08))`,
+                      filter: 'blur(8px)',
+                      transform: 'scale(1.1)',
+                    }}
+                  />
+                )}
+              </div>
+              <div className="h-5 bg-white/[0.04] flex items-center justify-center">
+                <div className="w-8 h-px bg-white/10" />
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {/* Label */}
+        <div className="absolute bottom-4 left-0 right-0 text-center">
+          <span className="text-[7px] font-mono text-white/30 uppercase tracking-[0.5em]">{label}</span>
+        </div>
+
+        {/* Film grain */}
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px] animate-grain" />
+      </motion.div>
+
+      {/* Lightbox — fixed overlay, renders outside the collage */}
+      {activeIdx !== null && activeSrc && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={closePhoto}
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ background: 'rgba(6,6,4,0.95)', backdropFilter: 'blur(16px)' }}
+        >
+          <motion.div
+            initial={{ scale: 0.88, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.25, type: 'spring', stiffness: 240 }}
+            onClick={e => e.stopPropagation()}
+            className="relative max-w-[90vw] max-h-[85vh]"
+          >
+            <img
+              src={activeSrc}
+              alt=""
+              className="rounded-2xl object-contain max-w-full max-h-[85vh]"
+              style={{ boxShadow: '0 40px 120px rgba(0,0,0,0.8)' }}
+            />
+            <button
+              onClick={closePhoto}
+              className="absolute -top-4 -right-4 w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
           </motion.div>
-        );
-      })}
 
-      {/* Label */}
-      <div className="absolute bottom-4 left-0 right-0 text-center">
-        <span className="text-[7px] font-mono text-white/30 uppercase tracking-[0.5em]">{label}</span>
-      </div>
-
-      {/* Film grain over everything */}
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px] animate-grain" />
-    </motion.div>
+          <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-4">
+            {/* Memory echo strip */}
+            {echoes && echoes.length > 0 && (
+              <div className="text-center">
+                <p className="font-mono text-[7px] uppercase tracking-[0.5em] mb-2"
+                   style={{ color: 'rgba(255,77,77,0.4)' }}>
+                  ● MEMORY ECHO
+                </p>
+                <div className="flex gap-2 justify-center">
+                  {echoes.map((e: any) => (
+                    <a key={e.photo_id} href={`/trips/${e.trip_id}`}
+                       className="relative rounded-lg overflow-hidden"
+                       style={{ width: 52, height: 52, flexShrink: 0 }}
+                       onClick={ev => ev.stopPropagation()}
+                       title={`${e.trip_name} (${e.trip_year})`}>
+                      {(e.thumbnailUrl || e.url) ? (
+                        <img src={e.thumbnailUrl ?? e.url} alt=""
+                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: 'rgba(255,77,77,0.1)' }} />
+                      )}
+                      <div className="absolute inset-0 flex items-end p-0.5"
+                           style={{ background: 'linear-gradient(to top, rgba(6,6,4,0.85), transparent)' }}>
+                        <span className="font-mono" style={{ fontSize: 5, color: 'rgba(255,77,77,0.9)', lineHeight: 1 }}>
+                          {e.trip_year}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            <span className="font-mono text-[8px] uppercase tracking-[0.4em] text-white/20">
+              {(activeIdx ?? 0) + 1} / {slots} · ESC TO CLOSE
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </>
   );
 }
 

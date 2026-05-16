@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+import asyncio
 import logging
+from datetime import datetime, timezone
 
 from .lore.orchestrator import LoreOrchestrator
 from .thumbnails import generate_thumbnail
@@ -14,10 +16,61 @@ logging.basicConfig(
 log = logging.getLogger("wwt")
 
 
+def _mark_job_done(trip_id: str):
+    from .clients import supabase
+    supabase.table("generation_jobs").update({
+        "status": "done",
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("trip_id", trip_id).eq("status", "claimed").execute()
+
+
+def _mark_job_failed(trip_id: str, error: str):
+    from .clients import supabase
+    supabase.table("generation_jobs").update({
+        "status": "failed",
+        "error": error[:500],
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("trip_id", trip_id).eq("status", "claimed").execute()
+
+
+async def poll_job_queue():
+    """Poll generation_jobs every 60s for jobs that the HTTP trigger couldn't start.
+    Uses claim_generation_job() Postgres function (FOR UPDATE SKIP LOCKED) to prevent
+    double-processing when multiple worker instances run concurrently."""
+    from .clients import supabase
+    # Wait 10s on startup to let the server fully boot before polling
+    await asyncio.sleep(10)
+    while True:
+        try:
+            result = await asyncio.to_thread(
+                lambda: supabase.rpc("claim_generation_job").execute()
+            )
+            trip_id: str | None = result.data
+            if trip_id:
+                log.info(f"[job-queue] claimed trip {trip_id} from DB queue")
+                try:
+                    await LoreOrchestrator().run_full_pipeline(trip_id)
+                    await asyncio.to_thread(lambda: _mark_job_done(trip_id))
+                except Exception as e:
+                    log.exception(f"[job-queue] pipeline failed for {trip_id}: {e}")
+                    await asyncio.to_thread(lambda: _mark_job_failed(trip_id, str(e)))
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            log.exception(f"[job-queue] poll error: {e}")
+        await asyncio.sleep(60)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("WWT AI Worker starting...")
+    poll_task = asyncio.create_task(poll_job_queue())
     yield
+    poll_task.cancel()
+    try:
+        await poll_task
+    except asyncio.CancelledError:
+        pass
     log.info("WWT AI Worker shutting down.")
 
 
@@ -42,6 +95,21 @@ class MissingPersonRequest(BaseModel):
 
 class BattleRequest(BaseModel):
     battle_id: str
+
+class EmbedRequest(BaseModel):
+    photo_id: str
+
+class BackfillEmbedRequest(BaseModel):
+    trip_id: str
+
+class NostalgiaRequest(BaseModel):
+    user_id: str
+    limit: int = 10
+
+class MemoryEchoRequest(BaseModel):
+    photo_id: str
+    user_id: str
+    limit: int = 5
 
 
 @app.post("/generate-lore")
@@ -70,6 +138,38 @@ async def judge_battle(req: BattleRequest, bg: BackgroundTasks, authorization: s
     verify_auth(authorization)
     bg.add_task(LoreOrchestrator().judge_battle, req.battle_id)
     return {"status": "queued", "battle_id": req.battle_id}
+
+
+@app.post("/embed-photo")
+async def embed_photo_endpoint(req: EmbedRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+    verify_auth(authorization)
+    from .embeddings import embed_photo
+    bg.add_task(embed_photo, req.photo_id)
+    return {"status": "queued", "photo_id": req.photo_id}
+
+
+@app.post("/backfill-embeddings")
+async def backfill_embeddings(req: BackfillEmbedRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+    verify_auth(authorization)
+    from .embeddings import backfill_trip_embeddings
+    bg.add_task(backfill_trip_embeddings, req.trip_id)
+    return {"status": "queued", "trip_id": req.trip_id}
+
+
+@app.post("/nostalgia/today")
+async def nostalgia_today(req: NostalgiaRequest, authorization: str = Header(...)):
+    verify_auth(authorization)
+    from .nostalgia import NostalgiaEngine
+    moments = NostalgiaEngine().get_today_moments(req.user_id, req.limit)
+    return {"moments": moments}
+
+
+@app.post("/nostalgia/echo")
+async def memory_echo(req: MemoryEchoRequest, authorization: str = Header(...)):
+    verify_auth(authorization)
+    from .nostalgia import NostalgiaEngine
+    echoes = NostalgiaEngine().get_memory_echo(req.photo_id, req.user_id, req.limit)
+    return {"echoes": echoes}
 
 
 @app.get("/health")

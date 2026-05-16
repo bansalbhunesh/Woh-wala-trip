@@ -32,6 +32,57 @@ function seasonAccent(name: string) {
   return glows[Math.abs(h) % glows.length];
 }
 
+function NostalgiaStrip() {
+  const { data: moments } = trpc.photos.nostalgiaFeed.useQuery({ limit: 8 });
+  if (!moments || moments.length === 0) return null;
+
+  return (
+    <div className="px-8 py-5" style={{ borderBottom: '1px solid rgba(245,240,232,0.04)' }}>
+      <p className="font-mono text-[8px] uppercase tracking-[0.55em] mb-4"
+         style={{ color: 'rgba(255,77,77,0.4)' }}>
+        ● THIS DAY IN HISTORY
+      </p>
+      <div className="flex gap-3 overflow-x-auto pb-2"
+           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {moments.map((m: any) => (
+          <a
+            key={m.photo_id}
+            href={`/trips/${m.trip_id}`}
+            className="flex-shrink-0 relative rounded-xl overflow-hidden group"
+            style={{
+              width: 96, height: 96,
+              background: 'rgba(245,240,232,0.04)',
+              border: '1px solid rgba(245,240,232,0.07)',
+              transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s',
+            }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.transform = 'scale(1.05)'; el.style.borderColor = 'rgba(255,77,77,0.3)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.transform = 'scale(1)'; el.style.borderColor = 'rgba(245,240,232,0.07)'; }}
+          >
+            {m.thumbnailUrl || m.url ? (
+              <img src={m.thumbnailUrl ?? m.url} alt={m.trip_name}
+                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'rgba(255,77,77,0.08)' }} />
+            )}
+            {/* Year overlay */}
+            <div className="absolute inset-0 flex flex-col justify-end p-1.5"
+                 style={{ background: 'linear-gradient(to top, rgba(6,6,4,0.85) 40%, transparent)' }}>
+              <p className="font-mono text-[7px] font-bold"
+                 style={{ color: 'rgba(255,77,77,0.9)', lineHeight: 1 }}>
+                {m.years_ago}Y AGO
+              </p>
+              <p className="font-mono text-[6px] leading-tight"
+                 style={{ color: 'rgba(245,240,232,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {m.destination || m.trip_name}
+              </p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TripsPage() {
   const { data: trips, isLoading } = trpc.trips.listMine.useQuery();
   const [revealed, setRevealed] = useState(false);
@@ -92,6 +143,8 @@ export default function TripsPage() {
           <Plus size={14} /> INITIALIZE SEASON
         </Link>
       </header>
+
+      <NostalgiaStrip />
 
       {/* Content */}
       <main className="px-8 py-10 pb-24">

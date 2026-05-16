@@ -120,21 +120,107 @@ export const photosRouter = router({
       // total_photos is now maintained atomically by a Postgres trigger (see
       // supabase/migrations/002_total_photos_trigger.sql) — no app-level increment needed.
 
-      // Fire-and-forget thumbnail — never block/fail the upload if worker is down
+      // Fire-and-forget thumbnail + CLIP embedding — never block/fail the upload if worker is down
       const workerUrl = process.env.AI_WORKER_URL;
       if (workerUrl && !workerUrl.includes('localhost')) {
+        const workerHeaders = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+        };
+        const photoBody = JSON.stringify({ photo_id: data.id });
         fetch(`${workerUrl}/generate-thumbnail`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-          },
-          body: JSON.stringify({ photo_id: data.id }),
+          method: 'POST', headers: workerHeaders, body: photoBody,
           signal: AbortSignal.timeout(6000),
         }).catch(e => console.warn('[thumbnail] worker unreachable:', e.message));
+
+        fetch(`${workerUrl}/embed-photo`, {
+          method: 'POST', headers: workerHeaders, body: photoBody,
+          signal: AbortSignal.timeout(6000),
+        }).catch(e => console.warn('[embed] worker unreachable:', e.message));
       }
 
       return { photoId: data.id };
+    }),
+
+  recordView: protectedProcedure
+    .input(
+      z.object({
+        photoId: z.string().uuid(),
+        tripId: z.string().uuid(),
+        viewDurationMs: z.number().int().min(0).max(300000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const supabase = ctx.supabase as any;
+      const { data: member } = await supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!member) return { recorded: false };
+
+      await supabase.from('photo_views').insert({
+        photo_id: input.photoId,
+        trip_id: input.tripId,
+        user_id: ctx.user.id,
+        view_duration_ms: input.viewDurationMs,
+      });
+      return { recorded: true };
+    }),
+
+  findSimilar: protectedProcedure
+    .input(z.object({
+      photoId: z.string().uuid(),
+      limit: z.number().int().min(1).max(10).default(5),
+    }))
+    .query(async ({ ctx, input }) => {
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase.rpc('find_similar_photos', {
+        p_photo_id: input.photoId,
+        p_user_id: ctx.user.id,
+        p_limit: input.limit,
+      });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const rows = (data as any[] || []);
+      if (rows.length === 0) return [];
+
+      const adminSupabase = createSupabaseServiceClient();
+      const paths = rows.flatMap((r: any) => [r.storage_path, r.thumbnail_path].filter(Boolean));
+      const { data: signed } = await adminSupabase.storage.from('trip-photos').createSignedUrls(paths, 3600);
+      const urlByPath = new Map<string, string>();
+      (signed || []).forEach((u: any) => { if (u.signedUrl) urlByPath.set(u.path, u.signedUrl); });
+
+      return rows.map((r: any) => ({
+        ...r,
+        url: urlByPath.get(r.storage_path) ?? null,
+        thumbnailUrl: r.thumbnail_path ? (urlByPath.get(r.thumbnail_path) ?? null) : null,
+      }));
+    }),
+
+  nostalgiaFeed: protectedProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(20).default(10) }))
+    .query(async ({ ctx, input }) => {
+      const supabase = ctx.supabase as any;
+      const { data, error } = await supabase.rpc('get_nostalgia_moments', {
+        p_user_id: ctx.user.id,
+        p_limit: input.limit,
+      });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const rows = (data as any[] || []);
+      if (rows.length === 0) return [];
+
+      const adminSupabase = createSupabaseServiceClient();
+      const paths = rows.flatMap((r: any) => [r.storage_path, r.thumbnail_path].filter(Boolean));
+      const { data: signed } = await adminSupabase.storage.from('trip-photos').createSignedUrls(paths, 3600);
+      const urlByPath = new Map<string, string>();
+      (signed || []).forEach((u: any) => { if (u.signedUrl) urlByPath.set(u.path, u.signedUrl); });
+
+      return rows.map((r: any) => ({
+        ...r,
+        url: urlByPath.get(r.storage_path) ?? null,
+        thumbnailUrl: r.thumbnail_path ? (urlByPath.get(r.thumbnail_path) ?? null) : null,
+      }));
     }),
 
   list: protectedProcedure

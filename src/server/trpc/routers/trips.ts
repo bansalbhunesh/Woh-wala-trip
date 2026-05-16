@@ -240,20 +240,20 @@ export const tripsRouter = router({
           signal: AbortSignal.timeout(8000), // 8s connection timeout
         });
         if (!resp.ok) throw new Error(`Worker returned ${resp.status}`);
+        return { status: 'processing' as const };
       } catch (err) {
-        // Reset status so user can retry
-        await supabase
-          .from('trips')
-          .update({ lore_status: 'pending' })
-          .eq('id', input.tripId);
-        console.error('[generateLore] worker failed:', err);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Lore engine failed to start. Check AI_WORKER_URL is reachable and retry.',
-        });
+        // HTTP trigger failed — queue the job so the worker's polling loop picks it up
+        // within 60 seconds. Don't reset lore_status to 'pending': it stays 'processing'
+        // so the generating page keeps polling and the stuck-job cron handles any crash.
+        const admin = createSupabaseServiceClient();
+        const db = admin as any;
+        await db
+          .from('generation_jobs')
+          .upsert({ trip_id: input.tripId, status: 'pending' }, { onConflict: 'trip_id' });
+        console.warn('[generateLore] worker unreachable, queued for polling:', (err as Error).message);
+        // Return normally — the generating page will receive the status update via Realtime
+        return { status: 'queued' as const };
       }
-
-      return { status: 'processing' };
     }),
 
   submitConfession: protectedProcedure

@@ -38,10 +38,47 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sent: 0, message: 'No anniversaries today' });
   }
 
+  // Push fatigue limit: max 1 anniversary email per user per 7-day window.
+  // If a user has multiple anniversaries in the same window, send the trip with
+  // the highest chaos score only (the most emotionally resonant one).
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentlySent } = await supabase
+    .from('scheduled_emails' as never)
+    .select('user_id')
+    .not('sent_at', 'is', null)
+    .gte('sent_at', sevenDaysAgo);
+
+  const recentUserIds = new Set<string>(
+    ((recentlySent as unknown as any[]) || []).map((r: any) => r.user_id)
+  );
+
+  // Group due rows by user_id, keep only the highest chaos score per user
+  const byUser = new Map<string, any>();
+  for (const row of due as any[]) {
+    const userId = (row as any).user_id;
+    if (recentUserIds.has(userId)) continue; // fatigue limit hit
+    const trip = (row as any).trips;
+    const chaosScore = trip?.chaos_score ?? 0;
+    const existing = byUser.get(userId);
+    if (!existing || chaosScore > (existing.trips?.chaos_score ?? 0)) {
+      byUser.set(userId, row);
+    }
+  }
+
+  const filtered = Array.from(byUser.values());
+  const skippedByFatigue = (due as any[]).length - filtered.length;
+  if (skippedByFatigue > 0) {
+    console.log(`[cron/anniversaries] skipped ${skippedByFatigue} rows (push fatigue limit)`);
+  }
+
+  if (filtered.length === 0) {
+    return NextResponse.json({ sent: 0, skipped: skippedByFatigue, message: 'All suppressed by fatigue limit' });
+  }
+
   let sent = 0;
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://yaarlore.app';
 
-  for (const row of due) {
+  for (const row of filtered) {
     const trip = (row as any).trips;
     const profile = (row as any).profiles;
     if (!trip?.lore_json || !profile?.email) continue;
@@ -127,6 +164,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  console.log(`[cron/anniversaries] Sent ${sent}/${due.length} anniversary emails`);
-  return NextResponse.json({ sent, total: due.length });
+  console.log(`[cron/anniversaries] Sent ${sent}/${filtered.length} anniversary emails (${skippedByFatigue} suppressed by fatigue limit)`);
+  return NextResponse.json({ sent, total: filtered.length, skipped_fatigue: skippedByFatigue });
 }

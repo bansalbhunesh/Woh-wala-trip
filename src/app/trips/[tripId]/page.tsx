@@ -180,6 +180,7 @@ export default function TripRoomPage() {
                 count={6}
                 accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
                 photos={(photoList as any[] || []).slice(0, 6)}
+                tripId={tripId}
               />
 
               {/* ⑤ Chaos rankings */}

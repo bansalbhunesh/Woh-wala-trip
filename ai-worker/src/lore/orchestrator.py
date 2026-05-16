@@ -51,11 +51,23 @@ class LoreOrchestrator:
                 supabase.table("trips").update({"lore_status": "failed"}).eq("id", trip_id).execute()
                 return
 
-            # Step 2: vision analysis
-            batch_signals = await self._analyze_photo_batches(trip, photos)
+            # Step 2: structural signals + vision analysis run in parallel
+            signals_task = _asyncio.to_thread(self._compute_trip_signals, trip, photos, members)
+            vision_task = self._analyze_photo_batches(trip, photos)
+            trip_signals, batch_signals = await _asyncio.gather(signals_task, vision_task)
+
+            # Persist signals so AI worker and future queries can use them
+            try:
+                supabase.table("trips").update({"trip_signals": trip_signals}).eq("id", trip_id).execute()
+            except Exception:
+                pass  # trip_signals column may not exist yet on older schemas
+
+            log.info(f"[{trip_id}] signals: {trip_signals.get('cluster_count')} scenes, "
+                     f"diversity={trip_signals.get('contributor_diversity')}, "
+                     f"night={trip_signals.get('night_photo_count')}")
 
             # Step 3: aggregate signals
-            aggregated = await self._aggregate_signals(trip, batch_signals, members)
+            aggregated = await self._aggregate_signals(trip, batch_signals, members, trip_signals)
 
             # Step 4: core lore
             confessions = self._get_confessions(trip_id)
@@ -228,7 +240,139 @@ class LoreOrchestrator:
     # Signal aggregation
     # -------------------------------------------------------------------------
 
-    async def _aggregate_signals(self, trip: dict, batches: list[dict], members: list[dict]) -> dict:
+    # -------------------------------------------------------------------------
+    # Trip signals: structural pre-computation (fast, no LLM)
+    # -------------------------------------------------------------------------
+
+    def _compute_trip_signals(self, trip: dict, photos: list[dict], members: list[dict]) -> dict:
+        """Compute structural signals from raw photo + member data — no LLM calls."""
+        from datetime import timedelta
+
+        clusters = self._cluster_photos_by_time(photos)
+
+        # Contributor diversity: unique uploaders / total members
+        uploaders = {p.get("user_id", "") for p in photos if p.get("user_id")}
+        member_ids = {m.get("user_id", "") for m in members}
+        contributor_diversity = round(len(uploaders & member_ids) / max(len(member_ids), 1), 2)
+
+        # Dominant uploader ratio
+        uploader_counts: dict[str, int] = {}
+        for p in photos:
+            uid = p.get("user_id", "")
+            if uid:
+                uploader_counts[uid] = uploader_counts.get(uid, 0) + 1
+        dominant_count = max(uploader_counts.values(), default=0)
+        dominant_uploader_ratio = round(dominant_count / max(len(photos), 1), 2)
+
+        # Night photos (10pm–5am by created_at)
+        night_count = 0
+        for p in photos:
+            ts = p.get("created_at", "")
+            if ts:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                    if dt.hour >= 22 or dt.hour <= 4:
+                        night_count += 1
+                except (ValueError, TypeError):
+                    pass
+
+        # Photo dwell signals from photo_views table
+        dwell_data: dict[str, int] = {}
+        try:
+            view_rows = (
+                supabase.table("photo_views")
+                .select("photo_id, view_duration_ms")
+                .eq("trip_id", trip["id"])
+                .execute()
+                .data or []
+            )
+            for r in view_rows:
+                pid = r.get("photo_id", "")
+                ms = r.get("view_duration_ms", 0) or 0
+                if pid:
+                    dwell_data[pid] = max(dwell_data.get(pid, 0), ms)
+        except Exception:
+            pass
+
+        high_dwell_photos = sum(1 for ms in dwell_data.values() if ms >= 9000)
+
+        # Reaction counts
+        reaction_data: dict[str, int] = {}
+        try:
+            rx_rows = (
+                supabase.table("lore_reactions")
+                .select("emoji")
+                .eq("trip_id", trip["id"])
+                .execute()
+                .data or []
+            )
+            for r in rx_rows:
+                emoji = r.get("emoji", "?")
+                reaction_data[emoji] = reaction_data.get(emoji, 0) + 1
+        except Exception:
+            pass
+
+        return {
+            "scene_clusters": clusters,
+            "cluster_count": len(clusters),
+            "contributor_diversity": contributor_diversity,
+            "dominant_uploader_ratio": dominant_uploader_ratio,
+            "unique_uploaders": len(uploaders),
+            "night_photo_count": night_count,
+            "night_photo_ratio": round(night_count / max(len(photos), 1), 2),
+            "high_dwell_photo_count": high_dwell_photos,
+            "reaction_summary": reaction_data,
+            "total_reactions": sum(reaction_data.values()),
+        }
+
+    def _cluster_photos_by_time(self, photos: list[dict]) -> list[dict]:
+        """Groups photos into scenes using 2-hour gap threshold."""
+        from datetime import datetime, timedelta
+
+        dated = []
+        for p in photos:
+            ts = p.get("created_at", "")
+            if ts:
+                try:
+                    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                    dated.append((p, dt))
+                except (ValueError, TypeError):
+                    pass
+
+        if not dated:
+            return []
+
+        dated.sort(key=lambda x: x[1])
+        clusters = []
+        current = [dated[0]]
+
+        for item in dated[1:]:
+            gap = item[1] - current[-1][1]
+            if gap <= timedelta(hours=2):
+                current.append(item)
+            else:
+                clusters.append(self._summarize_cluster(current))
+                current = [item]
+
+        clusters.append(self._summarize_cluster(current))
+        return clusters
+
+    def _summarize_cluster(self, items: list) -> dict:
+        photos_in_cluster = [p for p, _ in items]
+        times = [t for _, t in items]
+        uploaders = list({p.get("user_id", "") for p in photos_in_cluster if p.get("user_id")})
+        duration_min = int((times[-1] - times[0]).total_seconds() / 60)
+        return {
+            "start_time": times[0].isoformat(),
+            "end_time": times[-1].isoformat(),
+            "duration_minutes": duration_min,
+            "photo_count": len(photos_in_cluster),
+            "uploader_count": len(uploaders),
+            "is_night_session": times[0].hour >= 22 or times[0].hour <= 5,
+        }
+
+    async def _aggregate_signals(self, trip: dict, batches: list[dict], members: list[dict], trip_signals: dict | None = None) -> dict:
         # Safe null check — profiles join may return None if user has no profile row
         member_names = [
             m["profiles"]["display_name"]
@@ -244,6 +388,32 @@ class LoreOrchestrator:
             trip_id=trip["id"],
             all_batch_jsons_concatenated=json.dumps(batches, indent=2),
         )
+
+        # Append structural signals as extra context — the LLM uses these to calibrate
+        # chaos score, identify key scenes, and weight lore emphasis correctly
+        if trip_signals:
+            clusters = trip_signals.get("scene_clusters", [])
+            user_prompt += (
+                f"\n\n--- STRUCTURAL SIGNALS (computed from photo metadata) ---\n"
+                f"Scene clusters: {trip_signals.get('cluster_count', 0)} distinct scenes "
+                f"({len(clusters)} time-gap clusters over {self._calculate_duration(trip)} days)\n"
+                f"Contributor diversity: {trip_signals.get('contributor_diversity', 'unknown')} "
+                f"({trip_signals.get('unique_uploaders', 0)} unique uploaders / {len(members)} members)\n"
+                f"Dominant uploader ratio: {trip_signals.get('dominant_uploader_ratio', 'unknown')} "
+                f"(fraction of photos by the most active uploader)\n"
+                f"Night photos (10pm–5am): {trip_signals.get('night_photo_count', 0)} "
+                f"({round(trip_signals.get('night_photo_ratio', 0) * 100)}% of total)\n"
+                f"High-dwell photos (viewed 9s+): {trip_signals.get('high_dwell_photo_count', 0)} "
+                f"(emotionally significant moments)\n"
+                f"Total reactions from members: {trip_signals.get('total_reactions', 0)}\n"
+                f"Reaction breakdown: {json.dumps(trip_signals.get('reaction_summary', {}))}\n"
+                f"Scene cluster detail: {json.dumps(clusters[:6], indent=2)}\n"
+                f"--- END STRUCTURAL SIGNALS ---\n\n"
+                f"Use the scene clusters to identify chapter breaks in the narrative. "
+                f"Photos with high dwell time should be treated as emotionally significant moments. "
+                f"Low contributor diversity (one person dominates uploads) indicates a single POV — "
+                f"adjust narrative voice accordingly."
+            )
 
         response = await self._call_claude(
             system=prompts.SIGNAL_AGGREGATION_SYSTEM,
