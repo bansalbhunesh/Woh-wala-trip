@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     MAX_PHOTOS_PER_VISION_CALL: int = 20
     MAX_LORE_RETRIES: int = 3
 
+    # Set to "true" ONLY in dev/staging — disables /debug-pipeline and /test-claude in prod
+    DEBUG_ENABLED: str = "false"
+
     class Config:
         env_file = ".env"
 

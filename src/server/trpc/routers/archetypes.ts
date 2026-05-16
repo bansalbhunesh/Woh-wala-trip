@@ -4,14 +4,14 @@ import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
 export const archetypesRouter = router({
-  // Get a user's archetype history across all trips
+  // Get a user's archetype history — user-scoped client so RLS limits to own rows
   getHistory: protectedProcedure.query(async ({ ctx }) => {
-    const admin = createSupabaseServiceClient();
-    const { data } = await admin
-      .from('user_archetypes' as never)
+    const supabase = ctx.supabase as any;
+    const { data } = await supabase
+      .from('user_archetypes')
       .select('*')
-      .eq('user_id' as never, ctx.user.id)
-      .order('created_at' as never, { ascending: false });
+      .eq('user_id', ctx.user.id)
+      .order('created_at', { ascending: false });
     return (data as any[]) || [];
   }),
 
@@ -60,7 +60,7 @@ export const archetypesRouter = router({
       const { data: profile } = await admin
         .from('profiles' as never)
         .select('id')
-        .eq('username' as never, input.username.toLowerCase())
+        .ilike('username' as never, input.username) // case-insensitive — usernames may be mixed case in DB
         .single();
       if (!profile) return [];
       const { data } = await admin

@@ -5,7 +5,7 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server';
 const VALID_EMOJIS = ['🔥', '😂', '💔', '👑', '😭'] as const;
 
 export const reactionsRouter = router({
-  // Add a reaction (requires auth)
+  // Add a reaction (requires auth) — user-scoped client so RLS enforces ownership
   add: protectedProcedure
     .input(z.object({
       tripId: z.string().uuid(),
@@ -14,18 +14,18 @@ export const reactionsRouter = router({
       emoji: z.enum(VALID_EMOJIS),
     }))
     .mutation(async ({ ctx, input }) => {
-      const admin = createSupabaseServiceClient();
-      await admin.from('lore_reactions' as never).upsert({
+      const supabase = ctx.supabase as any;
+      await supabase.from('lore_reactions').upsert({
         trip_id: input.tripId,
         user_id: ctx.user.id,
         slide_type: input.slideType,
         slide_idx: input.slideIdx ?? null,
         emoji: input.emoji,
-      } as never, { onConflict: 'trip_id,user_id,slide_type,slide_idx' } as never);
+      }, { onConflict: 'trip_id,user_id,slide_type,slide_idx' });
       return { ok: true };
     }),
 
-  // Get reaction counts for a trip (public — no auth needed)
+  // Get reaction counts for a trip (public — service role to read across all users)
   getCounts: publicProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ input }) => {

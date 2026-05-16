@@ -80,8 +80,10 @@ async def health():
 
 @app.get("/debug-pipeline/{trip_id}")
 async def debug_pipeline(trip_id: str, authorization: str = Header(...)):
-    """Full pipeline trace — runs every step and reports exact failure."""
+    """Full pipeline trace — runs every step and reports exact failure. Disabled in production."""
     verify_auth(authorization)
+    if settings.DEBUG_ENABLED != "true":
+        raise HTTPException(status_code=404, detail="Not found")
     import traceback, asyncio, json
     from .clients import supabase, anthropic_client
     from .lore.orchestrator import LoreOrchestrator
@@ -167,8 +169,10 @@ async def debug_pipeline(trip_id: str, authorization: str = Header(...)):
 
 @app.get("/test-claude")
 async def test_claude(authorization: str = Header(...)):
-    """Debug endpoint — tests Anthropic API call from Render environment."""
+    """Debug endpoint — tests Anthropic API call from Render environment. Disabled in production."""
     verify_auth(authorization)
+    if settings.DEBUG_ENABLED != "true":
+        raise HTTPException(status_code=404, detail="Not found")
     from .clients import anthropic_client
     try:
         msg = await anthropic_client.messages.create(

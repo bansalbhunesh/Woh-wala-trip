@@ -117,11 +117,8 @@ export const photosRouter = router({
         });
       }
 
-      // Keep total_photos in sync (best-effort, generateLore counts real rows anyway)
-      try {
-        const { data: t } = await supabase.from('trips' as never).select('total_photos').eq('id', input.tripId).single() as any;
-        await supabase.from('trips' as never).update({ total_photos: (t?.total_photos || 0) + 1 }).eq('id', input.tripId);
-      } catch { /* non-critical */ }
+      // total_photos is now maintained atomically by a Postgres trigger (see
+      // supabase/migrations/002_total_photos_trigger.sql) — no app-level increment needed.
 
       // Fire-and-forget thumbnail — never block/fail the upload if worker is down
       const workerUrl = process.env.AI_WORKER_URL;

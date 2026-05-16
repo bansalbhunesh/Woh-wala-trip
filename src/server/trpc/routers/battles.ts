@@ -32,6 +32,20 @@ export const battlesRouter = router({
         });
       }
 
+      // Rate limit: max 3 active battles created by this user in the last 24h
+      const { count: recentBattles } = await supabase
+        .from('trip_vs_trip')
+        .select('id', { count: 'exact', head: true })
+        .eq('trip_a_id', input.myTripId)
+        .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+
+      if ((recentBattles || 0) >= 3) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Max 3 battle challenges per trip per day. Try again tomorrow.',
+        });
+      }
+
       const { data: oppTrip } = await supabase
         .from('trips')
         .select('lore_status')

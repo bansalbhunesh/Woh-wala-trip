@@ -202,10 +202,25 @@ export const tripsRouter = router({
         });
       }
 
-      // Atomically claim 'processing' only if not already processing — prevents double-fire race
+      // Rate limit: max 1 active lore generation per user across all their trips
+      const { count: activeJobs } = await supabase
+        .from('trips')
+        .select('id', { count: 'exact', head: true })
+        .eq('creator_id', ctx.user.id)
+        .eq('lore_status', 'processing');
+
+      if ((activeJobs || 0) > 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You already have a trip generating lore. Wait for it to finish before starting another.',
+        });
+      }
+
+      // Atomically claim 'processing' only if not already processing — prevents double-fire race.
+      // Also set processing_started_at so the stuck-job cron can detect and reset stalled runs.
       const { data: claimed } = await supabase
         .from('trips')
-        .update({ lore_status: 'processing' })
+        .update({ lore_status: 'processing', processing_started_at: new Date().toISOString() } as any)
         .eq('id', input.tripId)
         .neq('lore_status' as any, 'processing')
         .select('id');

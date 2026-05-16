@@ -16,16 +16,18 @@ async function fetchFont(url: string): Promise<ArrayBuffer> {
   return buf;
 }
 
-// Valid Google Fonts CDN TTF URLs — compatible with satori / @vercel/og
-const INTER_500 = 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf';
-const INTER_400 = 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf';
-const LORA_ITALIC = 'https://fonts.gstatic.com/s/lora/v37/0QI8MX1D_JOuMw_hLdO6T2wV9KnW-MoFkqg.ttf';
+// Fonts served from the same origin — no external CDN dependency, works in Edge runtime.
+// Files live in /public/fonts/ and are committed to the repo.
+function fontUrl(origin: string | null | undefined, filename: string): string {
+  const base = origin?.startsWith('http') ? origin : 'http://localhost:3000';
+  return `${base}/fonts/${filename}`;
+}
 
-export async function loadCardFonts(_origin?: string | null): Promise<Font[]> {
+export async function loadCardFonts(origin?: string | null): Promise<Font[]> {
   const results = await Promise.allSettled([
-    fetchFont(INTER_500),
-    fetchFont(INTER_400),
-    fetchFont(LORA_ITALIC),
+    fetchFont(fontUrl(origin, 'Inter-Medium.ttf')),
+    fetchFont(fontUrl(origin, 'Inter-Regular.ttf')),
+    fetchFont(fontUrl(origin, 'Lora-Italic.ttf')),
   ]);
 
   const fonts: Font[] = [];

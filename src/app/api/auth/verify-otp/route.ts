@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/database.types';
 
 function hashOtp(otp: string): string {
@@ -30,39 +31,9 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // First try: verify against our otp_codes table (custom OTP)
-    // Compare hashed token — codes are stored hashed (HMAC-SHA256)
-    const hashedToken = hashOtp(token.trim());
-    const { data: otpRow, error: selectErr } = await supabase
-      .from('otp_codes' as never)
-      .select('*')
-      .eq('email', email.trim())
-      .eq('code', hashedToken)
-      .eq('used', false)
-      .gte('expires_at', new Date().toISOString())
-      .single() as { data: { email: string; code: string; expires_at: string } | null; error: unknown };
-
-    if (!selectErr && otpRow) {
-      // Verify FIRST, then mark as used — prevents consuming OTP on failed verify
-      const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: token.trim(),
-        type: 'email',
-      });
-
-      if (!verifyErr && verifyData.session) {
-        // Only mark this specific OTP used — not all OTPs for the email
-        await supabase
-          .from('otp_codes' as never)
-          .update({ used: true } as never)
-          .eq('email', email.trim())
-          .eq('code' as never, hashedToken);
-        return NextResponse.json({ success: true });
-      }
-      // Verification failed — don't mark as used, fall through to direct verify
-    }
-
-    // Fallback: verify directly via Supabase's own OTP (for magic link / supabase-sent OTP)
+    // Single verification path — Supabase is authoritative for the OTP.
+    // otp_codes table is only used for rate limiting in send-otp; we don't need to
+    // re-check it here because verifyOtp will reject expired/used tokens itself.
     const { data, error } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token: token.trim(),
@@ -76,6 +47,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Wrong code. Check your email and try again.' }, { status: 401 });
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
+
+    // Mark the otp_codes row as used (non-critical — fire and forget)
+    const admin = createSupabaseServiceClient();
+    const hashedToken = hashOtp(token.trim());
+    void (admin.from('otp_codes' as never)
+      .update({ used: true } as never)
+      .eq('email' as never, email.trim().toLowerCase())
+      .eq('code' as never, hashedToken) as unknown as Promise<unknown>
+    ).catch(() => {});
 
     return NextResponse.json({
       success: true,
