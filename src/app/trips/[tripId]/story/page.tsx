@@ -104,7 +104,7 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStart.current;
-    if (Math.abs(dx) > 50) dx < 0 ? advance() : retreat();
+    if (Math.abs(dx) > 80) dx < 0 ? advance() : retreat();
     touchStart.current = null;
   };
 

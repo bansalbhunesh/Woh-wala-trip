@@ -32,9 +32,13 @@ class LoreOrchestrator:
         try:
             supabase.table("trips").update({"lore_status": "processing"}).eq("id", trip_id).execute()
 
-            trip = self._get_trip(trip_id)
-            photos = self._get_photos(trip_id)
-            members = self._get_members(trip_id)
+            # Fetch trip, photos, members in parallel
+            import asyncio as _asyncio
+            trip, photos, members = await _asyncio.gather(
+                _asyncio.to_thread(self._get_trip, trip_id),
+                _asyncio.to_thread(self._get_photos, trip_id),
+                _asyncio.to_thread(self._get_members, trip_id),
+            )
             log.info(f"[{trip_id}] fetched: {len(photos)} photos, {len(members)} members")
             # Sync total_photos from real count so lore reflects accurate data
             if trip and len(photos) != trip.get("total_photos", 0):

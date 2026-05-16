@@ -74,8 +74,8 @@ async def judge_battle(req: BattleRequest, bg: BackgroundTasks, authorization: s
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "version": "2.1", "model": settings.CLAUDE_MODEL,
-            "proxy": bool(settings.ANTHROPIC_BASE_URL), "base_url": settings.ANTHROPIC_BASE_URL}
+    # Don't expose proxy config — only confirm worker is alive
+    return {"ok": True, "version": "2.2", "model": settings.CLAUDE_MODEL}
 
 
 @app.get("/debug-pipeline/{trip_id}")

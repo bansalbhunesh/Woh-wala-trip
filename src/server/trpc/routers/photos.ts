@@ -78,6 +78,16 @@ export const photosRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const supabase = ctx.supabase as any;
+      // Verify membership before allowing photo creation
+      const { data: member } = await supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!member) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this trip' });
+      }
       const { data, error } = await supabase
         .from('photos')
         .insert({

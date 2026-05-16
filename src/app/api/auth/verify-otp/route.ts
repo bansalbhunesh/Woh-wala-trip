@@ -35,25 +35,22 @@ export async function POST(req: NextRequest) {
       .single() as { data: { email: string; code: string; expires_at: string } | null; error: unknown };
 
     if (!selectErr && otpRow) {
-      // Mark as used
-      await supabase
-        .from('otp_codes' as never)
-        .update({ used: true } as never)
-        .eq('email', email.trim());
-
-      // Create session via Supabase OTP verification
-      // Use the same token to verify via Supabase's auth endpoint
-      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+      // Verify FIRST, then mark as used — prevents consuming OTP on failed verify
+      const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: token.trim(),
         type: 'email',
       });
 
-      if (!verifyErr && data.session) {
+      if (!verifyErr && verifyData.session) {
+        // Only mark used after successful verification
+        await supabase
+          .from('otp_codes' as never)
+          .update({ used: true } as never)
+          .eq('email', email.trim());
         return NextResponse.json({ success: true });
       }
-      // If Supabase verifyOtp fails (different token state), still succeed
-      // The session will be created via the fallback below
+      // Verification failed — don't mark as used, fall through to direct verify
     }
 
     // Fallback: verify directly via Supabase's own OTP (for magic link / supabase-sent OTP)

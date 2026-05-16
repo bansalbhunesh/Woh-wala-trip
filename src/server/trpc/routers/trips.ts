@@ -92,7 +92,7 @@ export const tripsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const supabase = ctx.supabase as any;
       const { data, error } = await supabase.rpc('join_trip_by_code', {
-        p_invite_code: input.inviteCode.toUpperCase(),
+        p_invite_code: input.inviteCode.trim().toUpperCase(),
       });
 
       if (error) {
@@ -281,17 +281,15 @@ export const tripsRouter = router({
         .eq('trip_id', input.tripId)
         .eq('user_id', input.userId);
 
-      await fetch(`${process.env.AI_WORKER_URL!}/generate-missing-person-card`, {
+      // Fire-and-forget — don't block on worker, but log failures
+      fetch(`${process.env.AI_WORKER_URL ?? ''}/generate-missing-person-card`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
         },
-        body: JSON.stringify({
-          trip_id: input.tripId,
-          absent_user_id: input.userId,
-        }),
-      });
+        body: JSON.stringify({ trip_id: input.tripId, absent_user_id: input.userId }),
+      }).catch(e => console.error('[markAbsent] worker call failed:', e.message));
 
       return { success: true };
     }),
