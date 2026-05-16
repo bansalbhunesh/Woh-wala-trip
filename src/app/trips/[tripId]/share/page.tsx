@@ -167,7 +167,7 @@ export default function SharePage() {
           }}
         />
         <a
-          href={`/api/card/${tripId}`}
+          href={`/api/card/${tripId}?download=1`}
           download={`${tripName.replace(/\s+/g, '-')}-card.png`}
           className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group"
         >

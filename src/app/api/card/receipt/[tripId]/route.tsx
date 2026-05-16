@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseServiceClient } from '../../../../../lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { loadCardFonts } from '../../../../../lib/og/fonts';
 import { paletteFor } from '../../../../../lib/og/colors';
 import { qrDataUrl } from '../../../../../lib/og/qr';
@@ -7,14 +7,14 @@ import { renderCard, errorImage } from '../../../../../lib/og/render';
 import { CardFrame, CardFooter } from '../../../../../lib/og/components';
 import { ReceiptRow, DashedDivider } from '../../../../../lib/og/components-viral';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   const { tripId } = await params;
-  const supabase = createSupabaseServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
 
   const { data: trip, error } = await supabase
     .from('trips')

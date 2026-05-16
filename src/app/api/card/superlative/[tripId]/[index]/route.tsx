@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseServiceClient } from '../../../../../../lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../../../../../lib/database.types';
 
 type Trip = Database['public']['Tables']['trips']['Row'];
@@ -11,7 +11,7 @@ import { renderCard, errorImage } from '../../../../../../lib/og/render';
 import { CardFrame, Eyebrow, CardFooter } from '../../../../../../lib/og/components';
 import { MemberInitial, SuperlativeQuestion } from '../../../../../../lib/og/components-viral';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(
   req: NextRequest,
@@ -19,7 +19,7 @@ export async function GET(
 ) {
   const { tripId, index } = await params;
   const idx = parseInt(index);
-  const supabase = createSupabaseServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
 
   const { data, error } = await supabase
     .from('trips')

@@ -8,6 +8,7 @@ export type RenderOptions = {
   fonts: Font[];
   cacheSeconds?: number;
   immutable?: boolean;
+  filename?: string; // triggers Content-Disposition: attachment
 };
 
 export function renderCard(
@@ -20,11 +21,20 @@ export function renderCard(
     fonts,
     cacheSeconds = 3600,
     immutable = false,
+    filename,
   } = options;
 
   const headers: Record<string, string> = {
     'Content-Type': 'image/png',
   };
+
+  if (filename) {
+    // Force download with correct filename
+    headers['Content-Disposition'] = `attachment; filename="${filename}"`;
+  } else {
+    // Inline display (for OG previews)
+    headers['Content-Disposition'] = 'inline';
+  }
 
   if (immutable) {
     headers['Cache-Control'] = 'public, max-age=31536000, immutable';
@@ -48,8 +58,19 @@ export function renderCard(
 }
 
 export function errorImage(message: string, status = 404): Response {
-  return new Response(message, {
+  // Return a proper image response with an error message rendered as SVG
+  // This prevents downloading a text file with .png extension
+  const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1080" height="1920" fill="#060604"/>
+    <text x="540" y="940" font-family="monospace" font-size="28" fill="rgba(255,77,77,0.8)" text-anchor="middle">${message}</text>
+    <text x="540" y="990" font-family="monospace" font-size="20" fill="rgba(245,240,232,0.3)" text-anchor="middle">Woh Wala Trip</text>
+  </svg>`;
+
+  return new Response(svg, {
     status,
-    headers: { 'Content-Type': 'text/plain' },
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'no-store',
+    },
   });
 }
