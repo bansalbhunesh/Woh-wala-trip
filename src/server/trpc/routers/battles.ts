@@ -8,6 +8,9 @@ export const battlesRouter = router({
       z.object({
         myTripId: z.string().uuid(),
         opponentTripId: z.string().uuid(),
+      }).refine(d => d.myTripId !== d.opponentTripId, {
+        message: 'Cannot challenge your own trip',
+        path: ['opponentTripId'],
       })
     )
     .mutation(async ({ ctx, input }) => {

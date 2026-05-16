@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
 const VALID_EMOJIS = new Set(['🔥', '😂', '💔', '👑', '😭']);
@@ -34,21 +35,40 @@ export async function POST(req: NextRequest) {
 
     const admin = createSupabaseServiceClient();
 
-    // Try to get user from session
-    const supabaseSSR = (await import('@supabase/ssr')).createServerClient(
+    // Read real cookies so session is respected for logged-in users
+    const cookieStore = await cookies();
+    const { createServerClient } = await import('@supabase/ssr');
+    const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll: () => [], setAll: () => {} } }
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll(); },
+          setAll() {},
+        },
+      }
     );
     const { data: { user } } = await supabaseSSR.auth.getUser();
 
-    await admin.from('lore_reactions' as never).upsert({
-      trip_id: tripId,
-      user_id: user?.id ?? null, // null = anonymous (public story viewer)
-      slide_type: slideType,
-      slide_idx: slideIdx,
-      emoji,
-    } as never);
+    if (user) {
+      // Auth'd users: upsert to deduplicate per slide
+      await admin.from('lore_reactions' as never).upsert({
+        trip_id: tripId,
+        user_id: user.id,
+        slide_type: slideType,
+        slide_idx: slideIdx ?? null,
+        emoji,
+      } as never, { onConflict: 'trip_id,user_id,slide_type,slide_idx' } as never);
+    } else {
+      // Anonymous: just insert (can't deduplicate without user identity)
+      await admin.from('lore_reactions' as never).insert({
+        trip_id: tripId,
+        user_id: null,
+        slide_type: slideType,
+        slide_idx: slideIdx ?? null,
+        emoji,
+      } as never);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

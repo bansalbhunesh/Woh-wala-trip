@@ -171,7 +171,7 @@ async def test_claude(authorization: str = Header(...)):
     verify_auth(authorization)
     from .clients import anthropic_client
     try:
-        msg = anthropic_client.messages.create(
+        msg = await anthropic_client.messages.create(
             model=settings.CLAUDE_MODEL,
             max_tokens=5,
             messages=[{"role": "user", "content": "say ok"}]

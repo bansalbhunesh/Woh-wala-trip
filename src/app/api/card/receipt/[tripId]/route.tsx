@@ -12,6 +12,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
 ) {
+  try {
   const { tripId } = await params;
   const supabase = createSupabaseServiceClient();
 
@@ -36,11 +37,12 @@ export async function GET(
   const palette = paletteFor(t.chaos_score || 50);
   const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
-    loadCardFonts(origin),
+    loadCardFonts(origin).catch(() => null),
     qrDataUrl(`${origin}/trips/join?code=${t.invite_code}`, {
       dark: palette.ink,
     }),
   ]);
+  if (!fonts) return errorImage('Failed to load design assets');
 
   return renderCard(
     <CardFrame palette={palette}>
@@ -107,4 +109,8 @@ export async function GET(
     </CardFrame>,
     { fonts }
   );
+  } catch (err) {
+    console.error('[receipt card] render error:', err);
+    return errorImage('Receipt render failed');
+  }
 }

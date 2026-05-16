@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 
 function hashOtp(otp: string): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
+  const secret = process.env.OTP_HMAC_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
   return createHmac('sha256', secret).update(otp).digest('hex');
 }
 
@@ -51,11 +51,12 @@ export async function POST(req: NextRequest) {
       });
 
       if (!verifyErr && verifyData.session) {
-        // Only mark used after successful verification
+        // Only mark this specific OTP used — not all OTPs for the email
         await supabase
           .from('otp_codes' as never)
           .update({ used: true } as never)
-          .eq('email', email.trim());
+          .eq('email', email.trim())
+          .eq('code' as never, hashedToken);
         return NextResponse.json({ success: true });
       }
       // Verification failed — don't mark as used, fall through to direct verify

@@ -2,10 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
-// Hash OTP with HMAC-SHA256 before storing — no plaintext in DB
 function hashOtp(otp: string): string {
   const secret = process.env.OTP_HMAC_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
   return createHmac('sha256', secret).update(otp).digest('hex');
+}
+
+async function storeOtp(supabase: ReturnType<typeof createSupabaseServiceClient>, email: string, otp: string) {
+  const hashed = hashOtp(otp);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+  await supabase.from('otp_codes' as never).insert({
+    email: email.toLowerCase(),
+    code: hashed,
+    expires_at: expiresAt,
+    used: false,
+  } as never);
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,6 +56,9 @@ export async function POST(req: NextRequest) {
     }
 
     const otp = data.properties.email_otp;
+
+    // Store hashed OTP for rate limiting and custom verification path
+    await storeOtp(supabase, email.trim(), otp);
 
     // Send via Resend
     if (process.env.RESEND_API_KEY) {

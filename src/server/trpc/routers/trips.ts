@@ -181,13 +181,6 @@ export const tripsRouter = router({
         });
       }
 
-      // Block re-trigger if already processing
-      const { data: currentTrip } = await supabase
-        .from('trips').select('lore_status').eq('id', input.tripId).single();
-      if ((currentTrip as any)?.lore_status === 'processing') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Lore generation is already running. Check back in a few minutes.' });
-      }
-
       // Count actual photos — don't trust the cached total_photos column
       const { count: photoCount } = await supabase
         .from('photos')
@@ -201,7 +194,6 @@ export const tripsRouter = router({
         });
       }
 
-      // Only set processing AFTER confirming worker is reachable
       const workerUrl = process.env.AI_WORKER_URL;
       if (!workerUrl || workerUrl.includes('localhost')) {
         throw new TRPCError({
@@ -210,10 +202,17 @@ export const tripsRouter = router({
         });
       }
 
-      await supabase
+      // Atomically claim 'processing' only if not already processing — prevents double-fire race
+      const { data: claimed } = await supabase
         .from('trips')
         .update({ lore_status: 'processing' })
-        .eq('id', input.tripId);
+        .eq('id', input.tripId)
+        .neq('lore_status' as any, 'processing')
+        .select('id');
+
+      if (!claimed || (claimed as any[]).length === 0) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Lore generation is already running. Check back in a few minutes.' });
+      }
 
       try {
         const resp = await fetch(`${workerUrl}/generate-lore`, {
@@ -287,6 +286,18 @@ export const tripsRouter = router({
 
       if (!trip || trip.creator_id !== ctx.user.id) {
         throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      // Verify the target user is actually a member of this trip
+      const { data: targetMember } = await supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', input.userId)
+        .single();
+
+      if (!targetMember) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'That user is not a member of this trip' });
       }
 
       await supabase

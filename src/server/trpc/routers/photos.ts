@@ -30,18 +30,30 @@ export const photosRouter = router({
 
       const { data: trip } = await supabase
         .from('trips')
-        .select('tier, total_photos')
+        .select('tier')
         .eq('id', input.tripId)
         .single();
 
-      if (trip?.tier === 'free' && trip.total_photos >= 50) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Free tier limit: 50 photos. Upgrade to add unlimited photos.',
-        });
+      if ((trip as any)?.tier === 'free') {
+        // Count real rows — cached total_photos column can lag on concurrent uploads
+        const { count: realPhotoCount } = await supabase
+          .from('photos')
+          .select('id', { count: 'exact', head: true })
+          .eq('trip_id', input.tripId);
+
+        if ((realPhotoCount || 0) >= 50) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Free tier limit: 50 photos. Upgrade to add unlimited photos.',
+          });
+        }
       }
 
-      const ext = input.fileName.split('.').pop() || 'jpg';
+      // Derive extension from validated contentType, not from user-supplied filename
+      const extMap: Record<string, string> = {
+        'image/jpeg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/webp': 'webp',
+      };
+      const ext = extMap[input.contentType] ?? 'jpg';
       const storagePath = `${input.tripId}/${ctx.user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
       // Use service role for storage — RLS on storage.objects blocks the user session client

@@ -42,9 +42,7 @@ export async function renderCard(
     headers['Cache-Control'] = `public, s-maxage=${cacheSeconds}, stale-while-revalidate=86400`;
   }
 
-  // Return ImageResponse directly — it handles Content-Type: image/png internally.
-  // Extra headers (Cache-Control, Content-Disposition) are applied via NextResponse wrapper.
-  return new ImageResponse(element, {
+  const img = new ImageResponse(element, {
     width,
     height,
     fonts: fonts.map((f) => ({
@@ -53,7 +51,11 @@ export async function renderCard(
       weight: f.weight,
       style: f.style,
     })),
-  }) as unknown as Response;
+  });
+
+  // ImageResponse headers are immutable — pipe body through a new Response so
+  // Cache-Control, Content-Disposition, etc. actually land on the wire.
+  return new Response(img.body, { status: 200, headers });
 }
 
 export function errorImage(message: string, status = 404): Response {
