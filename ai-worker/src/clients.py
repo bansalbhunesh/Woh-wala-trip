@@ -2,12 +2,14 @@ import anthropic
 from supabase import create_client, Client
 from .config import settings
 
-# Use AsyncAnthropic — no thread pool executor needed, truly async Claude calls
-_headers = {"Authorization": f"Bearer {settings.ANTHROPIC_API_KEY}"} if settings.ANTHROPIC_BASE_URL else {}
+# Strip /v1 suffix if present — SDK adds it automatically
+# e.g. https://api.aicredits.in/v1 → https://api.aicredits.in
+_base = settings.ANTHROPIC_BASE_URL.rstrip("/").removesuffix("/v1") if settings.ANTHROPIC_BASE_URL else None
+_headers = {"Authorization": f"Bearer {settings.ANTHROPIC_API_KEY}"} if _base else {}
 
 anthropic_client = anthropic.AsyncAnthropic(
     api_key=settings.ANTHROPIC_API_KEY,
-    base_url=settings.ANTHROPIC_BASE_URL or None,
+    base_url=_base or None,
     default_headers=_headers,
     timeout=180.0,
 )
