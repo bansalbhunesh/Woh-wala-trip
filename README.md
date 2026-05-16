@@ -1,12 +1,12 @@
 <div align="center">
 
-# 🎬 WOH WALA TRIP
+# 🎬 YAARLORE
 
 ### *Your friendships, narrated.*
 
 **The AI-powered friendship documentary. Spotify Wrapped for the trips you'll never forget.**
 
-[![Live Demo](https://img.shields.io/badge/LIVE_DEMO-woh--wala--trip.vercel.app-FF4D4D?style=for-the-badge&logoColor=white)](https://woh-wala-trip.vercel.app)
+[![Live Demo](https://img.shields.io/badge/LIVE_DEMO-woh--wala--trip.vercel.app-FF4D4D?style=for-the-badge&logoColor=white)](https://yaarlore.app)
 [![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![Claude Sonnet 4](https://img.shields.io/badge/Claude_Sonnet_4-FF6B00?style=for-the-badge&logoColor=white)](https://anthropic.com)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
@@ -23,7 +23,7 @@
 
 You went on a trip. Someone started drama on Day 1. Someone claimed to be "fine" until 2 AM. There were three near-disasters, eleven incidents, and one conversation that will never be spoken of again.
 
-**Woh Wala Trip turns all of that into mythology.**
+**Yaarlore turns all of that into mythology.**
 
 Upload your photo dump. The AI watches, judges, and documents. Out comes a cinematic, roasting, brutally honest **Friendship Lore Archive** — complete with character archetypes, chaos scores, season recaps, and superlatives that will immediately end up in the group chat.
 
@@ -492,7 +492,7 @@ Want to retheme the design? → `src/app/globals.css` + `tailwind.config.ts`
 
 ---
 
-[**Try it live →**](https://woh-wala-trip.vercel.app)
+[**Try it live →**](https://yaarlore.app)
 
 *Season 2026 · AI Friendship Archive · Built with chaos, documented with care*
 

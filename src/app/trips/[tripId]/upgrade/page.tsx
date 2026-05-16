@@ -31,11 +31,15 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
       if (!orderRes.ok) throw new Error(`Order failed: ${orderRes.status}`);
       const order = await orderRes.json();
 
+      if (order.amount == null) {
+        throw new Error('Server did not return a payment amount. Cannot proceed.');
+      }
+
       const rzp = new window.Razorpay({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount ?? 29900, // use server amount, fallback to 299 INR
+        amount: order.amount,
         currency: order.currency ?? 'INR',
-        name: 'Woh Wala Trip',
+        name: 'Yaarlore',
         description: 'Digital trip archive',
         order_id: order.id,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,6 +49,8 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
               tripId,
               tier: 'digital',
               paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              signature: response.razorpay_signature,
             });
             router.push(`/trips/${tripId}`);
           } catch (err) {

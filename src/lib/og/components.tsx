@@ -77,7 +77,7 @@ export function CardFooter({ palette, qrDataUrl: inviteUrl, showWatermark, qrLab
         <div style={{ display: 'flex', fontSize: 32, fontFamily: 'Space Grotesk', fontWeight: 700, color: palette.accent, letterSpacing: 4 }}>
           {code}
         </div>
-        <div style={{ display: 'flex', fontSize: 18, fontFamily: 'Space Grotesk', color: palette.inkMuted }}>woh-wala-trip.vercel.app</div>
+        <div style={{ display: 'flex', fontSize: 18, fontFamily: 'Space Grotesk', color: palette.inkMuted }}>yaarlore.app</div>
       </div>
       {showWatermark && (
         <div style={{ display: 'flex', fontSize: 20, fontFamily: 'Space Grotesk', color: palette.inkMuted, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase' }}>

@@ -57,6 +57,6 @@ export async function renderCard(
 }
 
 export function errorImage(message: string, status = 404): Response {
-  const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1920" fill="#060604"/><text x="540" y="940" font-family="monospace" font-size="28" fill="rgba(255,77,77,0.8)" text-anchor="middle">${message}</text><text x="540" y="990" font-family="monospace" font-size="20" fill="rgba(245,240,232,0.3)" text-anchor="middle">Woh Wala Trip</text></svg>`;
+  const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1920" fill="#060604"/><text x="540" y="940" font-family="monospace" font-size="28" fill="rgba(255,77,77,0.8)" text-anchor="middle">${message}</text><text x="540" y="990" font-family="monospace" font-size="20" fill="rgba(245,240,232,0.3)" text-anchor="middle">Yaarlore</text></svg>`;
   return new Response(svg, { status, headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' } });
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import crypto from 'crypto';
 
 const TripCreateInput = z.object({
   name: z.string().min(2).max(80),
@@ -316,9 +317,20 @@ export const tripsRouter = router({
         tripId: z.string().uuid(),
         tier: z.enum(['digital', 'print']),
         paymentId: z.string(),
+        orderId: z.string(),
+        signature: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Verify Razorpay signature
+      const expectedSig = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+        .update(input.orderId + '|' + input.paymentId)
+        .digest('hex');
+      if (expectedSig !== input.signature) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Payment signature invalid' });
+      }
+
       const supabase = ctx.supabase as any;
       const { error } = await supabase
         .from('trips')

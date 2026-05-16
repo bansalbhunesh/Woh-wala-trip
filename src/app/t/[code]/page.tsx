@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     .eq('invite_code', code.toUpperCase())
     .single();
 
-  if (!trip) return { title: 'Woh Wala Trip' };
+  if (!trip) return { title: 'Yaarlore' };
 
   const lore = (trip as any).lore_json as LoreJson | null;
 

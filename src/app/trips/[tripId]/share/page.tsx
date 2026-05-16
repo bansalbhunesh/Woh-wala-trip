@@ -29,7 +29,7 @@ export default function SharePage() {
   // Blame % derived from chaos rating (deterministic, not random)
   const blamePercent = topChaos?.role_chaos_rating ? Math.round((topChaos.role_chaos_rating / 10) * 45 + 15) : 37;
 
-  const shareText = `According to AI, I'm the ${topChaos?.role_archetype_tag || topChaos?.role_title || 'Chaos Source'} (${topChaos?.role_chaos_rating ?? '??'}/10). Our trip scored ${cookedLevel}/100 chaos. ${topChaos?.display_name || 'Someone'} caused the most problems. No further comments. 🏛️ #WohWalaTrip #${tripName.replace(/\s+/g, '')}`;
+  const shareText = `According to AI, I'm the ${topChaos?.role_archetype_tag || topChaos?.role_title || 'Chaos Source'} (${topChaos?.role_chaos_rating ?? '??'}/10). Our trip scored ${cookedLevel}/100 chaos. ${topChaos?.display_name || 'Someone'} caused the most problems. No further comments. 🏛️ #Yaarlore #${tripName.replace(/\s+/g, '')}`;
 
   return (
     <div className="min-h-screen bg-black text-[#F5F0E8] font-vibe selection:bg-cooked-bg selection:text-white pb-20">

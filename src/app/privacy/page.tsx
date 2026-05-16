@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy Policy — Woh Wala Trip',
-  description: 'How Woh Wala Trip collects, uses, and protects your personal data.',
+  title: 'Privacy Policy — Yaarlore',
+  description: 'How Yaarlore collects, uses, and protects your personal data.',
 };
 
 export default function PrivacyPage() {
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           className="ml-auto font-mono text-[8px] uppercase tracking-[0.5em]"
           style={{ color: 'rgba(245,240,232,0.15)' }}
         >
-          WOH WALA TRIP
+          YAARLORE
         </span>
       </header>
 
@@ -72,11 +72,11 @@ export default function PrivacyPage() {
           {/* Intro */}
           <section className="space-y-3">
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
-              Woh Wala Trip (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) is an AI-powered trip photo analysis service
+              Yaarlore (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) is an AI-powered trip photo analysis service
               operated as an Indian startup. This Privacy Policy explains what personal data we
               collect, why we collect it, how AI processes your photos, and your rights over
               that data. By using the app at{' '}
-              <span style={{ color: 'rgba(245,240,232,0.8)' }}>woh-wala-trip.vercel.app</span>,
+              <span style={{ color: 'rgba(245,240,232,0.8)' }}>yaarlore.app</span>,
               you agree to this policy.
             </p>
           </section>
@@ -335,7 +335,7 @@ export default function PrivacyPage() {
         }}
       >
         <p className="font-mono text-[7.5px] uppercase tracking-[0.5em]" style={{ color: 'rgba(245,240,232,0.15)' }}>
-          WOH WALA TRIP
+          YAARLORE
         </p>
         <Link href="/terms" className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
           style={{ color: 'rgba(245,240,232,0.2)' }}>

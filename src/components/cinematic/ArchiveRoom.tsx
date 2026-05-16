@@ -883,7 +883,7 @@ export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; po
       ? (posterUrl.startsWith('http') ? posterUrl : `${window.location.origin}${posterUrl}`)
       : window.location.href;
     if (navigator.share) {
-      navigator.share({ url, title: 'Woh Wala Trip — Archive' }).catch(() => {});
+      navigator.share({ url, title: 'Yaarlore — Archive' }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url).then(() => {
         setCopied(true);

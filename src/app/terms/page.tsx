@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Terms of Service — Woh Wala Trip',
-  description: 'Terms governing your use of the Woh Wala Trip app.',
+  title: 'Terms of Service — Yaarlore',
+  description: 'Terms governing your use of the Yaarlore app.',
 };
 
 export default function TermsPage() {
@@ -34,7 +34,7 @@ export default function TermsPage() {
           className="ml-auto font-mono text-[8px] uppercase tracking-[0.5em]"
           style={{ color: 'rgba(245,240,232,0.15)' }}
         >
-          WOH WALA TRIP
+          YAARLORE
         </span>
       </header>
 
@@ -72,10 +72,10 @@ export default function TermsPage() {
           {/* Intro */}
           <section className="space-y-3">
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
-              These Terms of Service (&quot;Terms&quot;) govern your access to and use of Woh Wala Trip,
+              These Terms of Service (&quot;Terms&quot;) govern your access to and use of Yaarlore,
               an AI-powered trip photo analysis app operated as an Indian startup
               (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) available at{' '}
-              <span style={{ color: 'rgba(245,240,232,0.8)' }}>woh-wala-trip.vercel.app</span>.
+              <span style={{ color: 'rgba(245,240,232,0.8)' }}>yaarlore.app</span>.
               By creating an account or using the app, you agree to these Terms. If you do not
               agree, do not use the app.
             </p>
@@ -107,7 +107,7 @@ export default function TermsPage() {
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               We use email one-time password (OTP) authentication — no passwords are stored.
               You are responsible for keeping your email account secure. If you suspect
-              unauthorised access to your Woh Wala Trip account, contact us immediately at{' '}
+              unauthorised access to your Yaarlore account, contact us immediately at{' '}
               <a
                 href="mailto:bhuneshbansal20039888@gmail.com"
                 className="underline underline-offset-2 hover:opacity-80"
@@ -301,7 +301,7 @@ export default function TermsPage() {
               of the app&apos;s interface or branding without written permission.
             </p>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
-              &quot;Woh Wala Trip&quot; and associated visual identity are unregistered trademarks of the
+              &quot;Yaarlore&quot; and associated visual identity are unregistered trademarks of the
               operator. All rights reserved.
             </p>
           </section>
@@ -372,7 +372,7 @@ export default function TermsPage() {
         }}
       >
         <p className="font-mono text-[7.5px] uppercase tracking-[0.5em]" style={{ color: 'rgba(245,240,232,0.15)' }}>
-          WOH WALA TRIP
+          YAARLORE
         </p>
         <Link href="/privacy" className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
           style={{ color: 'rgba(245,240,232,0.2)' }}>

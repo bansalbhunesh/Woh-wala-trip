@@ -4,27 +4,11 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
 // Hash OTP with HMAC-SHA256 before storing — no plaintext in DB
 function hashOtp(otp: string): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
+  const secret = process.env.OTP_HMAC_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
   return createHmac('sha256', secret).update(otp).digest('hex');
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// In-memory rate limiter: 5 requests per email per 15 minutes
-const rateLimit = new Map<string, { count: number; resetAt: number }>();
-function checkRate(email: string): { allowed: boolean; waitSeconds?: number } {
-  const now = Date.now();
-  const entry = rateLimit.get(email);
-  if (entry && now < entry.resetAt) {
-    if (entry.count >= 5) {
-      return { allowed: false, waitSeconds: Math.ceil((entry.resetAt - now) / 1000) };
-    }
-    entry.count++;
-  } else {
-    rateLimit.set(email, { count: 1, resetAt: now + 15 * 60 * 1000 });
-  }
-  return { allowed: true };
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,16 +17,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 });
     }
 
-    const rate = checkRate(email.trim().toLowerCase());
-    if (!rate.allowed) {
-      return NextResponse.json(
-        { error: `Too many requests. Try again in ${Math.ceil((rate.waitSeconds ?? 60) / 60)} minutes.` },
-        { status: 429 }
-      );
+    // Use Supabase admin (service role) for all operations — queries across all sessions
+    const supabase = createSupabaseServiceClient();
+
+    // DB-backed rate limit: max 5 OTP sends per email per 15 minutes
+    const { count } = await supabase
+      .from('otp_codes' as never)
+      .select('email', { count: 'exact', head: true })
+      .eq('email' as never, email.trim().toLowerCase())
+      .gte('created_at' as never, new Date(Date.now() - 15 * 60 * 1000).toISOString());
+
+    if ((count || 0) >= 5) {
+      return NextResponse.json({ error: 'Too many requests. Try again in 15 minutes.' }, { status: 429 });
     }
 
     // Use Supabase admin to generate the OTP token without sending email
-    const supabase = createSupabaseServiceClient();
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: email.trim(),
@@ -81,9 +70,9 @@ async function sendViaResend(email: string, otp: string) {
   const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
 
   await resend.emails.send({
-    from: `Woh Wala Trip <${from}>`,
+    from: `Yaarlore <${from}>`,
     to: email,
-    subject: `${otp} is your Woh Wala Trip code`,
+    subject: `${otp} is your Yaarlore code`,
     html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -104,14 +93,14 @@ async function sendViaResend(email: string, otp: string) {
       </p>
     </div>
     <p style="font-size:13px;color:rgba(245,240,232,0.45);line-height:1.6;margin:0 0 12px;">
-      Enter this code on the Woh Wala Trip login screen to access your friendship universe.
+      Enter this code on the Yaarlore login screen to access your friendship universe.
     </p>
     <p style="font-size:11px;color:rgba(245,240,232,0.2);line-height:1.6;margin:0;">
       If you didn't request this, you can safely ignore this email.
     </p>
     <div style="border-top:1px solid rgba(245,240,232,0.05);padding-top:24px;margin-top:32px;">
       <p style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(245,240,232,0.15);margin:0;">
-        WOH WALA TRIP · AI FRIENDSHIP ARCHIVE · SEASON 2026
+        YAARLORE · AI FRIENDSHIP ARCHIVE · SEASON 2026
       </p>
     </div>
   </div>

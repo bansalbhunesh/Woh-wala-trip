@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   }
 
   let sent = 0;
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://woh-wala-trip.vercel.app';
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://yaarlore.app';
 
   for (const row of due) {
     const trip = (row as any).trips;
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
 
         await resend.emails.send({
-          from: `Woh Wala Trip <${from}>`,
+          from: `Yaarlore <${from}>`,
           to: profile.email,
           subject: `One year ago, ${name} was ${lore.cooked_verdict?.toLowerCase() ?? 'historically cooked'} 🔥`,
           html: `<!DOCTYPE html>
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
 
     <div style="border-top:1px solid rgba(245,240,232,0.05);padding-top:24px;">
       <p style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(245,240,232,0.15);margin:0;">
-        WOH WALA TRIP · AI FRIENDSHIP ARCHIVE · ${tripYear + 1}
+        YAARLORE · AI FRIENDSHIP ARCHIVE · ${tripYear + 1}
       </p>
     </div>
   </div>

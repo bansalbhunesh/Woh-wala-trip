@@ -23,7 +23,7 @@ const firaMono = Fira_Mono({
 });
 
 export const metadata = {
-  title: 'Woh Wala Trip — AI Friendship Lore',
+  title: 'Yaarlore — AI Friendship Lore',
   description: 'Turn your trips and friendships into cinematic chaos lore.',
   manifest: '/manifest.json',
   icons: {
@@ -35,8 +35,8 @@ export const metadata = {
     ],
   },
   openGraph: {
-    title: 'Woh Wala Trip',
-    description: 'Your friendships, narrated.',
+    title: 'Yaarlore',
+    description: "Your yaar group's lore, documented.",
     type: 'website',
     images: [{ url: '/icon.png' }],
   },

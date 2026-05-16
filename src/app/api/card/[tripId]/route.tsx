@@ -18,7 +18,6 @@ import {
   CardFooter,
 } from '../../../../lib/og/components';
 
-// Node runtime — edge runtime has issues with require() in createSupabaseServiceClient
 export const runtime = 'edge';
 
 export async function GET(
@@ -60,7 +59,7 @@ export async function GET(
 
     const imgResponse = await renderCard(
       <CardFrame palette={palette}>
-        <Eyebrow palette={palette}>Woh Wala Trip</Eyebrow>
+        <Eyebrow palette={palette}>Yaarlore</Eyebrow>
         <Title palette={palette}>{lore.trip_title}</Title>
         <Tagline palette={palette}>{lore.tagline}</Tagline>
         <CookedLevel

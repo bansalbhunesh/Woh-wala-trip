@@ -72,7 +72,7 @@ export default function CinematicLanding() {
   // Title character reveal in phase 3
   useEffect(() => {
     if (phase < 3) return;
-    const full = 'WOH WALA TRIP';
+    const full = 'YAARLORE';
     let i = 0;
     const id = setInterval(() => {
       setTitleChars(full.slice(0, i + 1).split(''));
