@@ -107,7 +107,17 @@ async def debug_pipeline(trip_id: str, authorization: str = Header(...)):
         members = supabase.table("trip_members").select("*, profiles:user_id(display_name)").eq("trip_id", trip_id).execute().data or []
         step("get_members", True, f"{len(members)} members")
 
-        # 4. Vision batch (1 photo only to test)
+        # 4a. Raw Claude call (bypasses retry/tenacity to see actual error)
+        try:
+            raw_resp = await anthropic_client.messages.create(
+                model=settings.CLAUDE_MODEL, max_tokens=5,
+                messages=[{"role": "user", "content": "say ok"}]
+            )
+            step("raw_claude_call", True, raw_resp.content[0].text)
+        except Exception as e:
+            step("raw_claude_call", False, f"{type(e).__name__}: {str(e)[:200]}")
+
+        # 4b. Vision batch (1 photo only to test)
         try:
             one_batch = await orch._analyze_one_batch(trip, photos[:1], 1, 1)
             step("vision_batch_1photo", "error" not in str(one_batch).lower(), str(one_batch)[:100])
