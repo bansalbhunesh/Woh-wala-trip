@@ -73,7 +73,7 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
         <div className="w-8 h-8 rounded-full border border-cooked-accent/30 border-t-cooked-accent animate-spin" />
         <p className="text-white/30 font-vibe text-xs uppercase tracking-widest">Opening archive...</p>
         <button onClick={() => router.push(`/trips/${tripId}`)}
-                className="mt-6 text-[9px] uppercase tracking-widest text-white/15 font-vibe hover:text-white/30 transition-colors">
+                className="mt-6 text-[9px] uppercase tracking-widest text-white/40 font-vibe hover:text-white/30 transition-colors">
           ← Return to archive
         </button>
       </div>
@@ -163,8 +163,8 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
 
       {isFirst && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-between px-8 pointer-events-none">
-          <span className="text-white/25 text-xs font-vibe uppercase tracking-wider">← tap</span>
-          <span className="text-white/25 text-xs font-vibe uppercase tracking-wider">tap →</span>
+          <span className="text-white/55 text-xs font-vibe uppercase tracking-wider">← tap</span>
+          <span className="text-white/55 text-xs font-vibe uppercase tracking-wider">tap →</span>
         </div>
       )}
 
@@ -213,7 +213,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
     case 'title':
       return (
         <div className="text-center space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Official Archive</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">The Official Archive</p>
           <h1 className="text-5xl font-cinematic font-medium text-white leading-[0.9]">
             {(slide.lore as any).trip_title || (slide.lore as any).name}
           </h1>
@@ -231,7 +231,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
     case 'cooked':
       return (
         <div className="text-center space-y-6 max-w-sm">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe"
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe"
              style={{ animation: 'fade-in 0.4s ease both' }}>
             How Cooked?
           </p>
@@ -265,7 +265,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
     case 'recap':
       return (
         <div className="space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Season Recap</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">The Season Recap</p>
           <p className="text-xl font-data font-light text-white/75 leading-relaxed">
             {slide.lore.season_recap?.full_narrative}
           </p>
@@ -276,7 +276,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
       const era = slide.lore.trip_eras![slide.idx];
       return (
         <div className="space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Era {slide.idx + 1}</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">Era {slide.idx + 1}</p>
           <h2 className="text-4xl font-cinematic font-medium text-white leading-tight">{era.era_name}</h2>
           {era.timeframe && <p className="text-[10px] uppercase tracking-wider text-chill-accent font-vibe">{era.timeframe}</p>}
           <p className="text-lg font-data font-light text-white/65 leading-relaxed">{era.description}</p>
@@ -304,7 +304,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
             <span className="text-3xl font-vibe font-bold text-cooked-accent">{name[0].toUpperCase()}</span>
           </div>
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/25 font-vibe">{name}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-vibe">{name}</p>
             <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{m.role_title}</h2>
           </div>
           <p className="text-base font-data font-light text-white/55 leading-relaxed">{m.role_description}</p>
@@ -324,7 +324,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
       const s = slide.sup;
       return (
         <div className="space-y-8 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Award #{slide.idx + 1}</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">Award #{slide.idx + 1}</p>
           <div className="space-y-3">
             <p className="text-lg font-cinematic italic text-white/45">most likely to</p>
             <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{s.question}</h2>
@@ -368,7 +368,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
     case 'share':
       return (
         <div className="text-center space-y-10 max-w-sm" style={{ animation: 'verdict-rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Your Lore is Ready</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">Your Lore is Ready</p>
           <h2 className="text-4xl font-cinematic font-medium text-white">Export your identity</h2>
           <p className="text-sm font-data font-light text-white/35">Pick your card and expose your friend group.</p>
           <button onClick={e => { e.stopPropagation(); onShare(); }}
@@ -376,7 +376,7 @@ function SlideRenderer({ slide, router, tripId, onShare, slamActive }: {
             Pick Your Card
           </button>
           <button onClick={e => { e.stopPropagation(); router.push(`/trips/${slide.tripId}`); }}
-                  className="text-[10px] uppercase tracking-widest font-vibe text-white/15 hover:text-white/35 transition-colors">
+                  className="text-[10px] uppercase tracking-widest font-vibe text-white/40 hover:text-white/35 transition-colors">
             View full archive →
           </button>
         </div>

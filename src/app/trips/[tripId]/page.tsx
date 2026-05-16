@@ -23,13 +23,13 @@ export default function TripRoomPage() {
   const params = useParams();
   const router = useRouter();
   const tripId = params.tripId as string;
-  const [showWrapped, setShowWrapped] = useState(true);
+  const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
 
   useEffect(() => {
     const hasSeen = localStorage.getItem(`wrapped_${tripId}`);
-    if (hasSeen) setShowWrapped(false);
+    if (!hasSeen) setShowWrapped(true);
   }, [tripId]);
 
   // Poll while generating
@@ -70,13 +70,13 @@ export default function TripRoomPage() {
     m.role_title?.toLowerCase().includes('villain') ||
     m.role_title?.toLowerCase().includes('chaos') ||
     m.role_chaos_rating >= 8
-  ) || members[1];
+  ) || (members.length > 1 ? members[1] : undefined);
 
   const mvp = members.find((m: any) =>
     m.role_title?.toLowerCase().includes('mvp') ||
     m.role_title?.toLowerCase().includes('retriever') ||
     (m.role_chaos_rating !== undefined && m.role_chaos_rating <= 4)
-  ) || members[0];
+  ) || (members.length > 0 ? members[0] : undefined);
 
   const insideJoke = lore?.trip_lore_awards?.core_memory;
 
@@ -273,7 +273,7 @@ export default function TripRoomPage() {
                     {lore?.cooked_verdict ? 'Confirmed' : 'Pending'}
                   </div>
                 </div>
-                <div className="text-[8px] font-mono text-black/20 uppercase tracking-[0.3em]">
+                <div className="text-[8px] font-mono text-black/40 uppercase tracking-[0.3em]">
                   {trip?.destination && `${trip.destination} · `}
                   {trip?.total_photos || 0} photos · {members.length} subjects
                 </div>
@@ -346,7 +346,7 @@ function FailedState({ trip, tripId, onRetry }: { trip: any; tripId: string; onR
 
         <button onClick={() => router.push(`/trips/${tripId}`)}
                 className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
-                style={{ color: 'rgba(245,240,232,0.2)' }}>
+                style={{ color: 'rgba(245,240,232,0.45)' }}>
           ← BACK TO ARCHIVE
         </button>
       </div>
@@ -548,7 +548,7 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
                   <Plus size={16} style={{ color: 'rgba(245,240,232,0.25)' }} />
                 </div>
                 <span className="font-mono text-[7px] uppercase tracking-[0.35em]"
-                      style={{ color: 'rgba(245,240,232,0.2)' }}>
+                      style={{ color: 'rgba(245,240,232,0.55)' }}>
                   Upload
                 </span>
               </>
@@ -635,7 +635,7 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
             ))}
           </div>
           <span className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
-                style={{ color: 'rgba(245,240,232,0.25)' }}>
+                style={{ color: 'rgba(245,240,232,0.55)' }}>
             {needed} MORE TO UNLOCK LORE
           </span>
         </div>
@@ -664,7 +664,7 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
         </button>
         {needed === 0 && (
           <p className="text-center font-mono text-[7.5px] uppercase tracking-[0.3em] mt-3"
-             style={{ color: 'rgba(245,240,232,0.15)' }}>
+             style={{ color: 'rgba(245,240,232,0.50)' }}>
             {photoCount} FRAGMENTS READY
           </p>
         )}
@@ -742,7 +742,7 @@ function GeneratingState({ tripId }: { tripId: string }) {
         ))}
       </div>
 
-      <p className="text-[9px] uppercase tracking-widest text-white/15 font-vibe">Usually 2–5 minutes</p>
+      <p className="text-[9px] uppercase tracking-widest text-white/35 font-vibe">Usually 2–5 minutes</p>
     </div>
   );
 }

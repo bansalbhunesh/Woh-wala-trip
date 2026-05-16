@@ -465,7 +465,8 @@ export function EvidenceBoard({
 }) {
   if (!mvp && !villain && !insideJoke) return null;
 
-  const caseId = `WWT-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+  // Stable ID derived from props — prevents Framer Motion re-animation on every refetch
+  const caseId = React.useRef(`WWT-${Math.random().toString(36).slice(-6).toUpperCase()}`).current;
 
   return (
     <motion.div
@@ -826,7 +827,7 @@ export function MemoryCollage({
           whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
           viewport={{ once: true }}
           transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
-          className="absolute w-20 h-24 bg-white/5 border border-white/8 rounded-sm flex flex-col overflow-hidden"
+          className="absolute w-20 h-24 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden"
           style={POSITIONS[i] as React.CSSProperties}
         >
           {/* Blurry image placeholder */}
@@ -926,7 +927,7 @@ export function SuperlativeCard({
       </div>
 
       {sup.reason && (
-        <p className="text-[11px] text-white/30 font-data font-light italic leading-relaxed border-l border-white/8 pl-4">
+        <p className="text-[11px] text-white/30 font-data font-light italic leading-relaxed border-l border-white/10 pl-4">
           {sup.reason}
         </p>
       )}

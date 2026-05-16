@@ -150,25 +150,26 @@ class LoreOrchestrator:
         return valid or [{"raw_cooked_score": 60, "recurring_behaviors": [], "emotional_arc": {}}]
 
     async def _analyze_one_batch(self, trip: dict, batch: list[dict], bn: int, total: int) -> dict:
+        import httpx, base64 as _base64
         image_blocks = []
         for photo in batch:
             try:
-                url_resp = supabase.storage.from_("trip-photos").create_signed_url(
-                    photo["storage_path"], 600
-                )
-                # supabase-py 2.x returns SignedURLResponse object or dict — handle both
-                # supabase-py 2.x wraps response in .data — handle both old and new formats
+                # Strip bucket-name prefix if storage_path accidentally includes it
+                path = photo["storage_path"]
+                if path.startswith("trip-photos/"):
+                    path = path[len("trip-photos/"):]
+
+                url_resp = supabase.storage.from_("trip-photos").create_signed_url(path, 600)
+
+                # Extract the URL regardless of supabase-py response shape
                 signed_url = None
                 if isinstance(url_resp, dict):
-                    # New: {"data": {"signedUrl": "..."}, "error": None}
                     if "data" in url_resp and isinstance(url_resp["data"], dict):
                         d = url_resp["data"]
                         signed_url = d.get("signedUrl") or d.get("signedURL") or d.get("signed_url")
                     else:
-                        # Old: {"signedURL": "..."} or {"signedUrl": "..."}
                         signed_url = url_resp.get("signedUrl") or url_resp.get("signedURL") or url_resp.get("signed_url")
                 else:
-                    # Object-style response
                     data = getattr(url_resp, "data", None)
                     if isinstance(data, dict):
                         signed_url = data.get("signedUrl") or data.get("signedURL")
@@ -176,18 +177,33 @@ class LoreOrchestrator:
                         signed_url = (getattr(url_resp, "signedUrl", None)
                                       or getattr(url_resp, "signedURL", None)
                                       or getattr(url_resp, "signed_url", None))
-                if signed_url:
+
+                if not signed_url:
+                    log.error(f"[batch {bn}] empty signed URL for photo {photo.get('id')} path={path!r} — resp:{type(url_resp)}")
+                    continue
+
+                # Use base64 inlining so proxy doesn't need to fetch the URL separately
+                try:
+                    img_resp = httpx.get(signed_url, timeout=15, follow_redirects=True)
+                    img_resp.raise_for_status()
+                    content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+                    if content_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+                        content_type = "image/jpeg"
+                    b64_data = _base64.standard_b64encode(img_resp.content).decode()
                     image_blocks.append({
                         "type": "image",
-                        "source": {"type": "url", "url": signed_url},
+                        "source": {"type": "base64", "media_type": content_type, "data": b64_data},
                     })
-                else:
-                    log.warning(f"Empty signed URL for photo {photo.get('id')} — resp type:{type(url_resp)} keys:{list(url_resp.keys()) if isinstance(url_resp, dict) else '?'}")
-            except Exception as e:
-                log.warning(f"Failed to get signed URL for photo {photo.get('id')}: {e}")
+                    log.info(f"[batch {bn}] photo {photo.get('id')} loaded ({len(img_resp.content)//1024}KB)")
+                except Exception as fetch_err:
+                    log.error(f"[batch {bn}] failed to download photo {photo.get('id')}: {fetch_err}")
 
+            except Exception as e:
+                log.error(f"[batch {bn}] signed URL failed for photo {photo.get('id')} path={photo.get('storage_path')!r}: {e}")
+
+        log.info(f"[batch {bn}/{total}] {len(image_blocks)}/{len(batch)} photos loaded for Claude")
         if not image_blocks:
-            return {"raw_cooked_score": 60, "recurring_behaviors": [], "photo_count": 0}
+            raise RuntimeError(f"batch {bn}: 0/{len(batch)} photos loaded — check storage_path values and Supabase RLS")
 
         user_prompt = prompts.PHOTO_BATCH_ANALYSIS_USER.format(
             trip_name=trip["name"],

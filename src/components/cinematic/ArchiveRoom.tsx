@@ -874,11 +874,11 @@ export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; po
         <div className="space-y-6 md:text-right">
           <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Micro-Lore Links</span>
           <div className="flex flex-col gap-3">
-            <span className="text-[11px] text-white/15 font-data">Privacy Policy · coming soon</span>
-            <span className="text-[11px] text-white/15 font-data">Terms of Archive · coming soon</span>
+            <Link href="/privacy" className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data">Privacy Policy</Link>
+            <Link href="/terms" className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data">Terms of Archive</Link>
             <a
               href="mailto:bhuneshbansal20039888@gmail.com?subject=Report a Trip"
-              className="text-[11px] text-white/15 hover:text-white/40 transition-colors font-data"
+              className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data"
             >
               Report a Trip
             </a>

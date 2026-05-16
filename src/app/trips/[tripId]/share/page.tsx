@@ -38,7 +38,7 @@ export default function SharePage() {
         <Link href={`/trips/${tripId}`} className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/25 font-vibe font-black hover:text-white/50 transition-colors mb-6">
           <span>←</span> Back to Archive
         </Link>
-        <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-vibe mb-2">Export Identity</p>
+        <p className="text-[9px] uppercase tracking-[0.4em] text-white/35 font-vibe mb-2">Export Identity</p>
         <h1 className="font-cinematic font-black text-4xl tracking-tighter leading-none">Pick a card.<br />Expose your group.</h1>
       </header>
 
@@ -92,7 +92,7 @@ export default function SharePage() {
             <p className="font-cinematic italic text-sm text-amber-500/40 mb-4">
               &ldquo;{topChaos?.role_title || 'The Menace'}&rdquo;
             </p>
-            <p className="text-[10px] text-amber-500/20 leading-relaxed line-clamp-3">
+            <p className="text-[10px] text-amber-500/40 leading-relaxed line-clamp-3">
               {topChaos?.role_description || 'The algorithm has no mercy for this level of chaos.'}
             </p>
           </div>
@@ -181,7 +181,7 @@ export default function SharePage() {
                 <div className="text-[10px] text-white/25 mt-1 font-vibe">PNG · 1080×1920</div>
               </div>
             </div>
-            <div className="text-white/20 group-hover:text-white/50 transition-colors">→</div>
+            <div className="text-white/35 group-hover:text-white/50 transition-colors">→</div>
           </a>
         )}
       </section>
@@ -199,10 +199,10 @@ function ShareActionButton({ icon, label, sub, onClick }: { icon: string; label:
         <div className="text-2xl">{icon}</div>
         <div className="text-left">
           <div className="font-vibe font-bold text-sm text-white/80 group-hover:text-white">{label}</div>
-          <div className="text-[10px] text-white/25 mt-1 font-vibe">{sub}</div>
+          <div className="text-[10px] text-white/40 mt-1 font-vibe">{sub}</div>
         </div>
       </div>
-      <div className="text-white/20 group-hover:text-white/50 transition-colors">→</div>
+      <div className="text-white/35 group-hover:text-white/50 transition-colors">→</div>
     </button>
   );
 }

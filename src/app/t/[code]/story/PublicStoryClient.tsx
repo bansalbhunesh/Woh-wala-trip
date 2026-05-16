@@ -121,8 +121,8 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
 
       {idx === 0 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-between px-8 pointer-events-none">
-          <span className="text-white/25 text-xs font-vibe uppercase tracking-wider">← tap</span>
-          <span className="text-white/25 text-xs font-vibe uppercase tracking-wider">tap →</span>
+          <span className="text-white/55 text-xs font-vibe uppercase tracking-wider">← tap</span>
+          <span className="text-white/55 text-xs font-vibe uppercase tracking-wider">tap →</span>
         </div>
       )}
 
@@ -143,7 +143,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
     case 'title':
       return (
         <div className="text-center space-y-6 max-w-sm" style={{ animation: 'rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Official Archive</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">The Official Archive</p>
           <h1 className="text-5xl font-cinematic font-medium text-white leading-[0.9]">
             {(slide.lore as any).trip_title}
           </h1>
@@ -156,7 +156,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
     case 'cooked':
       return (
         <div className="text-center space-y-6 max-w-sm">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe" style={{ animation: 'fade-in 0.4s ease both' }}>How Cooked?</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe" style={{ animation: 'fade-in 0.4s ease both' }}>How Cooked?</p>
           <div style={{ fontSize: 'clamp(100px, 20vw, 180px)', fontFamily: 'var(--font-ui)', fontWeight: 900, lineHeight: 1, color: '#FF4D4D', letterSpacing: '-0.04em', animation: slamActive ? 'slam 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both' : 'none' }}>
             {slamActive ? countedScore : ''}
           </div>
@@ -170,7 +170,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
     case 'recap':
       return (
         <div className="space-y-6 max-w-sm" style={{ animation: 'rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">The Season Recap</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">The Season Recap</p>
           <p className="text-xl font-data font-light text-white/75 leading-relaxed">{slide.lore.season_recap?.full_narrative}</p>
         </div>
       );
@@ -179,7 +179,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
       const era = slide.lore.trip_eras![slide.idx];
       return (
         <div className="space-y-6 max-w-sm" style={{ animation: 'rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Era {slide.idx + 1}</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">Era {slide.idx + 1}</p>
           <h2 className="text-4xl font-cinematic font-medium text-white leading-tight">{era.era_name}</h2>
           {era.timeframe && <p className="text-[10px] uppercase tracking-wider text-chill-accent font-vibe">{era.timeframe}</p>}
           <p className="text-lg font-data font-light text-white/65 leading-relaxed">{era.description}</p>
@@ -196,7 +196,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
                style={{ background: 'linear-gradient(135deg, rgba(255,77,77,0.18), rgba(255,77,77,0.04))', border: '1.5px solid rgba(255,77,77,0.35)', boxShadow: '0 0 28px rgba(255,77,77,0.15)' }}>
             <span className="text-3xl font-vibe font-bold text-cooked-accent">{name[0].toUpperCase()}</span>
           </div>
-          <div><p className="text-xs uppercase tracking-[0.2em] text-white/25 font-vibe">{name}</p>
+          <div><p className="text-xs uppercase tracking-[0.2em] text-white/40 font-vibe">{name}</p>
                <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{m.role_title}</h2></div>
           <p className="text-base font-data font-light text-white/55 leading-relaxed">{m.role_description}</p>
           {m.role_chaos_rating != null && (
@@ -212,7 +212,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
       const s = slide.sup;
       return (
         <div className="space-y-6 max-w-sm" style={{ animation: 'rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">Award #{slide.idx + 1}</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">Award #{slide.idx + 1}</p>
           <div className="space-y-2">
             <p className="text-lg font-cinematic italic text-white/45">most likely to</p>
             <h2 className="text-3xl font-cinematic font-medium text-white leading-tight">{s.question}</h2>
@@ -242,9 +242,9 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
     case 'join':
       return (
         <div className="text-center space-y-8 max-w-sm" style={{ animation: 'rise 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-vibe">You've seen the lore</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-vibe">You've seen the lore</p>
           <h2 className="text-4xl font-cinematic font-medium text-white">Want to join the archive?</h2>
-          <p className="text-sm font-data font-light text-white/35">Add your photos and get your own character card.</p>
+          <p className="text-sm font-data font-light text-white/50">Add your photos and get your own character card.</p>
           <a href={`/trips/join?code=${slide.inviteCode}`}
              onClick={e => e.stopPropagation()}
              className="block w-full py-5 bg-white text-[#060604] rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-center">
@@ -252,7 +252,7 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: {
           </a>
           <a href={`/t/${slide.inviteCode}`}
              onClick={e => e.stopPropagation()}
-             className="block text-[10px] uppercase tracking-widest font-vibe text-white/15 hover:text-white/35 transition-colors">
+             className="block text-[10px] uppercase tracking-widest font-vibe text-white/40 hover:text-white/35 transition-colors">
             ← Back to overview
           </a>
         </div>

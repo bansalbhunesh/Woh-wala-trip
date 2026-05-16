@@ -145,7 +145,7 @@ const config: Config = {
         "float-a":    "floatA 14s ease-in-out infinite",
         "float-b":    "floatB 16s ease-in-out infinite",
         "float-c":    "floatC 12s ease-in-out infinite",
-        grain:        "grain 0.8s steps(1) infinite",
+        grain:        "grain 1.2s steps(3) infinite",
         "pulse-soft": "pulse-soft 2.5s ease-in-out infinite",
         shimmer:      "shimmer 2s linear infinite",
         flicker:      "flicker 8s ease-in-out infinite",
