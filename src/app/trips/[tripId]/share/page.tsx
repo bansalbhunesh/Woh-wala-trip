@@ -18,8 +18,10 @@ export default function SharePage() {
   const members: any[] = (tripData as any).members || [];
   const lore = trip?.lore_json;
 
-  // Most chaotic member by chaos rating
-  const topChaos = [...members].sort((a, b) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0))[0];
+  // Most chaotic member by chaos rating — null-safe
+  const topChaos = members.length > 0
+    ? [...members].sort((a, b) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0))[0]
+    : null;
 
   const tripName = trip?.name || 'Our Trip';
   const tagline = lore?.tagline || 'The reason this trip now has its own Wikipedia page in our heads.';

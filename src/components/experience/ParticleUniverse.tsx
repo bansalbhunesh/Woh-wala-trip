@@ -32,12 +32,14 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     canvas.width = W;
     canvas.height = H;
 
+    let resizeTimer: ReturnType<typeof setTimeout>;
     const onResize = () => {
-      W = window.innerWidth;
-      H = window.innerHeight;
-      canvas.width = W;
-      canvas.height = H;
-      initParticles();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W; canvas.height = H;
+        initParticles();
+      }, 200);
     };
     window.addEventListener('resize', onResize);
 
@@ -55,8 +57,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
     function initParticles() {
       particles = [];
-      // Dust layer — many tiny warm particles
-      for (let i = 0; i < 600; i++) {
+      // Dust layer — reduced from 600 for 60fps on mobile
+      for (let i = 0; i < 300; i++) {
         particles.push({
           x: Math.random() * W,
           y: Math.random() * H,
@@ -71,8 +73,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           type: 'dust',
         });
       }
-      // Fragment layer — fewer, larger, more visible
-      for (let i = 0; i < 80; i++) {
+      // Fragment layer — reduced from 80
+      for (let i = 0; i < 40; i++) {
         particles.push({
           x: Math.random() * W,
           y: Math.random() * H,
@@ -87,8 +89,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           type: 'fragment',
         });
       }
-      // Stars — tiny bright pinpoints
-      for (let i = 0; i < 200; i++) {
+      // Stars — reduced from 200
+      for (let i = 0; i < 100; i++) {
         particles.push({
           x: Math.random() * W,
           y: Math.random() * H,

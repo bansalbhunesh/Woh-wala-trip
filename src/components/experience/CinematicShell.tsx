@@ -12,7 +12,11 @@ export function CinematicShell({ children, intensity = 0.3 }: { children: React.
     let W = window.innerWidth, H = window.innerHeight;
     canvas.width = W; canvas.height = H;
 
-    const onResize = () => { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; };
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }, 150);
+    };
     window.addEventListener('resize', onResize);
 
     // Particles — slow sine oscillation, minimal glow spread

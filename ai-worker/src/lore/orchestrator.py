@@ -594,15 +594,27 @@ class LoreOrchestrator:
 
     def _parse_json(self, raw: str) -> dict | list:
         cleaned = raw.strip()
-        if cleaned.startswith("```json"):
-            cleaned = cleaned[7:]
-        elif cleaned.startswith("```"):
-            cleaned = cleaned[3:]
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3]
+        # Strip any markdown code fence variant (```json, ```python, ```, etc.)
+        if "```" in cleaned:
+            parts = cleaned.split("```")
+            for part in parts:
+                stripped = part.strip()
+                # Skip the language tag line
+                if stripped.startswith("json") or stripped.startswith("python"):
+                    stripped = stripped.split("\n", 1)[-1].strip()
+                if stripped.startswith("{") or stripped.startswith("["):
+                    cleaned = stripped
+                    break
         cleaned = cleaned.strip()
+        # Find first { or [ to skip any preamble text
+        start = min(
+            (cleaned.find("{") if "{" in cleaned else len(cleaned)),
+            (cleaned.find("[") if "[" in cleaned else len(cleaned)),
+        )
+        if start > 0:
+            cleaned = cleaned[start:]
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError as e:
-            log.error(f"JSON parse failed: {e}\nRaw:\n{raw[:500]}")
+            log.error(f"JSON parse failed: {e}\nRaw (first 800 chars):\n{raw[:800]}")
             raise ValueError(f"Claude returned invalid JSON: {e}")

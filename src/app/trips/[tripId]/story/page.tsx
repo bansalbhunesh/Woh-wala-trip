@@ -58,7 +58,13 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
 
   const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
   const lore = (tripData as any)?.trip?.lore_json as LoreJson | null;
+  const loreStatus = (tripData as any)?.trip?.lore_status as string | undefined;
   const members = (tripData as any)?.members || [];
+
+  // Redirect if data loaded but lore not ready
+  useEffect(() => {
+    if (tripData && loreStatus && loreStatus !== 'ready') router.push(`/trips/${tripId}`);
+  }, [tripData, loreStatus, tripId, router]);
 
   if (!lore) {
     return (
