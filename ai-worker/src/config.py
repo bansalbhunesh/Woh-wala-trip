@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Optional: set if using a proxy (e.g. aicredits.in, openrouter, etc.)
     ANTHROPIC_BASE_URL: str = ""
 
-    CLAUDE_MODEL: str = "claude-sonnet-4-20250514"         # vision + fast
+    CLAUDE_MODEL: str = "claude-sonnet-4-6"              # vision + fast, current
     CLAUDE_HAIKU_MODEL: str = "claude-haiku-4-5-20251001"  # thumbnails + cheap calls
 
     MAX_PHOTOS_PER_VISION_CALL: int = 20

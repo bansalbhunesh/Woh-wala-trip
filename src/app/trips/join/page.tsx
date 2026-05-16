@@ -1,5 +1,5 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { CinematicShell } from '@/components/experience/CinematicShell';
@@ -9,6 +9,12 @@ function JoinContent() {
   const searchParams = useSearchParams();
   const [code, setCode] = useState((searchParams.get('code') || '').toUpperCase());
   const [focused, setFocused] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setRevealed(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   const joinTrip = trpc.trips.joinByCode.useMutation({
     onSuccess: ({ tripId }) => router.push(`/trips/${tripId}`),
@@ -22,24 +28,54 @@ function JoinContent() {
 
           <div className="space-y-3">
             <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
-               style={{ color: 'rgba(255,77,77,0.5)' }}>
+               style={{
+                 color: 'rgba(255,77,77,0.5)',
+                 opacity: revealed ? 1 : 0,
+                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s',
+                 willChange: 'transform, opacity',
+               }}>
               ● SECURE ACCESS PORTAL
             </p>
             <h1 className="font-display font-black uppercase tracking-tighter leading-[0.85]"
-                style={{ fontSize: 'clamp(36px, 7vw, 72px)', color: 'rgba(245,240,232,0.92)' }}>
+                style={{
+                  fontSize: 'clamp(36px, 7vw, 72px)', color: 'rgba(245,240,232,0.92)',
+                  opacity: revealed ? 1 : 0,
+                  transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                  filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                  transition: 'opacity 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, transform 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, filter 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s',
+                  willChange: 'transform, opacity',
+                }}>
               ENTER <em className="italic" style={{ color: '#FF4D4D' }}>THE LORE</em>
             </h1>
-            <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.25)' }}>
+            <p className="font-display italic text-sm"
+               style={{
+                 color: 'rgba(245,240,232,0.25)',
+                 opacity: revealed ? 1 : 0,
+                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s',
+                 willChange: 'transform, opacity',
+               }}>
               "Validate your credentials to access the digital remains of this season."
             </p>
           </div>
 
           {/* Code input */}
-          <div className="relative">
-            <div className="absolute inset-0 rounded-2xl pointer-events-none transition-all duration-400"
+          <div className="relative"
+               style={{
+                 opacity: revealed ? 1 : 0,
+                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.3s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.3s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.3s',
+                 willChange: 'transform, opacity',
+               }}>
+            <div className="absolute inset-0 rounded-2xl pointer-events-none"
                  style={{
                    border: `1px solid ${code.length > 0 ? 'rgba(255,77,77,0.5)' : 'rgba(245,240,232,0.07)'}`,
                    boxShadow: focused ? '0 0 40px rgba(255,77,77,0.1), inset 0 0 30px rgba(255,77,77,0.03)' : 'none',
+                   transition: 'border-color 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
                  }} />
             <input
               type="text"
@@ -69,13 +105,20 @@ function JoinContent() {
           <button
             onClick={() => joinTrip.mutate({ inviteCode: code })}
             disabled={code.length < 4 || joinTrip.isPending}
-            className="w-full py-4 rounded-2xl font-ui font-black text-[11px] uppercase tracking-widest transition-all duration-400 disabled:opacity-25 flex items-center justify-center gap-3"
+            className="w-full py-4 rounded-2xl font-ui font-black text-[11px] uppercase tracking-widest disabled:opacity-25 flex items-center justify-center gap-3"
             style={{
               background: 'rgba(255,77,77,0.1)',
               border: '1px solid rgba(255,77,77,0.4)',
               color: 'rgba(255,77,77,0.9)',
               boxShadow: code.length >= 4 ? '0 0 30px rgba(255,77,77,0.15)' : 'none',
-            }}>
+              opacity: revealed ? 1 : 0,
+              transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+              filter: revealed ? 'blur(0px)' : 'blur(6px)',
+              transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.4s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.4s, box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
+              willChange: 'transform, opacity',
+            }}
+            onMouseEnter={e => { if (code.length < 4) return; const el = e.currentTarget as HTMLButtonElement; el.style.transform = 'translate3d(0,-2px,0)'; el.style.boxShadow = '0 8px 40px rgba(255,77,77,0.25)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.transform = 'translate3d(0,0,0)'; el.style.boxShadow = code.length >= 4 ? '0 0 30px rgba(255,77,77,0.15)' : 'none'; }}>
             {joinTrip.isPending ? (
               <>
                 <div className="w-3 h-3 rounded-full" style={{ border: '1px solid rgba(255,77,77,0.3)', borderTopColor: '#FF4D4D', animation: 'spin 0.8s linear infinite' }} />
@@ -86,7 +129,10 @@ function JoinContent() {
 
           {joinTrip.error && (
             <div className="px-5 py-3 rounded-full font-mono text-[8px] uppercase tracking-[0.3em]"
-                 style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,77,77,0.2)', color: 'rgba(255,77,77,0.8)' }}>
+                 style={{
+                   background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,77,77,0.2)', color: 'rgba(255,77,77,0.8)',
+                   animation: 'join-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
+                 }}>
               {joinTrip.error.message}
             </div>
           )}
@@ -98,6 +144,10 @@ function JoinContent() {
       </div>
       <style jsx>{`
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes join-error-enter {
+          from { opacity: 0; transform: translate3d(0,16px,0); filter: blur(6px); }
+          to   { opacity: 1; transform: translate3d(0,0,0);   filter: blur(0px); }
+        }
       `}</style>
     </CinematicShell>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { analytics } from '@/lib/analytics';
 import Link from 'next/link';
@@ -8,6 +9,11 @@ import Link from 'next/link';
 export default function SharePage() {
   const params = useParams();
   const tripId = params.tripId as string;
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setRevealed(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   const { data: tripData, isLoading } = trpc.trips.getFull.useQuery({ tripId });
 
@@ -35,7 +41,14 @@ export default function SharePage() {
   return (
     <div className="min-h-screen bg-black text-[#F5F0E8] font-vibe selection:bg-cooked-bg selection:text-white pb-20">
       {/* Share Header */}
-      <header className="px-6 pt-8 pb-8">
+      <header className="px-6 pt-8 pb-8"
+              style={{
+                opacity: revealed ? 1 : 0,
+                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,20px,0)',
+                filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.05s',
+                willChange: 'transform, opacity',
+              }}>
         <Link href={`/trips/${tripId}`} className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/25 font-vibe font-black hover:text-white/50 transition-colors mb-6">
           <span>←</span> Back to Archive
         </Link>
@@ -44,9 +57,19 @@ export default function SharePage() {
       </header>
 
       {/* Horizontal Card Scroll */}
-      <div className="flex gap-4 overflow-x-auto px-6 pb-12 snap-x scrollbar-hide">
+      <div className="flex gap-4 overflow-x-auto px-6 pb-12 snap-x scrollbar-hide"
+           style={{
+             opacity: revealed ? 1 : 0,
+             transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,20px,0)',
+             filter: revealed ? 'blur(0px)' : 'blur(4px)',
+             transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.15s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.15s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.15s',
+             willChange: 'transform, opacity',
+           }}>
         {/* Card 1: Trip Card (Dark) */}
-        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#14181C] to-black snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
+        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#14181C] to-black snap-center p-8 flex flex-col justify-between"
+             style={{ transition: 'transform 0.45s cubic-bezier(0.16,1,0.3,1), box-shadow 0.45s cubic-bezier(0.16,1,0.3,1)' }}
+             onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translate3d(0,-4px,0) scale(1.01)'; el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.4)'; }}
+             onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translate3d(0,0,0) scale(1)'; el.style.boxShadow = 'none'; }}>
           <div>
             <div className="text-[9px] uppercase tracking-[0.3em] text-white/20">Season Archive</div>
             <div className="font-cinematic italic text-[10px] text-white/10 mt-1">yaarlore</div>
@@ -74,7 +97,10 @@ export default function SharePage() {
         </div>
 
         {/* Card 2: Character Card (Warm) */}
-        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#1A1508] to-[#120C00] snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
+        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#1A1508] to-[#120C00] snap-center p-8 flex flex-col justify-between"
+             style={{ transition: 'transform 0.45s cubic-bezier(0.16,1,0.3,1), box-shadow 0.45s cubic-bezier(0.16,1,0.3,1)' }}
+             onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translate3d(0,-4px,0) scale(1.01)'; el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.4)'; }}
+             onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translate3d(0,0,0) scale(1)'; el.style.boxShadow = 'none'; }}>
           <div>
             <div className="text-[9px] uppercase tracking-[0.3em] text-white/20">
               Character · {topChaos?.role_archetype_tag || topChaos?.role_title || 'Source'}
@@ -100,7 +126,10 @@ export default function SharePage() {
         </div>
 
         {/* Card 3: Receipt (Light) */}
-        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#FAF1E4] to-[#F2E8D8] snap-center p-8 flex flex-col justify-between group hover:scale-[1.02] transition-transform text-black">
+        <div className="flex-shrink-0 w-72 h-[480px] rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#FAF1E4] to-[#F2E8D8] snap-center p-8 flex flex-col justify-between text-black"
+             style={{ transition: 'transform 0.45s cubic-bezier(0.16,1,0.3,1), box-shadow 0.45s cubic-bezier(0.16,1,0.3,1)' }}
+             onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translate3d(0,-4px,0) scale(1.01)'; el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.25)'; }}
+             onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translate3d(0,0,0) scale(1)'; el.style.boxShadow = 'none'; }}>
           <div>
             <div className="text-[9px] uppercase tracking-[0.3em] text-black/30 font-mono">YAARLORE · CHAOS RECEIPT</div>
           </div>
@@ -132,7 +161,14 @@ export default function SharePage() {
       </div>
 
       {/* WhatsApp Caption Block */}
-      <section className="px-6 mb-10">
+      <section className="px-6 mb-10"
+               style={{
+                 opacity: revealed ? 1 : 0,
+                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,20px,0)',
+                 filter: revealed ? 'blur(0px)' : 'blur(4px)',
+                 transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.25s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.25s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.25s',
+                 willChange: 'transform, opacity',
+               }}>
         <div className="p-6 rounded-2xl bg-green-500/5 border border-green-500/15">
           <div className="text-[8px] uppercase tracking-[0.3em] text-green-500/50 font-vibe mb-3">Pre-filled Caption</div>
           <p className="font-mono text-xs text-white/50 leading-relaxed">
@@ -142,7 +178,14 @@ export default function SharePage() {
       </section>
 
       {/* Action Buttons */}
-      <section className="px-6 space-y-3">
+      <section className="px-6 space-y-3"
+               style={{
+                 opacity: revealed ? 1 : 0,
+                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,20px,0)',
+                 filter: revealed ? 'blur(0px)' : 'blur(4px)',
+                 transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.35s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.35s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.35s',
+                 willChange: 'transform, opacity',
+               }}>
         <ShareActionButton
           icon="📲"
           label="Share to Instagram"
@@ -196,16 +239,19 @@ function ShareActionButton({ icon, label, sub, onClick }: { icon: string; label:
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] active:scale-[0.98] transition-all group"
+      className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 active:scale-[0.98]"
+      style={{ transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), background 0.3s' }}
+      onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.transform = 'translate3d(0,-2px,0)'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; el.style.background = 'rgba(255,255,255,0.04)'; }}
+      onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.transform = 'translate3d(0,0,0)'; el.style.boxShadow = 'none'; el.style.background = 'rgba(255,255,255,0.02)'; }}
     >
       <div className="flex gap-4 items-center">
         <div className="text-2xl">{icon}</div>
         <div className="text-left">
-          <div className="font-vibe font-bold text-sm text-white/80 group-hover:text-white">{label}</div>
+          <div className="font-vibe font-bold text-sm text-white/80">{label}</div>
           <div className="text-[10px] text-white/40 mt-1 font-vibe">{sub}</div>
         </div>
       </div>
-      <div className="text-white/35 group-hover:text-white/50 transition-colors">→</div>
+      <div className="text-white/35">→</div>
     </button>
   );
 }

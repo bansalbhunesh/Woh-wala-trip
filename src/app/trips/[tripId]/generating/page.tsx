@@ -188,7 +188,13 @@ export default function GeneratingPage() {
 
         {/* Stage display */}
         <div className="text-center space-y-8 max-w-md"
-             style={{ opacity: revealed ? 1 : 0, transition: 'opacity 1s ease' }}>
+             style={{
+               opacity: revealed ? 1 : 0,
+               transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,20px,0)',
+               filter: revealed ? 'blur(0px)' : 'blur(6px)',
+               transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1), filter 0.9s cubic-bezier(0.16,1,0.3,1)',
+               willChange: 'transform, opacity',
+             }}>
 
           {/* Stage number */}
           <p className="font-mono text-[8px] uppercase tracking-[0.7em]"
@@ -199,10 +205,10 @@ export default function GeneratingPage() {
           {/* Active stage label — transitions between stages */}
           <div key={stage} className="space-y-3">
             <h2 className="font-display font-black uppercase leading-tight"
-                style={{ fontSize: 'clamp(28px, 5vw, 52px)', color: 'rgba(245,240,232,0.92)', animation: 'slide-up 0.6s cubic-bezier(0.16,1,0.3,1)' }}>
+                style={{ fontSize: 'clamp(28px, 5vw, 52px)', color: 'rgba(245,240,232,0.92)', animation: 'slide-up 0.65s cubic-bezier(0.16,1,0.3,1) both', willChange: 'transform, opacity' }}>
               {currentStage.label}
             </h2>
-            <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)', animation: 'fade-in 0.8s ease 0.2s both' }}>
+            <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)', animation: 'fade-in 0.65s cubic-bezier(0.16,1,0.3,1) 0.15s both', willChange: 'opacity' }}>
               "{currentStage.sub}"
             </p>
           </div>
@@ -283,12 +289,21 @@ export default function GeneratingPage() {
       )}
 
       <style jsx>{`
-        @keyframes slide-up { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fade-in { from{opacity:0} to{opacity:1} }
-        @keyframes unlock-appear { from{opacity:0} to{opacity:1} }
+        @keyframes slide-up {
+          from { opacity:0; transform:translate3d(0,16px,0); filter:blur(4px); }
+          to   { opacity:1; transform:translate3d(0,0,0);    filter:blur(0px); }
+        }
+        @keyframes fade-in {
+          from { opacity:0; filter:blur(3px); }
+          to   { opacity:1; filter:blur(0px); }
+        }
+        @keyframes unlock-appear {
+          from { opacity:0; filter:blur(8px); }
+          to   { opacity:1; filter:blur(0px); }
+        }
         @keyframes slam-up {
-          from { opacity:0; transform: translateY(40px) scale(0.92); }
-          to   { opacity:1; transform: translateY(0)    scale(1); }
+          from { opacity:0; transform:translate3d(0,40px,0) scale(0.92); filter:blur(8px); }
+          to   { opacity:1; transform:translate3d(0,0,0)    scale(1);    filter:blur(0px); }
         }
       `}</style>
     </div>

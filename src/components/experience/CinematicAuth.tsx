@@ -432,8 +432,9 @@ export default function CinematicAuth() {
     justifyContent: 'center',
     padding: '24px',
     opacity: phase === target ? 1 : 0,
-    transform: phase === target ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.985)',
-    transition: 'opacity 0.85s cubic-bezier(0.16,1,0.3,1), transform 0.85s cubic-bezier(0.16,1,0.3,1)',
+    transform: phase === target ? 'translate3d(0, 0, 0) scale(1)' : 'translate3d(0, 16px, 0) scale(0.985)',
+    filter: phase === target ? 'blur(0px)' : 'blur(4px)',
+    transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1), transform 0.65s cubic-bezier(0.16,1,0.3,1), filter 0.65s cubic-bezier(0.16,1,0.3,1)',
     pointerEvents: phase === target ? 'auto' : 'none',
     zIndex: 10,
   });
@@ -451,7 +452,7 @@ export default function CinematicAuth() {
                fontSize: 9, letterSpacing: '0.12em', color: 'rgba(245,240,232,0.8)',
                opacity: phase >= 1 ? (i===fragIdx ? 0.15 : 0.025) : 0,
                transform: `rotate(${-2+(i*5)%8}deg)`,
-               transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
+               transition: 'opacity 0.4s cubic-bezier(0.16,1,0.3,1)',
                whiteSpace: 'nowrap', zIndex: 1,
                maxWidth: '40vw', overflow: 'hidden', textOverflow: 'ellipsis',
              }}>
@@ -472,20 +473,45 @@ export default function CinematicAuth() {
         <div className="w-full max-w-md space-y-9">
           <div className="text-center space-y-3">
             <p className="font-mono text-[8px] uppercase tracking-[0.7em]"
-               style={{ color: 'rgba(255,140,30,0.5)' }}>
+               style={{
+                 color: 'rgba(255,140,30,0.5)',
+                 opacity: phase === 1 ? 1 : 0,
+                 transform: phase === 1 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: phase === 1 ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s',
+                 willChange: 'transform, opacity',
+               }}>
               ● MEMORY GATEWAY ACTIVE
             </p>
             <h1 className="font-display font-black uppercase leading-[0.85]"
-                style={{ fontSize: 'clamp(44px, 8vw, 80px)', color: 'rgba(245,240,232,0.92)' }}>
+                style={{
+                  fontSize: 'clamp(44px, 8vw, 80px)', color: 'rgba(245,240,232,0.92)',
+                  opacity: phase === 1 ? 1 : 0,
+                  transform: phase === 1 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                  filter: phase === 1 ? 'blur(0px)' : 'blur(6px)',
+                  transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.12s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.12s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.12s',
+                  willChange: 'transform, opacity',
+                }}>
               IDENTIFY<br /><em className="italic" style={{ color: '#FFA020' }}>YOURSELF</em>
             </h1>
             <p key={fragIdx} className="font-mono text-[9px]"
-               style={{ color: 'rgba(245,240,232,0.18)', letterSpacing: '0.12em' }}>
+               style={{
+                 color: 'rgba(245,240,232,0.18)', letterSpacing: '0.12em',
+                 opacity: phase === 1 ? 1 : 0,
+                 transition: 'opacity 0.4s cubic-bezier(0.16,1,0.3,1)',
+               }}>
               {FRAGMENTS[fragIdx]}
             </p>
           </div>
 
-          <div className="relative">
+          <div className="relative"
+               style={{
+                 opacity: phase === 1 ? 1 : 0,
+                 transform: phase === 1 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: phase === 1 ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s',
+                 willChange: 'transform, opacity',
+               }}>
             <input
               type="email" value={email}
               onChange={e => { setEmail(e.target.value); setError(''); }}
@@ -502,19 +528,26 @@ export default function CinematicAuth() {
                 color: 'rgba(245,240,232,0.85)',
                 caretColor: '#FFA020',
                 letterSpacing: '0.04em',
-                transition: 'border-color 0.5s ease',
+                transition: 'border-color 0.4s cubic-bezier(0.16,1,0.3,1)',
               }}
             />
             <div className="absolute bottom-0 left-8 right-8 h-px"
-                 style={{ background: 'linear-gradient(90deg,transparent,rgba(255,77,77,0.4),transparent)', opacity: inputFocused ? 1 : 0, transition: 'opacity 0.4s ease' }} />
+                 style={{ background: 'linear-gradient(90deg,transparent,rgba(255,77,77,0.4),transparent)', opacity: inputFocused ? 1 : 0, transition: 'opacity 0.4s cubic-bezier(0.16,1,0.3,1)' }} />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3"
+               style={{
+                 opacity: phase === 1 ? 1 : 0,
+                 transform: phase === 1 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: phase === 1 ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.32s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.32s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.32s',
+                 willChange: 'transform, opacity',
+               }}>
             <button onClick={sendOtp} disabled={sendLoading || !email.trim() || cooldown > 0}
                     className="w-full py-4 rounded-2xl font-ui font-black text-[10px] uppercase tracking-[0.35em] flex items-center justify-center gap-3 disabled:opacity-30"
-                    style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,140,30,0.4)', color: 'rgba(255,165,40,0.95)', transition: 'background 0.3s ease, box-shadow 0.4s ease' }}
-                    onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.boxShadow='0 0 40px rgba(255,77,77,0.2)'; el.style.background='rgba(255,77,77,0.13)'; }}
-                    onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.boxShadow='none'; el.style.background='rgba(255,77,77,0.08)'; }}>
+                    style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,140,30,0.4)', color: 'rgba(255,165,40,0.95)', transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), background 0.3s ease, box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)', willChange: 'transform, opacity' }}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.transform='translate3d(0,-2px,0)'; el.style.boxShadow='0 8px 40px rgba(255,77,77,0.25)'; el.style.background='rgba(255,77,77,0.13)'; }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.transform='translate3d(0,0,0)'; el.style.boxShadow='none'; el.style.background='rgba(255,77,77,0.08)'; }}>
               {sendLoading ? (
                 <><div style={{ width:12,height:12,borderRadius:'50%',border:'1px solid rgba(255,77,77,0.3)',borderTopColor:'#FFA020',animation:'wwt-spin 0.9s linear infinite' }} /> TRANSMITTING...</>
               ) : cooldown > 0 ? `WAIT ${cooldown}s` : 'SEND CODE →'}
@@ -541,11 +574,25 @@ export default function CinematicAuth() {
         <div className="w-full max-w-md space-y-5">
           <div className="text-center space-y-2">
             <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
-               style={{ color: 'rgba(255,140,30,0.5)' }}>
+               style={{
+                 color: 'rgba(255,140,30,0.5)',
+                 opacity: phase === 2 ? 1 : 0,
+                 transform: phase === 2 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: phase === 2 ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s',
+                 willChange: 'transform, opacity',
+               }}>
               ● CODE TRANSMITTED
             </p>
             <h2 className="font-display font-black uppercase leading-tight"
-                style={{ fontSize: 'clamp(28px, 5vw, 48px)', color: 'rgba(245,240,232,0.92)' }}>
+                style={{
+                  fontSize: 'clamp(28px, 5vw, 48px)', color: 'rgba(245,240,232,0.92)',
+                  opacity: phase === 2 ? 1 : 0,
+                  transform: phase === 2 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                  filter: phase === 2 ? 'blur(0px)' : 'blur(6px)',
+                  transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.12s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.12s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.12s',
+                  willChange: 'transform, opacity',
+                }}>
               ENTER THE <em className="italic" style={{ color: '#FFA020' }}>CODE</em>
             </h2>
             <p className="font-mono text-[8px]" style={{ color: 'rgba(245,240,232,0.22)', letterSpacing: '0.08em' }}>
@@ -561,7 +608,14 @@ export default function CinematicAuth() {
           {/* 8 digit slots */}
           <div className="flex gap-1 sm:gap-1.5 justify-center" onPaste={handlePaste}>
             {otp.map((d, i) => (
-              <div key={i} className="relative">
+              <div key={i} className="relative"
+                   style={{
+                     opacity: phase === 2 ? 1 : 0,
+                     transform: phase === 2 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                     filter: phase === 2 ? 'blur(0px)' : 'blur(6px)',
+                     transition: `opacity 0.5s cubic-bezier(0.16,1,0.3,1) ${0.18 + i * 0.04}s, transform 0.5s cubic-bezier(0.16,1,0.3,1) ${0.18 + i * 0.04}s, filter 0.5s cubic-bezier(0.16,1,0.3,1) ${0.18 + i * 0.04}s`,
+                     willChange: 'transform, opacity',
+                   }}>
                 {d && <div className="absolute inset-0 rounded-xl pointer-events-none"
                            style={{ boxShadow: '0 0 14px rgba(255,77,77,0.3)', background: 'rgba(255,77,77,0.06)', borderRadius: '0.7rem' }} />}
                 <input
@@ -582,8 +636,9 @@ export default function CinematicAuth() {
                     border: `1px solid ${activeDigit===i ? 'rgba(255,77,77,0.65)' : d ? 'rgba(255,77,77,0.35)' : 'rgba(245,240,232,0.08)'}`,
                     color: d ? '#FFA020' : 'rgba(245,240,232,0.3)',
                     caretColor: '#FFA020',
-                    transform: d ? 'scale(1.04)' : 'scale(1)',
-                    transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.3s ease',
+                    transform: d ? 'translate3d(0,0,0) scale(1.04)' : 'translate3d(0,0,0) scale(1)',
+                    transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1), border-color 0.3s cubic-bezier(0.16,1,0.3,1)',
+                    willChange: 'transform',
                   }}
                 />
                 {activeDigit === i && (
@@ -597,8 +652,8 @@ export default function CinematicAuth() {
           {/* Progress dots */}
           <div className="flex justify-center gap-1.5">
             {otp.map((d, i) => (
-              <div key={i} className="w-1 h-1 rounded-full transition-all duration-300"
-                   style={{ background: d ? '#FFA020' : 'rgba(245,240,232,0.1)', boxShadow: d ? '0 0 5px rgba(255,140,30,0.6)' : 'none' }} />
+              <div key={i} className="w-1 h-1 rounded-full"
+                   style={{ background: d ? '#FFA020' : 'rgba(245,240,232,0.1)', boxShadow: d ? '0 0 5px rgba(255,140,30,0.6)' : 'none', transition: 'background 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s cubic-bezier(0.16,1,0.3,1)' }} />
             ))}
           </div>
 
@@ -631,11 +686,26 @@ export default function CinematicAuth() {
       {/* ── PHASE 3: ACCESS GRANTED ── */}
       <div style={phaseStyle(3)}>
         <div className="text-center space-y-4">
-          <p className="font-mono text-[8px] uppercase tracking-[0.6em]" style={{ color: 'rgba(255,77,77,0.4)' }}>
+          <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
+             style={{
+               color: 'rgba(255,77,77,0.4)',
+               opacity: phase === 3 ? 1 : 0,
+               transform: phase === 3 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+               filter: phase === 3 ? 'blur(0px)' : 'blur(6px)',
+               transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s',
+               willChange: 'transform, opacity',
+             }}>
             ● IDENTITY CONFIRMED
           </p>
           <div className="font-display font-black uppercase"
-               style={{ fontSize: 'clamp(36px, 7vw, 64px)', color: 'rgba(245,240,232,0.9)' }}>
+               style={{
+                 fontSize: 'clamp(36px, 7vw, 64px)', color: 'rgba(245,240,232,0.9)',
+                 opacity: phase === 3 ? 1 : 0,
+                 transform: phase === 3 ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                 filter: phase === 3 ? 'blur(0px)' : 'blur(6px)',
+                 transition: 'opacity 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, transform 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, filter 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s',
+                 willChange: 'transform, opacity',
+               }}>
             ACCESS<br /><em className="italic" style={{ color: '#FFA020' }}>GRANTED</em>
           </div>
         </div>
@@ -643,7 +713,10 @@ export default function CinematicAuth() {
 
       {/* Error pill */}
       {error && (
-        <div className="fixed bottom-16 left-0 right-0 flex justify-center z-20 pointer-events-none">
+        <div className="fixed bottom-16 left-0 right-0 flex justify-center z-20 pointer-events-none"
+             style={{
+               animation: 'auth-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
+             }}>
           <div className="px-6 py-3 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
                style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.22)', color: 'rgba(255,77,77,0.8)' }}>
             {error}
@@ -652,11 +725,15 @@ export default function CinematicAuth() {
       )}
 
       {/* Final wipe */}
-      <div style={{ position:'fixed', inset:0, background:'#060604', zIndex:50, opacity: phase >= 4 ? 1 : 0, transition:'opacity 0.65s cubic-bezier(0.4,0,1,1)', pointerEvents:'none' }} />
+      <div style={{ position:'fixed', inset:0, background:'#060604', zIndex:50, opacity: phase >= 4 ? 1 : 0, transition:'opacity 0.65s cubic-bezier(0.16,1,0.3,1)', pointerEvents:'none' }} />
 
       <style jsx>{`
         @keyframes wwt-spin { to{transform:rotate(360deg)} }
         @keyframes wwt-breathe-dot { 0%,100%{opacity:.5} 50%{opacity:1} }
+        @keyframes auth-error-enter {
+          from { opacity: 0; transform: translate3d(0,16px,0); filter: blur(6px); }
+          to   { opacity: 1; transform: translate3d(0,0,0);   filter: blur(0px); }
+        }
       `}</style>
     </div>
   );

@@ -61,10 +61,10 @@ class LoreOrchestrator:
             confessions = self._get_confessions(trip_id)
             lore = await self._generate_lore_with_retry(trip, aggregated, confessions)
 
-            # Steps 5-7: parallel enrichment
+            # Steps 5-7: parallel enrichment — pass confessions to superlatives
             roles_task = self._generate_all_roles(trip, lore, members, aggregated)
             stats_task = self._generate_receipt_stats(trip, lore, aggregated)
-            superlatives_task = self._generate_superlatives(lore, members)
+            superlatives_task = self._generate_superlatives(lore, members, confessions)
 
             roles, stats, superlatives = await asyncio.gather(
                 roles_task, stats_task, superlatives_task,
@@ -277,6 +277,12 @@ class LoreOrchestrator:
     async def _generate_lore(self, trip: dict, aggregated: dict, confessions: list[str], extra: str = "") -> dict:
         system = prompts.LORE_GENERATION_SYSTEM + extra
 
+        # Extract lore writing hints from aggregation — explicitly surface them for the model
+        hints = aggregated.get("lore_writing_hints", {})
+        lead_with = hints.get("lead_with", "the group's collective chaos energy")
+        avoid = hints.get("avoid", "generic travel blog tropes")
+        hinglish_intensity = hints.get("hinglish_intensity", "medium")
+
         user_prompt = prompts.LORE_GENERATION_USER.format(
             trip_name=trip["name"],
             destination=trip.get("destination", "an unspecified location"),
@@ -286,14 +292,17 @@ class LoreOrchestrator:
             member_count=trip.get("member_count", 0),
             total_photos=trip.get("total_photos", 0),
             aggregated_signal_json=json.dumps(aggregated, indent=2),
-            confessions_json=json.dumps(confessions),
+            lead_with=lead_with,
+            avoid=avoid,
+            hinglish_intensity=hinglish_intensity,
+            confessions_json=json.dumps(confessions) if confessions else "[]",
         )
 
         # Use cache_control on system prompt — saves ~70% tokens on retries
         response = await self._call_claude(
             system=system,
             messages=[{"role": "user", "content": user_prompt}],
-            max_tokens=3000,
+            max_tokens=4500,  # full output: narrative + eras + superlatives + stats
             cache_system=True,
         )
         return self._parse_json(response)
@@ -334,6 +343,10 @@ class LoreOrchestrator:
             else "Unknown"
         )
 
+        # Build rich lore context so roles reference the actual narrative
+        dynamics = lore.get("friendship_dynamics", {})
+        awards = lore.get("trip_lore_awards", {})
+
         user_prompt = prompts.CHARACTER_ROLE_USER.format(
             person_label=name,
             appearance_count=member.get("appearance_count", 0),
@@ -342,9 +355,15 @@ class LoreOrchestrator:
             upload_count=member.get("photos_uploaded", 0),
             in_group_shots=bool(member.get("appearance_ratio", 0) and member["appearance_ratio"] > 0.5),
             confession_text=member.get("confession_text") or "null",
+            trip_title=lore.get("trip_title", ""),
+            full_narrative=lore.get("season_recap", {}).get("full_narrative", ""),
+            group_structure=dynamics.get("group_structure", "undefined group dynamic"),
+            chaos_source=dynamics.get("chaos_source", "unclear"),
+            cooked_verdict=lore.get("cooked_verdict", ""),
+            cooked_level=lore.get("cooked_level", 60),
+            core_memory=awards.get("core_memory", ""),
             trip_personality_type=lore.get("trip_personality_type", "unknown vibe"),
             social_dynamic=aggregated.get("social_dynamic", "undefined group dynamic"),
-            cooked_level=lore.get("cooked_level", 60),
             trip_eras_json=json.dumps(lore.get("trip_eras", [])),
             other_upload_counts_json=json.dumps(other_uploads),
         )
@@ -352,7 +371,7 @@ class LoreOrchestrator:
         response = await self._call_claude(
             system=prompts.CHARACTER_ROLE_SYSTEM,
             messages=[{"role": "user", "content": user_prompt}],
-            max_tokens=800,
+            max_tokens=900,
         )
         role = self._parse_json(response)
         role["user_id"] = member["user_id"]
@@ -363,20 +382,27 @@ class LoreOrchestrator:
     # -------------------------------------------------------------------------
 
     async def _generate_receipt_stats(self, trip: dict, lore: dict, aggregated: dict) -> dict:
+        # Use real aggregated ratios — these are computed in aggregation step
+        most_photographed_ratio = aggregated.get("most_photographed_ratio_avg", 0.4)
+        group_shots_ratio = aggregated.get("group_shots_ratio_avg", 0.3)
+        late_night_ratio = aggregated.get("late_night_ratio_avg", aggregated.get("dominant_time_pattern", "unknown"))
+        food_ratio = aggregated.get("food_ratio_avg", aggregated.get("food_obsession_level", "moderate"))
+
         user_prompt = prompts.STATS_USER.format(
             total_photos=trip.get("total_photos", 0),
             duration_days=self._calculate_duration(trip),
             duration_nights=max(0, self._calculate_duration(trip) - 1),
             member_count=trip.get("member_count", 0),
-            late_night_ratio=aggregated.get("dominant_time_pattern", "unknown"),
-            food_ratio=aggregated.get("food_obsession_level", "moderate"),
+            late_night_ratio=late_night_ratio,
+            food_ratio=food_ratio,
             cooked_level=lore.get("cooked_level", 60),
-            peak_cooked_window=aggregated.get("peak_cooked_moment", "null"),
-            most_photographed_ratio=0.4,
+            peak_cooked_window=aggregated.get("peak_cooked_moment", "unknown"),
+            most_photographed_ratio=most_photographed_ratio,
             dominant_photographer=aggregated.get("photographer_dynamic", ""),
-            group_shots_ratio=0.3,
+            group_shots_ratio=group_shots_ratio,
             trip_personality=lore.get("trip_personality_type", ""),
             social_dynamic=aggregated.get("social_dynamic", ""),
+            peak_cooked_moment=aggregated.get("peak_cooked_moment", ""),
             recurring_behaviors_json=json.dumps(aggregated.get("recurring_behaviors_merged", [])),
         )
 
@@ -395,7 +421,7 @@ class LoreOrchestrator:
     # Superlatives
     # -------------------------------------------------------------------------
 
-    async def _generate_superlatives(self, lore: dict, members: list[dict]) -> list[dict]:
+    async def _generate_superlatives(self, lore: dict, members: list[dict], confessions: list[str] | None = None) -> list[dict]:
         members_payload = [
             {
                 "user_id": m["user_id"],
@@ -403,12 +429,26 @@ class LoreOrchestrator:
             }
             for m in members
         ]
-        lore_summary = f"Trip: {lore.get('trip_title')}. Tagline: {lore.get('tagline')}. Cooked: {lore.get('cooked_level')}/100. Verdict: {lore.get('cooked_verdict')}"
+        # Build rich lore summary so superlatives are specific to this trip
+        dynamics = lore.get("friendship_dynamics", {})
+        awards = lore.get("trip_lore_awards", {})
+        lore_summary = (
+            f"Trip title: {lore.get('trip_title', '')}. "
+            f"Tagline: {lore.get('tagline', '')}. "
+            f"Cooked: {lore.get('cooked_level', 0)}/100. "
+            f"Verdict: {lore.get('cooked_verdict', '')}. "
+            f"Full narrative: {lore.get('season_recap', {}).get('full_narrative', '')}. "
+            f"Group structure: {dynamics.get('group_structure', '')}. "
+            f"Chaos source: {dynamics.get('chaos_source', '')}. "
+            f"Core memory: {awards.get('core_memory', '')}. "
+            f"Trip villain: {awards.get('trip_villain', '')}. "
+            f"Trip MVP: {awards.get('trip_mvp', '')}."
+        )
 
         user_prompt = prompts.SUPERLATIVES_USER.format(
             lore_summary=lore_summary,
             members_json=json.dumps(members_payload),
-            confessions_json=json.dumps([]),
+            confessions_json=json.dumps(confessions or []),
         )
 
         response = await self._call_claude(

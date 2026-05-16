@@ -1,11 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CinematicText, AtmosphericBlob } from '@/components/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Play, Plus, X, ChevronRight, Share2 } from 'lucide-react';
+
+// Shared easing constant
+const EXPO_OUT = 'cubic-bezier(0.16,1,0.3,1)';
+const makeTransition = (delay = '0s') =>
+  `opacity 0.65s ${EXPO_OUT} ${delay}, transform 0.65s ${EXPO_OUT} ${delay}, filter 0.65s ${EXPO_OUT} ${delay}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE NAVBAR
@@ -123,9 +128,9 @@ export function ArchiveHero({ trip }: { trip: any }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8 }}
+      initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
       className="relative overflow-hidden rounded-[2.5rem] bg-[#060604] min-h-[80vh] flex flex-col justify-end"
     >
       {/* ── Layer 1: blurred photo or deep gradient ── */}
@@ -285,8 +290,9 @@ export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCt
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, x: -20, filter: 'blur(6px)' }}
+      animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+      transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
       className="group relative flex rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] overflow-hidden hover:border-white/[0.12] transition-all duration-500 hover:shadow-3xl"
     >
       {/* Cinematic photo / gradient panel */}
@@ -578,9 +584,10 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
+      initial={{ opacity: 0, filter: 'blur(8px)' }}
+      animate={{ opacity: 1, filter: 'blur(0px)' }}
+      exit={{ opacity: 0, filter: 'blur(8px)', scale: 0.98 }}
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
       className="fixed inset-0 z-[200] bg-[#060604] flex flex-col items-center justify-center p-8 overflow-hidden"
     >
       {/* Ambient */}
@@ -603,10 +610,10 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
         <AnimatePresence mode="wait">
           <motion.div
             key={step + 'content'}
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -40, opacity: 0 }}
-            transition={{ duration: 0.4 }}
+            initial={{ y: 30, opacity: 0, filter: 'blur(6px)' }}
+            animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+            exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-8"
           >
             <span className="text-[10px] uppercase tracking-[0.5em] text-white/25 font-vibe font-black">
@@ -659,6 +666,8 @@ export function CookedScoreLight({ trip }: { trip: any }) {
   const verdict = lore?.cooked_verdict ?? '—';
   const explanation = lore?.cooked_explanation;
   const accentColor = level >= 76 ? '#FF4D4D' : level >= 51 ? '#D49E2D' : '#2D9E8B';
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 300); return () => clearTimeout(t); }, []);
 
   return (
     <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-5">
@@ -693,12 +702,15 @@ export function CookedScoreLight({ trip }: { trip: any }) {
       {/* Progress bar */}
       <div className="space-y-1.5 pt-1">
         <div className="h-1.5 bg-black/[0.08] rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${level}%` }}
-            transition={{ duration: 1.5, ease: 'easeOut' }}
+          <div
             className="h-full rounded-full"
-            style={{ backgroundColor: accentColor }}
+            style={{
+              width: `${level}%`,
+              backgroundColor: accentColor,
+              transformOrigin: 'left',
+              transform: mounted ? 'scaleX(1)' : 'scaleX(0)',
+              transition: 'transform 1.5s cubic-bezier(0.16,1,0.3,1)',
+            }}
           />
         </div>
         <div className="flex justify-between text-[8px] font-vibe font-black uppercase tracking-widest text-black/20">
@@ -713,6 +725,8 @@ export function CookedScoreLight({ trip }: { trip: any }) {
 export function BadFeelingsChart({ trip }: { trip: any }) {
   const lore = trip?.lore_json;
   const level = lore?.cooked_level ?? 60;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 300); return () => clearTimeout(t); }, []);
   const stats = (lore?.receipt_stats || []).filter((s: any) => s.label && s.value);
 
   const feelings: { label: string; value: number; color: string }[] = stats.length >= 3
@@ -742,12 +756,15 @@ export function BadFeelingsChart({ trip }: { trip: any }) {
               <span className="text-[10px] font-vibe font-black tabular-nums" style={{ color: f.color }}>{Math.round(f.value)}%</span>
             </div>
             <div className="h-1 bg-black/[0.07] rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${f.value}%` }}
-                transition={{ duration: 1.1, delay: i * 0.12, ease: 'easeOut' }}
+              <div
                 className="h-full rounded-full"
-                style={{ backgroundColor: f.color }}
+                style={{
+                  width: `${f.value}%`,
+                  backgroundColor: f.color,
+                  transformOrigin: 'left',
+                  transform: mounted ? 'scaleX(1)' : 'scaleX(0)',
+                  transition: `transform 1.1s cubic-bezier(0.16,1,0.3,1) ${i * 0.12}s`,
+                }}
               />
             </div>
           </div>

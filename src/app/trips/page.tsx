@@ -51,26 +51,43 @@ export default function TripsPage() {
               style={{ borderBottom: '1px solid rgba(245,240,232,0.05)' }}>
         <div className="space-y-1">
           <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
-             style={{ color: 'rgba(255,77,77,0.5)' }}>
+             style={{
+               color: 'rgba(255,77,77,0.5)',
+               opacity: revealed ? 1 : 0,
+               transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+               filter: revealed ? 'blur(0px)' : 'blur(6px)',
+               transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s',
+               willChange: 'transform, opacity',
+             }}>
             ● RECOVERED ARCHIVES
           </p>
           <h1 className="font-display font-black uppercase tracking-tighter leading-[0.85]"
-              style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'rgba(245,240,232,0.92)' }}>
+              style={{
+                fontSize: 'clamp(36px, 6vw, 72px)', color: 'rgba(245,240,232,0.92)',
+                opacity: revealed ? 1 : 0,
+                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                transition: 'opacity 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, transform 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, filter 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s',
+                willChange: 'transform, opacity',
+              }}>
             THE <em className="italic" style={{ color: '#FF4D4D' }}>SEASONS</em>
           </h1>
         </div>
 
         <Link
           href="/trips/new"
-          className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
           style={{
             border: '1px solid rgba(255,77,77,0.4)',
             background: 'rgba(255,77,77,0.08)',
             color: 'rgba(255,77,77,0.9)',
             boxShadow: '0 0 20px rgba(255,77,77,0.1)',
+            transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), background 0.3s ease',
+            willChange: 'transform',
+            opacity: revealed ? 1 : 0,
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 40px rgba(255,77,77,0.3)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 20px rgba(255,77,77,0.1)'; }}
+          onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.transform = 'translate3d(0,-2px,0) scale(1.02)'; el.style.boxShadow = '0 8px 40px rgba(255,77,77,0.3)'; }}
+          onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.transform = 'translate3d(0,0,0) scale(1)'; el.style.boxShadow = '0 0 20px rgba(255,77,77,0.1)'; }}
         >
           <Plus size={14} /> INITIALIZE SEASON
         </Link>
@@ -108,8 +125,10 @@ export default function TripsPage() {
               </p>
             </div>
             <Link href="/trips/new"
-                  className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105"
-                  style={{ border: '1px solid rgba(255,77,77,0.4)', background: 'rgba(255,77,77,0.08)', color: 'rgba(255,77,77,0.9)' }}>
+                  className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest"
+                  style={{ border: '1px solid rgba(255,77,77,0.4)', background: 'rgba(255,77,77,0.08)', color: 'rgba(255,77,77,0.9)', transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)', willChange: 'transform' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.transform = 'translate3d(0,-2px,0) scale(1.02)'; el.style.boxShadow = '0 8px 30px rgba(255,77,77,0.2)'; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.transform = 'translate3d(0,0,0) scale(1)'; el.style.boxShadow = 'none'; }}>
               INITIALIZE FIRST SEASON →
             </Link>
           </div>
@@ -133,21 +152,22 @@ export default function TripsPage() {
                     border: `1px solid rgba(245,240,232,0.07)`,
                     boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)`,
                     opacity: revealed ? 1 : 0,
-                    transform: revealed ? 'translateY(0)' : 'translateY(20px)',
-                    transition: `opacity 0.6s ease ${animDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, box-shadow 0.4s ease, border-color 0.3s ease`,
-                    willChange: 'transform',
+                    transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
+                    filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                    transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, filter 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), border-color 0.3s cubic-bezier(0.16,1,0.3,1)`,
+                    willChange: 'transform, opacity',
                     transformStyle: 'preserve-3d',
                   }}
                   onFocus={e => {
                     // Keyboard focus: lift + glow (no 3D tilt)
                     const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.transform = 'translateY(-4px)';
+                    el.style.transform = 'translate3d(0,-4px,0)';
                     el.style.borderColor = `${accent}60`;
                     el.style.boxShadow = `0 20px 52px rgba(0,0,0,0.5), 0 0 40px ${glow}`;
                   }}
                   onBlur={e => {
                     const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.transform = 'translateY(0)';
+                    el.style.transform = 'translate3d(0,0,0)';
                     el.style.borderColor = 'rgba(245,240,232,0.07)';
                     el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)';
                   }}
@@ -156,13 +176,13 @@ export default function TripsPage() {
                     const r = el.getBoundingClientRect();
                     const x = (e.clientX - r.left) / r.width - 0.5;
                     const y = (e.clientY - r.top) / r.height - 0.5;
-                    el.style.transform = `perspective(800px) rotateX(${-y * 6}deg) rotateY(${x * 6}deg) translateY(-4px)`;
+                    el.style.transform = `perspective(800px) rotateX(${-y * 6}deg) rotateY(${x * 6}deg) translate3d(0,-4px,0)`;
                     el.style.borderColor = `${accent}40`;
                     el.style.boxShadow = `0 20px 52px rgba(0,0,0,0.5), 0 0 40px ${glow}, inset 0 1px 0 rgba(245,240,232,0.07)`;
                   }}
                   onMouseLeave={e => {
                     const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.transform = revealed ? 'translateY(0) perspective(800px) rotateX(0) rotateY(0)' : '';
+                    el.style.transform = revealed ? 'translate3d(0,0,0) perspective(800px) rotateX(0) rotateY(0)' : '';
                     el.style.borderColor = 'rgba(245,240,232,0.07)';
                     el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)';
                   }}
@@ -214,8 +234,8 @@ export default function TripsPage() {
                         ENTER ARCHIVE
                       </p>
                       {/* Arrow — fully visible, accent color, clear */}
-                      <span className="font-mono text-base font-bold transition-transform duration-300 group-hover:translate-x-1.5"
-                            style={{ color: accent }}>
+                      <span className="font-mono text-base font-bold group-hover:translate-x-1.5"
+                            style={{ color: accent, transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1)' }}>
                         →
                       </span>
                     </div>
@@ -226,17 +246,22 @@ export default function TripsPage() {
 
             {/* Add new card */}
             <Link href="/trips/new"
-                  className="group flex flex-col items-center justify-center rounded-2xl transition-all duration-400 hover:scale-[1.02]"
+                  className="group flex flex-col items-center justify-center rounded-2xl"
                   style={{
                     minHeight: 200,
                     border: '1px dashed rgba(245,240,232,0.08)',
                     background: 'rgba(245,240,232,0.02)',
                     opacity: revealed ? 1 : 0,
-                    transition: `opacity 0.6s ease ${(trips?.length ?? 0) * 0.08}s`,
+                    transform: revealed ? 'translate3d(0,0,0) scale(1)' : 'translate3d(0,24px,0) scale(0.95)',
+                    filter: revealed ? 'blur(0px)' : 'blur(6px)',
+                    transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${(trips?.length ?? 0) * 0.08}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${(trips?.length ?? 0) * 0.08}s, filter 0.6s cubic-bezier(0.16,1,0.3,1) ${(trips?.length ?? 0) * 0.08}s`,
+                    willChange: 'transform, opacity',
                   }}>
               <div className="space-y-3 text-center">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto transition-all group-hover:scale-110"
-                     style={{ border: '1px solid rgba(255,77,77,0.25)', background: 'rgba(255,77,77,0.05)' }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto"
+                     style={{ border: '1px solid rgba(255,77,77,0.25)', background: 'rgba(255,77,77,0.05)', transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1)' }}
+                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.1)'; }}
+                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; }}>
                   <Plus size={18} style={{ color: 'rgba(255,77,77,0.5)' }} />
                 </div>
                 <p className="font-mono text-[8px] uppercase tracking-[0.4em]" style={{ color: 'rgba(245,240,232,0.2)' }}>
