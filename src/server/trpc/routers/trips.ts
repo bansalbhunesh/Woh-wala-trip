@@ -180,6 +180,13 @@ export const tripsRouter = router({
         });
       }
 
+      // Block re-trigger if already processing
+      const { data: currentTrip } = await supabase
+        .from('trips').select('lore_status').eq('id', input.tripId).single();
+      if ((currentTrip as any)?.lore_status === 'processing') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Lore generation is already running. Check back in a few minutes.' });
+      }
+
       // Count actual photos — don't trust the cached total_photos column
       const { count: photoCount } = await supabase
         .from('photos')

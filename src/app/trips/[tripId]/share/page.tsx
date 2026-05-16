@@ -34,7 +34,10 @@ export default function SharePage() {
   return (
     <div className="min-h-screen bg-black text-[#F5F0E8] font-vibe selection:bg-cooked-bg selection:text-white pb-20">
       {/* Share Header */}
-      <header className="px-6 pt-12 pb-8">
+      <header className="px-6 pt-8 pb-8">
+        <Link href={`/trips/${tripId}`} className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/25 font-vibe font-black hover:text-white/50 transition-colors mb-6">
+          <span>←</span> Back to Archive
+        </Link>
         <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-vibe mb-2">Export Identity</p>
         <h1 className="font-cinematic font-black text-4xl tracking-tighter leading-none">Pick a card.<br />Expose your group.</h1>
       </header>
@@ -166,20 +169,21 @@ export default function SharePage() {
             navigator.clipboard.writeText(url).then(() => alert('Invite link copied!'));
           }}
         />
-        <a
-          href={`/api/card/${tripId}?download=1`}
-          download={`${tripName.replace(/\s+/g, '-')}-card.png`}
-          className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group"
-        >
-          <div className="flex gap-4 items-center">
-            <div className="text-2xl">⬇</div>
-            <div className="text-left">
-              <div className="font-vibe font-bold text-sm text-white/80 group-hover:text-white">Download all cards</div>
-              <div className="text-[10px] text-white/25 mt-1 font-vibe">PNG · 1080×1920</div>
+        {lore && (
+          <a
+            href={`/api/card/${tripId}?download=1`}
+            className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group"
+          >
+            <div className="flex gap-4 items-center">
+              <div className="text-2xl">⬇</div>
+              <div className="text-left">
+                <div className="font-vibe font-bold text-sm text-white/80 group-hover:text-white">Download lore card</div>
+                <div className="text-[10px] text-white/25 mt-1 font-vibe">PNG · 1080×1920</div>
+              </div>
             </div>
-          </div>
-          <div className="text-white/20 group-hover:text-white/50 transition-colors">→</div>
-        </a>
+            <div className="text-white/20 group-hover:text-white/50 transition-colors">→</div>
+          </a>
+        )}
       </section>
     </div>
   );

@@ -157,7 +157,10 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
         </section>
       )}
 
-      <ArchiveFooter />
+      <ArchiveFooter
+        publicUrl={`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/t/${trip.invite_code}`}
+        posterUrl={`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/api/card/${trip.id}`}
+      />
     </div>
   );
 }

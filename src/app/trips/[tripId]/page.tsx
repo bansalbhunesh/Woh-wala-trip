@@ -286,7 +286,10 @@ export default function TripRoomPage() {
             </div>
           </div>
 
-          <ArchiveFooter />
+          <ArchiveFooter
+            publicUrl={trip?.invite_code ? `/t/${trip.invite_code}` : undefined}
+            posterUrl={trip?.id ? `/api/card/${trip.id}` : undefined}
+          />
         </main>
       )}
     </div>

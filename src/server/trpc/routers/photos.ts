@@ -111,14 +111,19 @@ export const photosRouter = router({
         await supabase.from('trips' as never).update({ total_photos: (t?.total_photos || 0) + 1 }).eq('id', input.tripId);
       } catch { /* non-critical */ }
 
-      await fetch(`${process.env.AI_WORKER_URL!}/generate-thumbnail`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-        },
-        body: JSON.stringify({ photo_id: data.id }),
-      });
+      // Fire-and-forget thumbnail — never block/fail the upload if worker is down
+      const workerUrl = process.env.AI_WORKER_URL;
+      if (workerUrl && !workerUrl.includes('localhost')) {
+        fetch(`${workerUrl}/generate-thumbnail`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+          },
+          body: JSON.stringify({ photo_id: data.id }),
+          signal: AbortSignal.timeout(6000),
+        }).catch(e => console.warn('[thumbnail] worker unreachable:', e.message));
+      }
 
       return { photoId: data.id };
     }),

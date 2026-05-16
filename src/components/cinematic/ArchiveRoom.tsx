@@ -816,7 +816,33 @@ export function LightCastWidget({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE FOOTER
 // ─────────────────────────────────────────────────────────────────────────────
-export function ArchiveFooter() {
+export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; posterUrl?: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopyLink = () => {
+    const url = publicUrl
+      ? (publicUrl.startsWith('http') ? publicUrl : `${window.location.origin}${publicUrl}`)
+      : window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleSharePoster = () => {
+    const url = posterUrl
+      ? (posterUrl.startsWith('http') ? posterUrl : `${window.location.origin}${posterUrl}`)
+      : window.location.href;
+    if (navigator.share) {
+      navigator.share({ url, title: 'Woh Wala Trip — Archive' }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
+
   return (
     <footer className="mt-40 border-t border-white/[0.04] pt-24 pb-48 px-6">
       <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-16">
@@ -830,11 +856,17 @@ export function ArchiveFooter() {
         <div className="space-y-6">
           <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Share the Season</span>
           <div className="flex flex-col gap-3">
-            <button className="px-8 py-3.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all w-fit">
+            <button
+              onClick={handleSharePoster}
+              className="px-8 py-3.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all w-fit"
+            >
               Share Poster
             </button>
-            <button className="px-8 py-3.5 bg-white/5 border border-white/10 text-white/40 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all w-fit">
-              Copy O.G. Link
+            <button
+              onClick={handleCopyLink}
+              className="px-8 py-3.5 bg-white/5 border border-white/10 text-white/40 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all w-fit"
+            >
+              {copied ? '✓ Copied!' : 'Copy O.G. Link'}
             </button>
           </div>
         </div>
@@ -842,9 +874,14 @@ export function ArchiveFooter() {
         <div className="space-y-6 md:text-right">
           <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Micro-Lore Links</span>
           <div className="flex flex-col gap-3">
-            {['Privacy Policy', 'Terms of Archive', 'Report a Trip'].map(l => (
-              <a key={l} href="#" className="text-[11px] text-white/15 hover:text-white/40 transition-colors font-data">{l}</a>
-            ))}
+            <span className="text-[11px] text-white/15 font-data">Privacy Policy · coming soon</span>
+            <span className="text-[11px] text-white/15 font-data">Terms of Archive · coming soon</span>
+            <a
+              href="mailto:bhuneshbansal20039888@gmail.com?subject=Report a Trip"
+              className="text-[11px] text-white/15 hover:text-white/40 transition-colors font-data"
+            >
+              Report a Trip
+            </a>
           </div>
         </div>
       </div>
