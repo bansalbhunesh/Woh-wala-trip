@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+
+// Hash OTP with HMAC-SHA256 before storing — no plaintext in DB
+function hashOtp(otp: string): string {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
+  return createHmac('sha256', secret).update(otp).digest('hex');
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

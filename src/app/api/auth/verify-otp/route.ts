@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
+
+function hashOtp(otp: string): string {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
+  return createHmac('sha256', secret).update(otp).digest('hex');
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +31,13 @@ export async function POST(req: NextRequest) {
     );
 
     // First try: verify against our otp_codes table (custom OTP)
+    // Compare hashed token — codes are stored hashed (HMAC-SHA256)
+    const hashedToken = hashOtp(token.trim());
     const { data: otpRow, error: selectErr } = await supabase
       .from('otp_codes' as never)
       .select('*')
       .eq('email', email.trim())
-      .eq('code', token.trim())
+      .eq('code', hashedToken)
       .eq('used', false)
       .gte('expires_at', new Date().toISOString())
       .single() as { data: { email: string; code: string; expires_at: string } | null; error: unknown };

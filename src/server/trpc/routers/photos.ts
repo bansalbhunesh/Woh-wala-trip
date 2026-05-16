@@ -139,27 +139,31 @@ export const photosRouter = router({
           message: error.message,
         });
 
+      const photos = (data as any[] || []);
+      if (photos.length === 0) return [];
+
       const adminSupabase = createSupabaseServiceClient();
-      const photosWithUrls = await Promise.all(
-        (data as any[] || []).map(async (photo) => {
-          const { data: urlData } = await adminSupabase.storage
-            .from('trip-photos')
-            .createSignedUrl(photo.storage_path, 3600);
 
-          const { data: thumbData } = photo.thumbnail_path
-            ? await adminSupabase.storage
-                .from('trip-photos')
-                .createSignedUrl(photo.thumbnail_path, 3600)
-            : { data: null };
+      // Batch all paths into 2 API calls instead of N*2 individual calls
+      const photoPaths = photos.map((p: any) => p.storage_path);
+      const thumbPaths = photos.filter((p: any) => p.thumbnail_path).map((p: any) => p.thumbnail_path);
 
-          return {
-            ...photo,
-            url: urlData?.signedUrl,
-            thumbnailUrl: thumbData?.signedUrl,
-          };
-        })
-      );
+      const [photoUrls, thumbUrls] = await Promise.all([
+        adminSupabase.storage.from('trip-photos').createSignedUrls(photoPaths, 3600),
+        thumbPaths.length > 0
+          ? adminSupabase.storage.from('trip-photos').createSignedUrls(thumbPaths, 3600)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      return photosWithUrls;
+      // Build lookup maps by path
+      const urlByPath = new Map<string, string>();
+      (photoUrls.data || []).forEach((u: any) => { if (u.signedUrl) urlByPath.set(u.path, u.signedUrl); });
+      (thumbUrls.data || []).forEach((u: any) => { if (u.signedUrl) urlByPath.set(u.path, u.signedUrl); });
+
+      return photos.map((photo: any) => ({
+        ...photo,
+        url: urlByPath.get(photo.storage_path) ?? null,
+        thumbnailUrl: photo.thumbnail_path ? (urlByPath.get(photo.thumbnail_path) ?? null) : null,
+      }));
     }),
 });
