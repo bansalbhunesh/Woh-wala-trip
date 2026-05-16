@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceClient } from '../../../../../../lib/supabase/server';
 import { loadCardFonts } from '../../../../../../lib/og/fonts';
 import { PALETTES } from '../../../../../../lib/og/colors';
 import { qrDataUrl } from '../../../../../../lib/og/qr';
@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ tripId: string; userId: string }> }
 ) {
   const { tripId, userId } = await params;
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const supabase = createSupabaseServiceClient();
 
   const { data: member, error } = await supabase
     .from('trip_members')

@@ -22,31 +22,43 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
   }, []);
 
   const payDigital = async () => {
-    const orderRes = await fetch('/api/payments/create-order', {
-      method: 'POST',
-      body: JSON.stringify({ tripId, tier: 'digital' }),
-    });
-    const order = await orderRes.json();
+    try {
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId, tier: 'digital' }),
+      });
+      if (!orderRes.ok) throw new Error(`Order failed: ${orderRes.status}`);
+      const order = await orderRes.json();
 
-    const rzp = new window.Razorpay({
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: 29900,
-      currency: 'INR',
-      name: 'Woh Wala Trip',
-      description: 'Digital trip archive',
-      order_id: order.id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      handler: async (response: any) => {
-        await upgradeTier.mutateAsync({
-          tripId,
-          tier: 'digital',
-          paymentId: response.razorpay_payment_id,
-        });
-        router.push(`/trips/${tripId}`);
-      },
-      theme: { color: '#000000' },
-    });
-    rzp.open();
+      const rzp = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount ?? 29900, // use server amount, fallback to 299 INR
+        currency: order.currency ?? 'INR',
+        name: 'Woh Wala Trip',
+        description: 'Digital trip archive',
+        order_id: order.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handler: async (response: any) => {
+          try {
+            await upgradeTier.mutateAsync({
+              tripId,
+              tier: 'digital',
+              paymentId: response.razorpay_payment_id,
+            });
+            router.push(`/trips/${tripId}`);
+          } catch (err) {
+            console.error('[upgrade] tier update failed:', err);
+            alert('Payment received but upgrade failed. Contact support.');
+          }
+        },
+        theme: { color: '#000000' },
+      });
+      rzp.open();
+    } catch (err) {
+      console.error('[upgrade] payment init failed:', err);
+      alert('Could not start payment. Try again.');
+    }
   };
 
   return (

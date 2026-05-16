@@ -92,7 +92,7 @@ export const battlesRouter = router({
       return data;
     }),
 
-  vote: publicProcedure
+  vote: protectedProcedure
     .input(
       z.object({
         battleId: z.string().uuid(),

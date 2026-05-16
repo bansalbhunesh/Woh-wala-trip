@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceClient } from '../../../../../../lib/supabase/server';
 import type { Database } from '../../../../../../lib/database.types';
 
 type Member = Database['public']['Tables']['trip_members']['Row'];
@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ tripId: string; memberId: string }> }
 ) {
   const { tripId, memberId } = await params;
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const supabase = createSupabaseServiceClient();
   const query = supabase
     .from('trip_members')
     .select('*, profiles:user_id(display_name), trips(*)')

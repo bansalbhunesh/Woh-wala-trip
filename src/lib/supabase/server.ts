@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 
@@ -35,14 +36,9 @@ export async function createSupabaseServerClient() {
  * Uses the raw supabase-js client (not the SSR wrapper) so admin APIs work.
  */
 export function createSupabaseServiceClient() {
-  // Use raw supabase-js (not SSR wrapper) so auth.admin methods work correctly
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createClient } = require('@supabase/supabase-js') as typeof import('@supabase/supabase-js');
   return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-    }
+    { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

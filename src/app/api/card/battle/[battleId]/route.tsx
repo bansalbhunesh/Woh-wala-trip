@@ -6,7 +6,7 @@ import { qrDataUrl } from '../../../../../lib/og/qr';
 import { renderCard, errorImage } from '../../../../../lib/og/render';
 import { CardFrame, Eyebrow, CardFooter } from '../../../../../lib/og/components';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(
   req: NextRequest,
@@ -32,15 +32,18 @@ export async function GET(
   const b = battle as any;
   const tripA = b.trip_a;
   const tripB = b.trip_b;
-  const maxScore = Math.max((b.trip_a as any)?.chaos_score ?? 0, (b.trip_b as any)?.chaos_score ?? 0);
+
+  // Null-safe guard — joined trips may be missing
+  if (!tripA || !tripB) return errorImage('Battle trip data incomplete');
+
+  const maxScore = Math.max(tripA?.chaos_score ?? 0, tripB?.chaos_score ?? 0);
   const palette = maxScore >= 76 ? PALETTES.cooked : PALETTES.delusional;
   const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
-    loadCardFonts(origin),
-    qrDataUrl(`${origin}/trips/${tripA.id}`, {
-      dark: palette.ink,
-    }),
+    loadCardFonts(origin).catch(() => null),
+    qrDataUrl(`${origin}/trips/${tripA.id}`, { dark: palette.ink }),
   ]);
+  if (!fonts) return errorImage('Failed to load fonts');
 
   return renderCard(
     <CardFrame palette={palette}>
