@@ -52,7 +52,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${nunito.variable} ${firaMono.variable} antialiased`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${bricolage.variable} ${nunito.variable} ${firaMono.variable} antialiased`}>
       <body className="overflow-x-hidden bg-[#060604] text-[#F5F0E8]">
         <TRPCProvider><PostHogProvider>{children}</PostHogProvider></TRPCProvider>
       </body>

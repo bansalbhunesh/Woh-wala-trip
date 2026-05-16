@@ -188,7 +188,7 @@ export default function YearWrapPage({ params }: { params: Promise<{ year: strin
             <div className="w-10 h-0.5 mx-auto rounded-full bg-[#2D9E8B]" />
             <p className="font-cinematic italic text-white/85 leading-relaxed"
                style={{ fontSize: 'clamp(20px, 5vw, 28px)', animation: 'wrap-rise 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both', opacity: 0 }}>
-              &ldquo;{year} was the year the mythology solidified. The archive remembers everything.&rdquo;
+              &ldquo;{year}{' '}was the year the mythology solidified. The archive remembers everything.&rdquo;
             </p>
             <div className="w-10 h-0.5 mx-auto rounded-full bg-[#2D9E8B]"
                  style={{ animation: 'fade-in 0.4s ease 0.5s both', opacity: 0 }} />

@@ -38,7 +38,7 @@ html, body {
   overflow-x: hidden;
 }
 * { -webkit-tap-highlight-color: transparent; }
-html { scroll-behavior: smooth; }
+html[data-scroll-behavior="smooth"] { scroll-behavior: smooth; }
 
 ::selection { background: var(--accent); color: oklch(97% 0.008 70); }
 
