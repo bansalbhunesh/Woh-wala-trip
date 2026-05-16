@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import type { LoreJson } from '@/lib/types';
 import ReactionBar from '@/components/experience/ReactionBar';
+import { SlidePhotoBackground } from '@/components/experience/SlidePhotoBackground';
+import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }
@@ -55,12 +57,16 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
   const [dir, setDir] = useState<'forward' | 'backward'>('forward');
   const [animKey, setAnimKey] = useState(0);
   const [slamActive, setSlamActive] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
   const touchStart = useRef<number | null>(null);
 
   const { data: tripData } = trpc.trips.getFull.useQuery({ tripId });
   const lore = (tripData as any)?.trip?.lore_json as LoreJson | null;
   const loreStatus = (tripData as any)?.trip?.lore_status as string | undefined;
   const members = (tripData as any)?.members || [];
+
+  const { data: photoList } = trpc.photos.list.useQuery({ tripId });
+  const photos = (photoList as any[]) || [];
 
   // Redirect if data loaded but lore not ready
   useEffect(() => {
@@ -80,6 +86,7 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
     );
   }
 
+  const cookedScore = (lore as any)?.cooked_level ?? 60;
   const slides = buildSlides(tripId, lore, members);
   const current = slides[idx];
   const isFirst = idx === 0;
@@ -140,6 +147,15 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
         ))}
       </div>
 
+      {/* Mood Soundtrack */}
+      <div className="absolute top-6 right-16 z-50">
+        <MoodSoundtrack
+          cookedScore={cookedScore}
+          active={soundOn}
+          onToggle={() => setSoundOn(p => !p)}
+        />
+      </div>
+
       {/* Exit */}
       <button onClick={e => { e.stopPropagation(); router.push(`/trips/${tripId}`); }}
               className="absolute top-6 right-4 z-50 text-white/40 text-xs font-vibe uppercase tracking-wider hover:text-white/65 transition-colors duration-200">
@@ -149,9 +165,10 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
       {/* Directional slide — key remounts on every nav, direction drives the enter animation */}
       <div
         key={animKey}
-        className="min-h-screen flex flex-col items-center justify-center px-8 py-20"
+        className="min-h-screen flex flex-col items-center justify-center px-8 py-20 relative"
         style={{ animation: `${slideAnim} 0.35s cubic-bezier(0.16,1,0.3,1) both` }}
       >
+        <SlidePhotoBackground photos={photos} slideIdx={idx} visible={current.type !== 'title'} />
         <SlideRenderer
           slide={current}
           router={router}
@@ -196,6 +213,9 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
           from { opacity: 0; transform: translateY(30px); filter: blur(4px); }
           to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
         }
+        @keyframes sound-bar-1 { from{height:4px} to{height:10px} }
+        @keyframes sound-bar-2 { from{height:10px} to{height:4px} }
+        @keyframes sound-bar-3 { from{height:6px} to{height:12px} }
       `}</style>
     </div>
   );

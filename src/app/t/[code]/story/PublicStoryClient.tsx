@@ -3,6 +3,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LoreJson } from '@/lib/types';
 import ReactionBar from '@/components/experience/ReactionBar';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { SlidePhotoBackground } from '@/components/experience/SlidePhotoBackground';
+import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }
@@ -53,6 +56,7 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
   const [dir, setDir] = useState<'forward' | 'backward'>('forward');
   const [animKey, setAnimKey] = useState(0);
   const [slamActive, setSlamActive] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
   const touchStart = useRef<number | null>(null);
 
   const slides = buildSlides(inviteCode, lore, members);
@@ -72,6 +76,7 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
     setSlamActive(false);
   }, [current.type, animKey]);
 
+  const cookedScore = (lore.cooked_level ?? (lore as any).chaos_score ?? 60) as number;
   const cookedLevel = slides.find(s => s.type === 'cooked')
     ? ((lore.cooked_level ?? (lore as any).chaos_score ?? 84) as number)
     : 0;
@@ -99,6 +104,15 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
                  style={{ width: i < idx ? '100%' : i === idx ? '50%' : '0%', boxShadow: i === idx ? '0 0 6px rgba(255,255,255,0.35)' : 'none' }} />
           </div>
         ))}
+      </div>
+
+      {/* Mood Soundtrack */}
+      <div className="absolute top-6 right-24 z-50">
+        <MoodSoundtrack
+          cookedScore={cookedScore}
+          active={soundOn}
+          onToggle={() => setSoundOn(p => !p)}
+        />
       </div>
 
       {/* Back to overview */}
@@ -133,6 +147,9 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
         @keyframes rise { from{opacity:0;transform:translateY(20px);filter:blur(4px)} to{opacity:1;transform:translateY(0);filter:blur(0)} }
         @keyframes fade-in { from{opacity:0} to{opacity:1} }
         @keyframes flip { from{opacity:0;transform:perspective(800px) rotateY(-90deg) scale(0.8)} to{opacity:1;transform:perspective(800px) rotateY(0) scale(1)} }
+        @keyframes sound-bar-1 { from{height:4px} to{height:10px} }
+        @keyframes sound-bar-2 { from{height:10px} to{height:4px} }
+        @keyframes sound-bar-3 { from{height:6px} to{height:12px} }
       `}</style>
     </div>
   );
