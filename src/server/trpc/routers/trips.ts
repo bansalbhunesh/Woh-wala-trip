@@ -220,9 +220,9 @@ export const tripsRouter = router({
       // Also set processing_started_at so the stuck-job cron can detect and reset stalled runs.
       const { data: claimed } = await supabase
         .from('trips')
-        .update({ lore_status: 'processing', processing_started_at: new Date().toISOString() } as any)
+        .update({ lore_status: 'processing', processing_started_at: new Date().toISOString() })
         .eq('id', input.tripId)
-        .neq('lore_status' as any, 'processing')
+        .neq('lore_status', 'processing')
         .select('id');
 
       if (!claimed || (claimed as any[]).length === 0) {

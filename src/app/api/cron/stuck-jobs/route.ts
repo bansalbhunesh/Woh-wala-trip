@@ -14,12 +14,13 @@ export async function GET(req: NextRequest) {
   const supabase = createSupabaseServiceClient();
   const cutoff = new Date(Date.now() - 25 * 60 * 1000).toISOString();
 
-  const { data: stuck, error } = await supabase
-    .from('trips' as never)
-    .update({ lore_status: 'failed', processing_started_at: null } as never)
-    .eq('lore_status' as never, 'processing')
-    .lt('processing_started_at' as never, cutoff)
-    .select('id, name') as any;
+  const db = supabase as any;
+  const { data: stuck, error } = await db
+    .from('trips')
+    .update({ lore_status: 'failed', processing_started_at: null })
+    .eq('lore_status', 'processing')
+    .lt('processing_started_at', cutoff)
+    .select('id, name');
 
   if (error) {
     console.error('[stuck-jobs] query error:', error.message);
