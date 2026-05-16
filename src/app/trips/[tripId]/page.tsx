@@ -370,6 +370,7 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
   const [active, setActive] = useState<ActiveUpload | null>(null);
   const [queue, setQueue] = useState<File[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [optimisticCount, setOptimisticCount] = useState(0); // immediate count update
   const inputRef = useRef<HTMLInputElement>(null);
   const { data: photos, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
   const getUploadUrl = trpc.photos.getUploadUrl.useMutation();
@@ -404,6 +405,7 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
       setActive(prev => prev ? { ...prev, progress: 100 } : prev);
 
       await confirmUpload.mutateAsync({ tripId, storagePath, fileSize: file.size, mimeType: file.type });
+      setOptimisticCount(c => c + 1); // enable Generate button immediately on 5th photo
       await refetchPhotos();
       onPhotosChanged();
 
@@ -441,7 +443,8 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
     }
   };
 
-  const photoCount = photos?.length || 0;
+  // Use whichever is higher — optimistic (immediate) or confirmed (from DB)
+  const photoCount = Math.max(photos?.length || 0, optimisticCount);
   const canGenerate = photoCount >= 5;
   const needed = Math.max(0, 5 - photoCount);
   const isActive = !!active;
@@ -597,15 +600,21 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
           <div className="flex flex-wrap gap-2 justify-center">
             {(photos || []).map((photo: any) => (
               <div key={photo.id}
-                   className="rounded-xl overflow-hidden"
+                   className="rounded-xl overflow-hidden relative"
                    style={{
                      width: 48, height: 48,
                      border: '1px solid rgba(245,240,232,0.08)',
                      background: 'rgba(245,240,232,0.04)',
                      animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
                    }}>
-                {(photo.thumbnailUrl || photo.url) && (
+                {(photo.thumbnailUrl || photo.url) ? (
                   <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  // Placeholder — photo uploaded but thumbnail not generated yet
+                  <div className="w-full h-full flex items-center justify-center"
+                       style={{ background: 'rgba(255,77,77,0.06)' }}>
+                    <div className="w-3 h-3 rounded-full" style={{ background: 'rgba(255,77,77,0.3)', animation: 'pulse-soft 1.5s ease-in-out infinite' }} />
+                  </div>
                 )}
               </div>
             ))}

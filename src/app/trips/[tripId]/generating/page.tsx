@@ -25,7 +25,14 @@ export default function GeneratingPage() {
 
   const { data: tripData } = trpc.trips.getFull.useQuery(
     { tripId },
-    { refetchInterval: (data) => (data ? 4000 : false) } // stop polling if no data (auth error)
+    {
+      // Keep polling until lore is ready or failed — don't stop just because data arrived
+      refetchInterval: (data) => {
+        const status = (data as any)?.trip?.lore_status;
+        if (status === 'ready' || status === 'failed') return false;
+        return data ? 4000 : false; // stop if no auth
+      },
+    }
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trip = (tripData as any)?.trip;

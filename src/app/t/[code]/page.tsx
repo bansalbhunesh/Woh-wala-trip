@@ -127,18 +127,17 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
 
           <div className="flex flex-col sm:flex-row gap-6 pt-12">
             <Link
-              href={`/trips/join?code=${trip.invite_code}`}
+              href={`/t/${trip.invite_code}/story`}
               className="group flex items-center justify-center gap-4 px-12 py-8 bg-[#F5F0E8] text-black rounded-full font-black uppercase tracking-[0.3em] text-[11px] hover:scale-105 active:scale-95 transition-all shadow-[0_0_60px_rgba(245,240,232,0.1)]"
             >
-              Join the Season
+              View Full Story
               <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </Link>
             <Link
-              href={`/api/card/${trip.invite_code}`}
-              target="_blank"
+              href={`/trips/join?code=${trip.invite_code}`}
               className="flex items-center justify-center gap-4 px-12 py-8 border border-white/10 bg-white/[0.03] text-white/60 rounded-full font-black uppercase tracking-[0.3em] text-[11px] hover:bg-white/10 hover:text-white transition-all"
             >
-              Identity Card
+              Join the Season
             </Link>
           </div>
         </div>
