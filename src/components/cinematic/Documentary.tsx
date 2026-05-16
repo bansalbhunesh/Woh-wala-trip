@@ -80,10 +80,9 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
       {/* Scanline overlay — VHS signal feel */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2rem]">
         <div
-          className="absolute left-0 right-0 h-8 opacity-[0.04]"
+          className="absolute left-0 right-0 h-8 opacity-[0.04] animate-scan"
           style={{
             background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent)',
-            animation: 'scan 6s linear infinite',
           }}
         />
       </div>
@@ -788,13 +787,15 @@ export function MemoryCollage({
   label = 'Recovered Evidence',
   count = 6,
   accent = '#FF4D4D',
+  photos = [],
 }: {
   label?: string;
   count?: number;
   accent?: string;
+  photos?: Array<{ thumbnailUrl?: string | null; url?: string | null }>;
 }) {
   const ROTATIONS = [-3, 1.5, -1, 2.5, -2, 1];
-  const OPACITIES = [0.4, 0.25, 0.35, 0.2, 0.3, 0.25];
+  const OPACITIES = [0.55, 0.4, 0.5, 0.35, 0.45, 0.4];
   const POSITIONS = [
     { top: '10%', left: '5%' },
     { top: '5%', left: '40%' },
@@ -803,6 +804,8 @@ export function MemoryCollage({
     { bottom: '10%', left: '50%' },
     { bottom: '18%', right: '6%' },
   ];
+
+  const slots = Math.min(photos.length > 0 ? photos.length : count, 6);
 
   return (
     <motion.div
@@ -814,41 +817,52 @@ export function MemoryCollage({
       {/* Atmospheric glow */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)`,
-        }}
+        style={{ background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)` }}
       />
 
-      {/* Fake memory polaroids */}
-      {Array.from({ length: Math.min(count, 6) }).map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, scale: 0.8, rotate: ROTATIONS[i] - 10 }}
-          whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
-          viewport={{ once: true }}
-          transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
-          className="absolute w-20 h-24 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden"
-          style={POSITIONS[i] as React.CSSProperties}
-        >
-          {/* Blurry image placeholder */}
-          <div
-            className="flex-1"
-            style={{
-              background: `linear-gradient(${135 + i * 30}deg, ${accent}15, rgba(45,158,139,0.08))`,
-              filter: 'blur(8px)',
-              transform: 'scale(1.1)',
-            }}
-          />
-          {/* Polaroid bottom */}
-          <div className="h-5 bg-white/[0.04] flex items-center justify-center">
-            <div className="w-8 h-px bg-white/10" />
-          </div>
-        </motion.div>
-      ))}
+      {/* Polaroids — real thumbnails when available, gradient placeholders otherwise */}
+      {Array.from({ length: slots }).map((_, i) => {
+        const photo = photos[i];
+        const imgUrl = photo?.thumbnailUrl || photo?.url;
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, scale: 0.8, rotate: ROTATIONS[i] - 10 }}
+            whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
+            className="absolute w-20 h-24 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden"
+            style={POSITIONS[i] as React.CSSProperties}
+          >
+            <div className="flex-1 overflow-hidden">
+              {imgUrl ? (
+                <img
+                  src={imgUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ filter: 'blur(2px) grayscale(0.3)', transform: 'scale(1.08)' }}
+                />
+              ) : (
+                <div
+                  className="w-full h-full"
+                  style={{
+                    background: `linear-gradient(${135 + i * 30}deg, ${accent}15, rgba(45,158,139,0.08))`,
+                    filter: 'blur(8px)',
+                    transform: 'scale(1.1)',
+                  }}
+                />
+              )}
+            </div>
+            <div className="h-5 bg-white/[0.04] flex items-center justify-center">
+              <div className="w-8 h-px bg-white/10" />
+            </div>
+          </motion.div>
+        );
+      })}
 
       {/* Label */}
       <div className="absolute bottom-4 left-0 right-0 text-center">
-        <span className="text-[7px] font-mono text-white/15 uppercase tracking-[0.5em]">{label}</span>
+        <span className="text-[7px] font-mono text-white/30 uppercase tracking-[0.5em]">{label}</span>
       </div>
 
       {/* Film grain over everything */}

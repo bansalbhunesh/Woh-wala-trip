@@ -24,13 +24,22 @@ export default function TripRoomPage() {
   const router = useRouter();
   const tripId = params.tripId as string;
   const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
+  const [lightMode, setLightMode] = useState(false);
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
+  const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
 
   useEffect(() => {
     const hasSeen = localStorage.getItem(`wrapped_${tripId}`);
     if (!hasSeen) setShowWrapped(true);
+    setLightMode(localStorage.getItem('archive_light_mode') === '1');
   }, [tripId]);
+
+  const toggleLight = () => setLightMode(prev => {
+    const next = !prev;
+    localStorage.setItem('archive_light_mode', next ? '1' : '0');
+    return next;
+  });
 
   // Poll while generating
   const loreStatus = (tripData as any)?.trip?.lore_status;
@@ -85,15 +94,19 @@ export default function TripRoomPage() {
   const isFailed     = trip.lore_status === 'failed';
 
   return (
-    <div className="min-h-screen bg-[#060604] text-[#F5F0E8] selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden">
+    <div className={`min-h-screen selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden transition-colors duration-300 ${
+      lightMode
+        ? 'bg-[#FAF1E4] text-[#2A1A0A]'
+        : 'bg-[#060604] text-[#F5F0E8]'
+    }`}>
       <AnimatePresence>
         {showWrapped && isReady && (
           <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />
         )}
       </AnimatePresence>
 
-      <FilmGrain />
-      <ArchiveNavbar trip={trip} />
+      {!lightMode && <FilmGrain />}
+      <ArchiveNavbar trip={trip} lightMode={lightMode} onToggleLight={toggleLight} />
 
       {/* Full-width hero outside the grid */}
       <div className="max-w-[1600px] mx-auto px-6 pt-12">
@@ -149,6 +162,7 @@ export default function TripRoomPage() {
                 label="Photos Recovered From Device Storage"
                 count={6}
                 accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
+                photos={(photoList as any[] || []).slice(0, 6)}
               />
 
               {/* ⑤ Chaos rankings */}

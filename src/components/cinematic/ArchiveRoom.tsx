@@ -10,46 +10,95 @@ import { Play, Plus, X, ChevronRight, Share2 } from 'lucide-react';
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE NAVBAR
 // ─────────────────────────────────────────────────────────────────────────────
-export function ArchiveNavbar({ trip }: { trip: any }) {
+export function ArchiveNavbar({
+  trip,
+  lightMode,
+  onToggleLight,
+}: {
+  trip: any;
+  lightMode?: boolean;
+  onToggleLight?: () => void;
+}) {
   const cookedLevel = trip?.lore_json?.cooked_level ?? trip?.chaos_score ?? '—';
   const verdict = trip?.lore_json?.cooked_verdict ?? 'Processing...';
 
   return (
-    <nav className="sticky top-0 z-[100] w-full px-6 py-4 bg-[#060604]/90 backdrop-blur-2xl border-b border-white/[0.06] flex items-center justify-between">
+    <nav className={`sticky top-0 z-[100] w-full px-6 py-4 backdrop-blur-2xl flex items-center justify-between transition-colors duration-300 ${
+      lightMode
+        ? 'bg-[#FAF1E4]/90 border-b border-black/[0.06]'
+        : 'bg-[#060604]/90 border-b border-white/[0.06]'
+    }`}>
       <div className="flex items-center gap-4">
         <Link href="/trips" className="w-8 h-8 bg-cooked-accent rounded-lg flex items-center justify-center font-vibe font-black text-xs text-white hover:scale-110 transition-transform">
           W
         </Link>
-        <div className="hidden md:block h-6 w-px bg-white/10" />
+        <div className={`hidden md:block h-6 w-px ${lightMode ? 'bg-black/10' : 'bg-white/10'}`} />
         <div className="hidden md:flex flex-col">
-          <span className="text-[8px] uppercase tracking-[0.3em] text-white/25 font-vibe font-black">Current Archive</span>
-          <span className="text-sm font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none mt-0.5">
+          <span className={`text-[8px] uppercase tracking-[0.3em] font-vibe font-black ${lightMode ? 'text-black/35' : 'text-white/25'}`}>Current Archive</span>
+          <span className={`text-sm font-cinematic font-black tracking-tight leading-none mt-0.5 ${lightMode ? 'text-[#2A1A0A]' : 'text-[#F5F0E8]'}`}>
             {trip?.name || 'Loading...'}
           </span>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden lg:flex items-center gap-6 mr-4 pr-6 border-r border-white/[0.06]">
+        <div className={`hidden lg:flex items-center gap-6 mr-4 pr-6 ${lightMode ? 'border-r border-black/[0.06]' : 'border-r border-white/[0.06]'}`}>
           <div className="flex flex-col items-end">
-            <span className="text-[8px] uppercase tracking-widest text-white/20 font-black">Cooked</span>
+            <span className={`text-[8px] uppercase tracking-widest font-black ${lightMode ? 'text-black/30' : 'text-white/20'}`}>Cooked</span>
             <span className="text-sm font-vibe font-black text-cooked-accent">{cookedLevel}/100</span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-[8px] uppercase tracking-widest text-white/20 font-black">Verdict</span>
-            <span className="text-[10px] font-vibe font-black text-white/60 uppercase tracking-wider">{verdict}</span>
+            <span className={`text-[8px] uppercase tracking-widest font-black ${lightMode ? 'text-black/30' : 'text-white/20'}`}>Verdict</span>
+            <span className={`text-[10px] font-vibe font-black uppercase tracking-wider ${lightMode ? 'text-black/50' : 'text-white/60'}`}>{verdict}</span>
           </div>
         </div>
 
+        {/* Light / Dark mode toggle */}
+        {onToggleLight && (
+          <button
+            onClick={onToggleLight}
+            title={lightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
+              lightMode
+                ? 'bg-black/8 border border-black/12 text-black/50 hover:text-black/80'
+                : 'bg-white/8 border border-white/12 text-white/40 hover:text-white/70'
+            }`}
+          >
+            {lightMode ? (
+              // Moon icon
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            ) : (
+              // Sun icon
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            )}
+          </button>
+        )}
+
         <Link
           href={`/trips/${trip?.id}/share`}
-          className="px-5 py-2.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow-red"
+          className="px-5 py-2.5 bg-cooked-accent text-white rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:scale-105 transition-all"
         >
           Export
         </Link>
         <Link
           href={`/trips/${trip?.id}/story`}
-          className="px-5 py-2.5 bg-white/5 border border-white/10 text-white/60 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+          className={`px-5 py-2.5 rounded-full text-[10px] font-vibe font-black uppercase tracking-widest transition-all ${
+            lightMode
+              ? 'bg-black/5 border border-black/10 text-black/50 hover:bg-black/10'
+              : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10'
+          }`}
         >
           Story Mode
         </Link>
@@ -115,8 +164,8 @@ export function ArchiveHero({ trip }: { trip: any }) {
       <div className="absolute inset-0 opacity-[0.04] pointer-events-none animate-grain bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px]" />
 
       {/* ── Layer 5: VHS scanline ── */}
-      <div className="absolute left-0 right-0 h-12 pointer-events-none opacity-[0.04]"
-        style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.4), transparent)', animation: 'scan 8s linear infinite' }}
+      <div className="absolute left-0 right-0 h-12 pointer-events-none opacity-[0.04] animate-scan"
+        style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.4), transparent)' }}
       />
 
       {/* ── Layer 6: floating polaroid fragments ── */}
