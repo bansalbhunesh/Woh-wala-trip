@@ -127,7 +127,7 @@ export default function TripsPage() {
                 <Link
                   key={trip.id}
                   href={`/trips/${trip.id}`}
-                  className="group relative block rounded-2xl overflow-hidden"
+                  className="group relative block rounded-2xl overflow-hidden focus:outline-none"
                   style={{
                     background: 'rgba(245,240,232,0.03)',
                     border: `1px solid rgba(245,240,232,0.07)`,
@@ -137,6 +137,19 @@ export default function TripsPage() {
                     transition: `opacity 0.6s ease ${animDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${animDelay}s, box-shadow 0.4s ease, border-color 0.3s ease`,
                     willChange: 'transform',
                     transformStyle: 'preserve-3d',
+                  }}
+                  onFocus={e => {
+                    // Keyboard focus: lift + glow (no 3D tilt)
+                    const el = e.currentTarget as HTMLAnchorElement;
+                    el.style.transform = 'translateY(-4px)';
+                    el.style.borderColor = `${accent}60`;
+                    el.style.boxShadow = `0 20px 52px rgba(0,0,0,0.5), 0 0 40px ${glow}`;
+                  }}
+                  onBlur={e => {
+                    const el = e.currentTarget as HTMLAnchorElement;
+                    el.style.transform = 'translateY(0)';
+                    el.style.borderColor = 'rgba(245,240,232,0.07)';
+                    el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(245,240,232,0.04)';
                   }}
                   onMouseMove={e => {
                     const el = e.currentTarget as HTMLAnchorElement;

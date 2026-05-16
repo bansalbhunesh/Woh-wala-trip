@@ -41,22 +41,25 @@ export const tripsRouter = router({
         console.error('trip create failed', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Lore creation failed—our historian is a bit overwhelmed.',
+          message: 'Could not create the season. Try again.',
         });
       }
 
       if (!trip) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Trip creation returned no data',
-        });
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Trip creation returned no data' });
       }
 
-      await supabase.from('trip_members').insert({
+      // Add creator as member — rollback trip if this fails
+      const { error: memberErr } = await supabase.from('trip_members').insert({
         trip_id: trip.id,
         user_id: ctx.user.id,
         status: 'joined',
       });
+      if (memberErr) {
+        // Cleanup orphaned trip
+        await supabase.from('trips').delete().eq('id', trip.id);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to join your own trip. Try again.' });
+      }
 
       return trip;
     }),

@@ -573,23 +573,18 @@ class LoreOrchestrator:
         max_tokens: int = 1500,
         cache_system: bool = False,
     ) -> str:
-        loop = asyncio.get_event_loop()
-
         system_content: list | str = system
-        # cache_control only works with official Anthropic API — disable for proxy services
-        use_cache = cache_system and not settings.ANTHROPIC_BASE_URL
-        if use_cache:
+        # cache_control only works with official Anthropic API — skip for proxies
+        if cache_system and not settings.ANTHROPIC_BASE_URL:
             system_content = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
 
-        def _sync_call():
-            return anthropic_client.messages.create(
-                model=settings.CLAUDE_MODEL,
-                max_tokens=max_tokens,
-                system=system_content,
-                messages=messages,
-            )
-
-        response = await loop.run_in_executor(None, _sync_call)
+        # AsyncAnthropic — no thread pool, truly non-blocking
+        response = await anthropic_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=max_tokens,
+            system=system_content,
+            messages=messages,
+        )
         return response.content[0].text
 
     def _parse_json(self, raw: str) -> dict | list:

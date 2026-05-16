@@ -139,9 +139,33 @@ export default function SharePage() {
 
       {/* Action Buttons */}
       <section className="px-6 space-y-3">
-        <ShareActionButton icon="📲" label="Share to Instagram" sub="Stories · 9:16 · Trip card" />
-        <ShareActionButton icon="💬" label="WhatsApp your group" sub="Caption pre-filled · Roast ready" />
-        <ShareActionButton icon="🔗" label="Copy invite link" sub="Join the archive · See your role" />
+        <ShareActionButton
+          icon="📲"
+          label="Share to Instagram"
+          sub="Stories · 9:16 · Trip card"
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: tripName, text: shareText, url: window.location.href });
+            } else {
+              navigator.clipboard.writeText(shareText).then(() => alert('Caption copied — paste into Instagram Stories!'));
+            }
+          }}
+        />
+        <ShareActionButton
+          icon="💬"
+          label="WhatsApp your group"
+          sub="Caption pre-filled · Roast ready"
+          onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank')}
+        />
+        <ShareActionButton
+          icon="🔗"
+          label="Copy invite link"
+          sub="Join the archive · See your role"
+          onClick={() => {
+            const url = `${window.location.origin}/trips/join?code=${trip?.invite_code || ''}`;
+            navigator.clipboard.writeText(url).then(() => alert('Invite link copied!'));
+          }}
+        />
         <a
           href={`/api/card/${tripId}`}
           download={`${tripName.replace(/\s+/g, '-')}-card.png`}
@@ -161,9 +185,12 @@ export default function SharePage() {
   );
 }
 
-function ShareActionButton({ icon, label, sub }: { icon: string; label: string; sub: string }) {
+function ShareActionButton({ icon, label, sub, onClick }: { icon: string; label: string; sub: string; onClick: () => void }) {
   return (
-    <button className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] active:scale-[0.98] transition-all group"
+    >
       <div className="flex gap-4 items-center">
         <div className="text-2xl">{icon}</div>
         <div className="text-left">

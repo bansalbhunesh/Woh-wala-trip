@@ -3,11 +3,35 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// In-memory rate limiter: 5 requests per email per 15 minutes
+const rateLimit = new Map<string, { count: number; resetAt: number }>();
+function checkRate(email: string): { allowed: boolean; waitSeconds?: number } {
+  const now = Date.now();
+  const entry = rateLimit.get(email);
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= 5) {
+      return { allowed: false, waitSeconds: Math.ceil((entry.resetAt - now) / 1000) };
+    }
+    entry.count++;
+  } else {
+    rateLimit.set(email, { count: 1, resetAt: now + 15 * 60 * 1000 });
+  }
+  return { allowed: true };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
     if (!email || !EMAIL_RE.test(email.trim())) {
       return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 });
+    }
+
+    const rate = checkRate(email.trim().toLowerCase());
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${Math.ceil((rate.waitSeconds ?? 60) / 60)} minutes.` },
+        { status: 429 }
+      );
     }
 
     // Use Supabase admin to generate the OTP token without sending email
