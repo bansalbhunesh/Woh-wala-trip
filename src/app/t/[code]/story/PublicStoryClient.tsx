@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LoreJson } from '@/lib/types';
+import ReactionBar from '@/components/experience/ReactionBar';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }
@@ -115,7 +116,7 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
       {/* Slide */}
       <div key={animKey} className="absolute inset-0 flex items-center justify-center px-8 py-20"
            style={{ animation: `${anim} 0.35s cubic-bezier(0.16,1,0.3,1) both` }}>
-        <SlideContent slide={current} slamActive={slamActive} countedScore={countedScore} inviteCode={inviteCode} />
+        <SlideContent slide={current} slamActive={slamActive} countedScore={countedScore} inviteCode={inviteCode} tripId={tripId} />
       </div>
 
       {idx === 0 && (
@@ -137,7 +138,7 @@ export default function PublicStoryClient({ tripId, inviteCode, lore, members }:
   );
 }
 
-function SlideContent({ slide, slamActive, countedScore, inviteCode }: { slide: Slide; slamActive: boolean; countedScore: number; inviteCode: string }) {
+function SlideContent({ slide, slamActive, countedScore, inviteCode, tripId }: { slide: Slide; slamActive: boolean; countedScore: number; inviteCode: string; tripId: string }) {
   switch (slide.type) {
     case 'title':
       return (
@@ -232,6 +233,9 @@ function SlideContent({ slide, slamActive, countedScore, inviteCode }: { slide: 
             &ldquo;{(slide.lore as any).closing_line || slide.lore.cooked_verdict}&rdquo;
           </p>
           <div className="w-12 h-0.5 bg-chill-accent mx-auto rounded-full" style={{ animation: 'fade-in 0.4s ease 0.4s both', opacity: 0 }} />
+          <div style={{ animation: 'fade-in 0.5s ease 0.7s both', opacity: 0 }} onClick={e => e.stopPropagation()}>
+            <ReactionBar tripId={tripId} slideType="verdict" isPublic />
+          </div>
         </div>
       );
 
