@@ -538,34 +538,32 @@ export default function CinematicAuth() {
 
       {/* ── PHASE 2: 8-DIGIT OTP ── */}
       <div style={phaseStyle(2)}>
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center space-y-3">
+        <div className="w-full max-w-md space-y-5">
+          <div className="text-center space-y-2">
             <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
                style={{ color: 'rgba(255,140,30,0.5)' }}>
               ● CODE TRANSMITTED
             </p>
-            <h2 className="font-display font-black uppercase leading-[0.85]"
-                style={{ fontSize: 'clamp(32px, 6vw, 60px)', color: 'rgba(245,240,232,0.92)' }}>
-              ENTER THE<br /><em className="italic" style={{ color: '#FFA020' }}>CODE</em>
+            <h2 className="font-display font-black uppercase leading-tight"
+                style={{ fontSize: 'clamp(28px, 5vw, 48px)', color: 'rgba(245,240,232,0.92)' }}>
+              ENTER THE <em className="italic" style={{ color: '#FFA020' }}>CODE</em>
             </h2>
-            <p className="font-mono text-[8.5px]" style={{ color: 'rgba(245,240,232,0.25)', letterSpacing: '0.1em' }}>
-              8-DIGIT CODE SENT TO {email.toUpperCase()}
+            <p className="font-mono text-[8px]" style={{ color: 'rgba(245,240,232,0.22)', letterSpacing: '0.08em' }}>
+              SENT TO {email.length > 28 ? email.slice(0,25)+'...' : email.toUpperCase()}
             </p>
             {isDevMode && (
               <p className="font-mono text-[8px]" style={{ color: 'rgba(255,140,30,0.5)' }}>
-                CHECK YOUR TERMINAL FOR THE CODE
+                CHECK YOUR TERMINAL
               </p>
             )}
           </div>
 
-          {/* 6 digit slots */}
-          <div className="flex gap-1.5 sm:gap-2.5 justify-center" onPaste={handlePaste}>
+          {/* 8 digit slots */}
+          <div className="flex gap-1 sm:gap-1.5 justify-center" onPaste={handlePaste}>
             {otp.map((d, i) => (
               <div key={i} className="relative">
-                {d && (
-                  <div className="absolute inset-0 rounded-xl pointer-events-none"
-                       style={{ boxShadow: '0 0 18px rgba(255,77,77,0.35)', background: 'rgba(255,77,77,0.06)', borderRadius: '0.7rem' }} />
-                )}
+                {d && <div className="absolute inset-0 rounded-xl pointer-events-none"
+                           style={{ boxShadow: '0 0 14px rgba(255,77,77,0.3)', background: 'rgba(255,77,77,0.06)', borderRadius: '0.7rem' }} />}
                 <input
                   ref={el => { otpRefs.current[i] = el; }}
                   type="text" inputMode="numeric" maxLength={1}
@@ -575,18 +573,21 @@ export default function CinematicAuth() {
                   onFocus={() => setActiveDigit(i)}
                   onBlur={() => setActiveDigit(-1)}
                   disabled={verifyLoading}
-                  className="relative w-9 h-11 sm:w-11 sm:h-13 text-center text-xl sm:text-2xl font-display font-black outline-none rounded-xl disabled:opacity-50"
+                  className="relative text-center font-display font-black outline-none rounded-xl disabled:opacity-50"
                   style={{
+                    width: 'clamp(32px, 10vw, 44px)',
+                    height: 'clamp(40px, 12vw, 52px)',
+                    fontSize: 'clamp(16px, 4vw, 22px)',
                     background: d ? 'rgba(255,77,77,0.1)' : 'rgba(245,240,232,0.03)',
                     border: `1px solid ${activeDigit===i ? 'rgba(255,77,77,0.65)' : d ? 'rgba(255,77,77,0.35)' : 'rgba(245,240,232,0.08)'}`,
                     color: d ? '#FFA020' : 'rgba(245,240,232,0.3)',
                     caretColor: '#FFA020',
                     transform: d ? 'scale(1.04)' : 'scale(1)',
-                    transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.3s ease, background 0.3s ease',
+                    transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.3s ease',
                   }}
                 />
                 {activeDigit === i && (
-                  <div className="absolute bottom-0.5 left-2 right-2 h-px"
+                  <div className="absolute bottom-0.5 left-1 right-1 h-px"
                        style={{ background: '#FFA020', boxShadow: '0 0 4px rgba(255,77,77,0.8)', borderRadius: 1 }} />
                 )}
               </div>
@@ -594,10 +595,10 @@ export default function CinematicAuth() {
           </div>
 
           {/* Progress dots */}
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-1.5">
             {otp.map((d, i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full transition-all duration-300"
-                   style={{ background: d ? '#FFA020' : 'rgba(245,240,232,0.1)', boxShadow: d ? '0 0 6px rgba(255,140,30,0.65)' : 'none' }} />
+              <div key={i} className="w-1 h-1 rounded-full transition-all duration-300"
+                   style={{ background: d ? '#FFA020' : 'rgba(245,240,232,0.1)', boxShadow: d ? '0 0 5px rgba(255,140,30,0.6)' : 'none' }} />
             ))}
           </div>
 
@@ -608,17 +609,19 @@ export default function CinematicAuth() {
             </p>
           )}
 
-          <div className="flex items-center justify-between">
+          {/* Bottom actions — larger text, clearly visible */}
+          <div className="flex items-center justify-between pt-2"
+               style={{ borderTop: '1px solid rgba(245,240,232,0.06)' }}>
             <button onClick={() => { setPhase(1); setOtp(['','','','','','','','']); setError(''); }}
-                    className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
-                    style={{ color: 'rgba(245,240,232,0.18)' }}>
+                    className="font-mono text-[9px] uppercase tracking-[0.35em] hover:opacity-80 active:opacity-60 transition-opacity px-2 py-2"
+                    style={{ color: 'rgba(245,240,232,0.45)' }}>
               ← WRONG EMAIL
             </button>
             <button
               onClick={() => { setOtp(['','','','','','','','']); sendOtp(); }}
               disabled={cooldown > 0 || sendLoading}
-              className="font-mono text-[7.5px] uppercase tracking-[0.4em] disabled:opacity-30 hover:opacity-60 transition-opacity"
-              style={{ color: 'rgba(245,240,232,0.18)' }}>
+              className="font-mono text-[9px] uppercase tracking-[0.35em] disabled:opacity-30 hover:opacity-80 active:opacity-60 transition-opacity px-2 py-2"
+              style={{ color: cooldown > 0 ? 'rgba(255,140,30,0.4)' : 'rgba(245,240,232,0.45)' }}>
               {cooldown > 0 ? `RESEND IN ${cooldown}s` : 'RESEND CODE'}
             </button>
           </div>
