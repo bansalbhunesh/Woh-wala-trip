@@ -11,7 +11,7 @@ import { renderCard, errorImage } from '../../../../../../lib/og/render';
 import { CardFrame, Eyebrow, CardFooter } from '../../../../../../lib/og/components';
 import { MemberInitial, SuperlativeQuestion } from '../../../../../../lib/og/components-viral';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET(
   req: NextRequest,

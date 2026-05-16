@@ -19,7 +19,7 @@ import {
 } from '../../../../lib/og/components';
 
 // Node runtime — edge runtime has issues with require() in createSupabaseServiceClient
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET(
   req: NextRequest,
@@ -57,11 +57,8 @@ export async function GET(
     });
 
     const isDownload = req.nextUrl.searchParams.get('download') === '1';
-    const filename = isDownload
-      ? `${(trip.name || 'trip').replace(/\s+/g, '-')}-lore-card.png`
-      : undefined;
 
-    return renderCard(
+    const imgResponse = await renderCard(
       <CardFrame palette={palette}>
         <Eyebrow palette={palette}>Woh Wala Trip</Eyebrow>
         <Title palette={palette}>{lore.trip_title}</Title>
@@ -79,8 +76,22 @@ export async function GET(
           qrLabel="Scan to join"
         />
       </CardFrame>,
-      { fonts, filename }
+      { fonts }
     );
+
+    if (isDownload) {
+      const filename = `${(trip.name || 'trip').replace(/\s+/g, '-')}-lore-card.png`;
+      const buf = await imgResponse.arrayBuffer();
+      return new Response(buf, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
+    return imgResponse;
   } catch (err) {
     console.error('OG Route Error:', err);
     return errorImage('Critical render failure');

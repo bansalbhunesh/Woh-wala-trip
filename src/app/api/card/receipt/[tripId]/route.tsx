@@ -6,7 +6,7 @@ import { qrDataUrl } from '../../../../../lib/og/qr';
 import { renderCard, errorImage } from '../../../../../lib/og/render';
 import { CardFrame, CardFooter } from '../../../../../lib/og/components';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET(
   req: NextRequest,

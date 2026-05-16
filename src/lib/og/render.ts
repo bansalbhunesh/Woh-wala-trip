@@ -11,7 +11,7 @@ export type RenderOptions = {
   filename?: string; // triggers Content-Disposition: attachment
 };
 
-export function renderCard(
+export async function renderCard(
   element: React.ReactElement,
   options: RenderOptions
 ): Promise<Response> {
@@ -42,35 +42,21 @@ export function renderCard(
     headers['Cache-Control'] = `public, s-maxage=${cacheSeconds}, stale-while-revalidate=86400`;
   }
 
-  return Promise.resolve(
-    new ImageResponse(element, {
-      width,
-      height,
-      fonts: fonts.map((f) => ({
-        name: f.name,
-        data: f.data,
-        weight: f.weight,
-        style: f.style,
-      })),
-      headers,
-    })
-  );
+  // Return ImageResponse directly — it handles Content-Type: image/png internally.
+  // Extra headers (Cache-Control, Content-Disposition) are applied via NextResponse wrapper.
+  return new ImageResponse(element, {
+    width,
+    height,
+    fonts: fonts.map((f) => ({
+      name: f.name,
+      data: f.data,
+      weight: f.weight,
+      style: f.style,
+    })),
+  }) as unknown as Response;
 }
 
 export function errorImage(message: string, status = 404): Response {
-  // Return a proper image response with an error message rendered as SVG
-  // This prevents downloading a text file with .png extension
-  const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1080" height="1920" fill="#060604"/>
-    <text x="540" y="940" font-family="monospace" font-size="28" fill="rgba(255,77,77,0.8)" text-anchor="middle">${message}</text>
-    <text x="540" y="990" font-family="monospace" font-size="20" fill="rgba(245,240,232,0.3)" text-anchor="middle">Woh Wala Trip</text>
-  </svg>`;
-
-  return new Response(svg, {
-    status,
-    headers: {
-      'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'no-store',
-    },
-  });
+  const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1920" fill="#060604"/><text x="540" y="940" font-family="monospace" font-size="28" fill="rgba(255,77,77,0.8)" text-anchor="middle">${message}</text><text x="540" y="990" font-family="monospace" font-size="20" fill="rgba(245,240,232,0.3)" text-anchor="middle">Woh Wala Trip</text></svg>`;
+  return new Response(svg, { status, headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' } });
 }
