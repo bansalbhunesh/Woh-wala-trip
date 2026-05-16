@@ -1,4 +1,5 @@
 import { TRPCProvider } from '@/lib/trpc/provider';
+import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { Bricolage_Grotesque, Nunito, Fira_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -53,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${bricolage.variable} ${nunito.variable} ${firaMono.variable} antialiased`}>
       <body className="overflow-x-hidden bg-[#060604] text-[#F5F0E8]">
-        <TRPCProvider>{children}</TRPCProvider>
+        <TRPCProvider><PostHogProvider>{children}</PostHogProvider></TRPCProvider>
       </body>
     </html>
   );

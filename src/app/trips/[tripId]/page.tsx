@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
 import { trpc } from '@/lib/trpc/client';
 import { FilmGrain } from '@/components/ui/atoms';
+import { RecurringIdentityWidget } from '@/components/experience/RecurringIdentityWidget';
 import {
   ArchiveNavbar, ArchiveHero, ArchiveReveal,
   CookedScoreLight, BadFeelingsChart, DonutChart, LightCastWidget,
@@ -41,13 +43,26 @@ export default function TripRoomPage() {
     return next;
   });
 
-  // Poll while generating
+  // Realtime subscription — replaces setInterval polling
   const loreStatus = (tripData as any)?.trip?.lore_status;
   useEffect(() => {
-    if (loreStatus === 'processing') {
-      const t = setInterval(() => refetch(), 5000);
-      return () => clearInterval(t);
-    }
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const channel = supabase
+      .channel(`trip-status-${tripId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` },
+        (payload) => {
+          const newStatus = (payload.new as any)?.lore_status;
+          if (newStatus === 'ready' || newStatus === 'failed') refetch();
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tripId, refetch]);
+
+  useEffect(() => {
+    if (false) { /* realtime handles updates, no interval needed */ }
     if (loreStatus === 'ready' && !localStorage.getItem(`wrapped_${tripId}`)) {
       setShowWrapped(true);
     }
@@ -297,6 +312,7 @@ export default function TripRoomPage() {
               <BadFeelingsChart trip={trip} />
               <DonutChart trip={trip} />
               <LightCastWidget trip={trip} />
+              <RecurringIdentityWidget tripId={tripId} />
             </div>
           </div>
 

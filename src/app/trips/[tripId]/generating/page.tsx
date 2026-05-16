@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
 import { trpc } from '@/lib/trpc/client';
+import { analytics } from '@/lib/analytics';
 
 const STAGES = [
   { id: 0, label: 'SCANNING MEMORIES',      sub: 'Reading your photo dump for emotional evidence' },
@@ -23,17 +25,33 @@ export default function GeneratingPage() {
   const [progress, setProgress] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
-  const { data: tripData } = trpc.trips.getFull.useQuery(
+  const { data: tripData, refetch } = trpc.trips.getFull.useQuery(
     { tripId },
-    {
-      // Keep polling until lore is ready or failed — don't stop just because data arrived
-      refetchInterval: (data) => {
-        const status = (data as any)?.trip?.lore_status;
-        if (status === 'ready' || status === 'failed') return false;
-        return data ? 4000 : false; // stop if no auth
-      },
-    }
+    { refetchOnMount: true }
   );
+
+  // Supabase Realtime — push update when lore_status changes instead of polling
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const channel = supabase
+      .channel(`trip-lore-${tripId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'trips',
+        filter: `id=eq.${tripId}`,
+      }, (payload) => {
+        const newStatus = (payload.new as any)?.lore_status;
+        if (newStatus === 'ready' || newStatus === 'failed') {
+          refetch();
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tripId, refetch]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trip = (tripData as any)?.trip;
   const loreStatus = trip?.lore_status;
@@ -42,6 +60,8 @@ export default function GeneratingPage() {
 
   useEffect(() => {
     if (loreStatus === 'ready' && !unlocking) {
+      // Track generation completion
+      analytics.generationCompleted(tripId, trip?.chaos_score ?? 0);
       // Dramatic unlock flash before routing to story
       setUnlocking(true);
       setProgress(100);
