@@ -1,0 +1,51 @@
+{
+  "_comment": "Deliberately bad lore — generic, forbidden phrases, wrong verdict alignment, short acts",
+  "trip_title": "Kasol",
+  "tagline": "An adventure awaits!",
+  "opening_line": "The trip was a wonderful experience for everyone.",
+  "cooked_level": 91,
+  "cooked_verdict": "Mildly Simmering",
+  "cooked_explanation": "The group had a great time.",
+  "trip_personality_type": "Fun Trip With Friends",
+  "what_this_trip_was_really_about": "Creating memories and strengthening bonds.",
+  "screenshot_moment_line": "Unforgettable memories were made.",
+  "closing_line": "Heartwarming.",
+  "whatsapp_caption": "Best trip ever!! Had a blast. 10/10 would recommend.",
+  "season_recap": {
+    "act_1": "Everyone had a great time and the trip started well.",
+    "act_2": "The adventure awaits and they had a blast exploring.",
+    "act_3": "Bonds that last a lifetime were formed on this journey.",
+    "full_narrative": "The group had a wonderful experience and created unforgettable memories. Everyone contributed to making it truly special. The heartwarming moments they shared will cherish forever. It was a breathtaking journey through beautiful landscapes."
+  },
+  "trip_eras": [
+    {
+      "era_name": "Fun",
+      "timeframe": "the whole trip",
+      "description": "Everyone had fun.",
+      "defining_moment": "It was nice."
+    }
+  ],
+  "friendship_dynamics": {
+    "group_structure": "Everyone had a role and each person contributed.",
+    "emotional_center": "The group",
+    "chaos_source": "No one",
+    "collective_energy": "Good vibes only"
+  },
+  "trip_lore_awards": {
+    "movie_genre": "Coming of Age",
+    "trip_villain": "No one",
+    "trip_mvp": "Everyone",
+    "core_memory": "All the memories"
+  },
+  "superlatives": [
+    {
+      "winner_name": "Everyone",
+      "question": "Most likely to have fun",
+      "reason": "They all had fun",
+      "archetype": "Golden Retriever"
+    }
+  ],
+  "receipt_stats": [
+    {"label": "FUN LEVEL", "value": "100%", "unit": "fun"}
+  ]
+}

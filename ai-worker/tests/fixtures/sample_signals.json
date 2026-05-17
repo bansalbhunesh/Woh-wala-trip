@@ -1,0 +1,58 @@
+{
+  "trip": {
+    "id": "test-trip-001",
+    "name": "Kasol Trip March 2024",
+    "destination": "Kasol, Himachal Pradesh",
+    "trip_start_date": "2024-03-15",
+    "trip_end_date": "2024-03-17",
+    "chaos_score": 77,
+    "member_count": 4
+  },
+  "members": [
+    {"user_id": "uid-001", "display_name": "Rohan", "status": "joined"},
+    {"user_id": "uid-002", "display_name": "Priya", "status": "joined"},
+    {"user_id": "uid-003", "display_name": "Divya", "status": "joined"},
+    {"user_id": "uid-004", "display_name": "Karan", "status": "joined"}
+  ],
+  "aggregated_signal": {
+    "trip_id": "test-trip-001",
+    "total_photos": 127,
+    "duration_days": 3,
+    "aggregated_cooked_score": 77,
+    "cooked_percentile": "top 20% chaos",
+    "dominant_time_pattern": "night owls who pretend they're not",
+    "social_dynamic": "one designated planner (Rohan) who immediately abandoned his own plan, and one dedicated documenter (Priya) who documented her own crisis",
+    "food_obsession_level": "severe documentary-level",
+    "photographer_dynamic": "one dedicated documenter (Priya uploaded 89 of 127 photos)",
+    "emotional_arc_summary": "Started with genuine trekking intent that collapsed within 2 hours of arrival. Ended with collective agreement that not trekking was somehow the authentic Kasol experience.",
+    "peak_cooked_moment": "Rohan suggesting a cafe detour at 9:47 AM on day one, which ended the 18-hour planned trek permanently and without formal announcement",
+    "recurring_behaviors_merged": [
+      "food photographed before eating, every single time",
+      "Priya uploading photos before the meal was finished",
+      "group consensus achieved via WhatsApp poll even when sitting at the same table",
+      "someone always crying productively (Priya, Day 2)"
+    ],
+    "late_night_ratio_avg": 0.41,
+    "food_ratio_avg": 0.67,
+    "group_shots_ratio_avg": 0.31,
+    "most_photographed_ratio_avg": 0.72,
+    "identity_trends": {
+      "mvp_candidate": "Divya",
+      "villain_candidate": "Rohan",
+      "main_character_candidate": "Priya"
+    },
+    "trip_personality": "Trekkers Who Forgot To Trek",
+    "lore_writing_hints": {
+      "lead_with": "the cafe pivot that killed the trek plan in under 5 minutes",
+      "avoid": "don't make it about the mountains, make it about the group's relationship with their own ambition",
+      "hinglish_intensity": "heavy"
+    }
+  },
+  "trip_signals": {
+    "contributor_diversity": 0.31,
+    "dominant_uploader_ratio": 0.70,
+    "night_photo_count": 52,
+    "high_dwell_photos": ["photo-023", "photo-047", "photo-091"],
+    "reaction_counts": {"fire": 23, "laugh": 41, "heart": 12}
+  }
+}
