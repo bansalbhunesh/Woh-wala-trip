@@ -119,6 +119,29 @@ def validate_lore_json(lore: dict):
     if len(screenshot) < 20:
         raise ValueError(f"screenshot_moment_line too short")
 
+    # Opening line — first thing the group reads; must be specific, not generic
+    opening = lore.get("opening_line", "")
+    if len(opening) < 30:
+        raise ValueError(f"opening_line too short: {len(opening)} chars")
+    _generic_openers = [
+        "you and your friends",
+        "this group of friends",
+        "a group that",
+        "the trip began",
+        "once upon a time",
+        "it all started",
+    ]
+    if any(phrase in opening.lower() for phrase in _generic_openers):
+        raise ValueError(f"opening_line is generic: {opening[:60]!r}")
+
+    # Receipt stats — must not be placeholder garbage
+    stats = lore.get("receipt_stats", [])
+    _generic_stat_labels = {"fun had", "memories made", "adventures completed", "smiles shared", "good vibes"}
+    for stat in stats:
+        label = stat.get("label", "").lower().strip()
+        if label in _generic_stat_labels:
+            raise ValueError(f"Generic receipt stat detected: {stat.get('label')!r}")
+
 
 def scan_forbidden_phrases(lore: dict) -> list[str]:
     """Return list of forbidden phrases detected. Empty list = clean."""

@@ -28,12 +28,8 @@ export const metadata = {
   description: 'Turn your trips and friendships into cinematic chaos lore.',
   manifest: '/manifest.json',
   icons: {
-    icon: [
-      { url: '/icon.png', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/icon.png', type: 'image/png' },
-    ],
+    icon: [{ url: '/icon.png', type: 'image/png' }],
+    apple: [{ url: '/icon.png', type: 'image/png' }],
   },
   openGraph: {
     title: 'Yaarlore',
@@ -52,9 +48,18 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${bricolage.variable} ${nunito.variable} ${firaMono.variable} antialiased`}>
-      <body className="overflow-x-hidden bg-[#060604] text-[#F5F0E8]">
-        <TRPCProvider><PostHogProvider>{children}</PostHogProvider></TRPCProvider>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${bricolage.variable} ${nunito.variable} ${firaMono.variable} antialiased`}
+    >
+      <body
+        className="overflow-x-hidden"
+        style={{ background: 'oklch(97% 0.008 70)', color: 'oklch(16% 0.015 60)' }}
+      >
+        <TRPCProvider>
+          <PostHogProvider>{children}</PostHogProvider>
+        </TRPCProvider>
       </body>
     </html>
   );

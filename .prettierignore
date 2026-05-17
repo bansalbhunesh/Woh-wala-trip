@@ -1,0 +1,8 @@
+.next
+node_modules
+public
+coverage
+playwright-report
+ai-worker
+external-tools
+*.min.js

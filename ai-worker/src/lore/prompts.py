@@ -173,6 +173,9 @@ Writing direction from signal analysis:
 Member confessions (treat these as gold — specific confessions unlock specific lore):
 {confessions_json}
 
+Era count guidance: this trip was {duration_days} days. Generate approximately {recommended_eras} eras.
+A 1-day trip should have 1-2 eras. A 3-day trip 2-3 eras. A 7-day trip up to 5. Never pad with generic eras.
+
 Generate the following JSON structure. EVERY TEXT FIELD must be specific to this trip, not generic.
 Do NOT use placeholder text. Each act must describe what actually happened to THIS group based on the signals.
 
@@ -261,6 +264,9 @@ Trip vibe:
 - Trip eras: {trip_eras_json}
 
 Other members' upload counts (context for photographer dynamic): {other_upload_counts_json}
+
+Anonymous group confessions (things others admitted — use if relevant to this person's role):
+{peer_confessions_json}
 
 Write their character role. Requirements:
 - Sound like their best friend wrote it (affectionate roast, not mean)

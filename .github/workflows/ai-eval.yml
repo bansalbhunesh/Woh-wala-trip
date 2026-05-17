@@ -1,0 +1,53 @@
+name: AI Prompt Regression
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Weekly Monday 2am UTC
+  workflow_dispatch:
+    inputs:
+      run_full:
+        description: Run full LLM eval suite (costs tokens)
+        type: boolean
+        default: false
+
+jobs:
+  python-llm-tests:
+    name: DeepEval LLM Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.run_full
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - working-directory: ai-worker
+        run: pip install -e ".[test]" --quiet
+      - working-directory: ai-worker
+        name: Run DeepEval quality + safety tests
+        run: python -m pytest tests/test_lore_quality.py tests/test_safety.py -v --tb=short
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.AI_WORKER_ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.AI_WORKER_ANTHROPIC_BASE_URL }}
+          CLAUDE_MODEL: claude-sonnet-4-6
+          CLAUDE_HAIKU_MODEL: claude-haiku-4-5-20251001
+
+  promptfoo-eval:
+    name: Promptfoo Prompt Regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install -g promptfoo
+      - name: Run promptfoo eval
+        run: promptfoo eval --config tests/ai/promptfoo.yaml --no-progress-bar --output promptfoo-results.json
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.AI_WORKER_ANTHROPIC_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: promptfoo-results
+          path: promptfoo-results.json
+          retention-days: 30

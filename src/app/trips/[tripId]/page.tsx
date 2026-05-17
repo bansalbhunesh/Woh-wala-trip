@@ -6,21 +6,38 @@ import { createBrowserClient } from '@supabase/ssr';
 import { trpc } from '@/lib/trpc/client';
 import { FilmGrain } from '@/components/ui/atoms';
 import { RecurringIdentityWidget } from '@/components/experience/RecurringIdentityWidget';
+import { ConfessionInput } from '@/components/experience/ConfessionInput';
 import {
-  ArchiveNavbar, ArchiveHero, ArchiveReveal,
-  CookedScoreLight, BadFeelingsChart, DonutChart, LightCastWidget,
-  ArchiveFooter, LoreWrapped
+  ArchiveNavbar,
+  ArchiveHero,
+  ArchiveReveal,
+  CookedScoreLight,
+  BadFeelingsChart,
+  DonutChart,
+  LightCastWidget,
+  ArchiveFooter,
+  LoreWrapped,
 } from '@/components/cinematic/ArchiveRoom';
 import {
-  CinematicBreak, CookedLevelReveal, FriendshipExpose,
-  DocumentaryEra, PlotTwistMoment, FriendshipVerdict, ClosingVerdict,
-  EmotionalTimestamp, RecoveredArtifact, MemoryCollage, SuperlativeCard,
-  StickyChapter, EvidenceBoard,
+  CinematicBreak,
+  CookedLevelReveal,
+  FriendshipExpose,
+  DocumentaryEra,
+  PlotTwistMoment,
+  FriendshipVerdict,
+  ClosingVerdict,
+  EmotionalTimestamp,
+  RecoveredArtifact,
+  MemoryCollage,
+  SuperlativeCard,
+  StickyChapter,
+  EvidenceBoard,
 } from '@/components/cinematic/Documentary';
 import { AnimatePresence, motion } from 'framer-motion';
 import { analytics } from '@/lib/analytics';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
+import { LoreCapsules } from '@/components/experience/LoreCapsules';
 
 export default function TripRoomPage() {
   const params = useParams();
@@ -39,32 +56,40 @@ export default function TripRoomPage() {
     analytics.storyRevisited(tripId);
   }, [tripId]);
 
-  const toggleLight = () => setLightMode(prev => {
-    const next = !prev;
-    localStorage.setItem('archive_light_mode', next ? '1' : '0');
-    return next;
-  });
+  const toggleLight = () =>
+    setLightMode(prev => {
+      const next = !prev;
+      localStorage.setItem('archive_light_mode', next ? '1' : '0');
+      return next;
+    });
 
   // Realtime subscription — replaces setInterval polling
   const loreStatus = (tripData as any)?.trip?.lore_status;
   useEffect(() => {
+    let mounted = true;
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     const channel = supabase
       .channel(`trip-status-${tripId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` },
-        (payload) => {
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` },
+        payload => {
+          if (!mounted) return;
           const newStatus = (payload.new as any)?.lore_status;
           if (newStatus === 'ready' || newStatus === 'failed') refetch();
-        })
+        }
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
   }, [tripId, refetch]);
 
   useEffect(() => {
-    if (false) { /* realtime handles updates, no interval needed */ }
     if (loreStatus === 'ready' && !localStorage.getItem(`wrapped_${tripId}`)) {
       setShowWrapped(true);
     }
@@ -92,34 +117,36 @@ export default function TripRoomPage() {
   const members = trip.members;
 
   // Find key cast members from lore or member roles
-  const villain = members.find((m: any) =>
-    m.role_title?.toLowerCase().includes('villain') ||
-    m.role_title?.toLowerCase().includes('chaos') ||
-    m.role_chaos_rating >= 8
-  ) || (members.length > 1 ? members[1] : undefined);
+  const villain =
+    members.find(
+      (m: any) =>
+        m.role_title?.toLowerCase().includes('villain') ||
+        m.role_title?.toLowerCase().includes('chaos') ||
+        m.role_chaos_rating >= 8
+    ) || (members.length > 1 ? members[1] : undefined);
 
-  const mvp = members.find((m: any) =>
-    m.role_title?.toLowerCase().includes('mvp') ||
-    m.role_title?.toLowerCase().includes('retriever') ||
-    (m.role_chaos_rating !== undefined && m.role_chaos_rating <= 4)
-  ) || (members.length > 0 ? members[0] : undefined);
+  const mvp =
+    members.find(
+      (m: any) =>
+        m.role_title?.toLowerCase().includes('mvp') ||
+        m.role_title?.toLowerCase().includes('retriever') ||
+        (m.role_chaos_rating !== undefined && m.role_chaos_rating <= 4)
+    ) || (members.length > 0 ? members[0] : undefined);
 
   const insideJoke = lore?.trip_lore_awards?.core_memory;
 
-  const isReady      = trip.lore_status === 'ready' && lore;
+  const isReady = trip.lore_status === 'ready' && lore;
   const isProcessing = trip.lore_status === 'processing';
-  const isFailed     = trip.lore_status === 'failed';
+  const isFailed = trip.lore_status === 'failed';
 
   return (
-    <div className={`min-h-screen selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden transition-colors duration-300 ${
-      lightMode
-        ? 'bg-[#FAF1E4] text-[#2A1A0A]'
-        : 'bg-[#060604] text-[#F5F0E8]'
-    }`}>
+    <div
+      className={`min-h-screen selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden transition-colors duration-300 ${
+        lightMode ? 'bg-[#FAF1E4] text-[#2A1A0A]' : 'bg-[#060604] text-[#F5F0E8]'
+      }`}
+    >
       <AnimatePresence>
-        {showWrapped && isReady && (
-          <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />
-        )}
+        {showWrapped && isReady && <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />}
       </AnimatePresence>
 
       {!lightMode && <FilmGrain />}
@@ -143,12 +170,13 @@ export default function TripRoomPage() {
             <ArchiveHero trip={trip} />
           </div>
 
-          {/* Letterboxd 2-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
+          {/* Lore Capsules — tap-to-unlock reveals (villain, MVP, core memory) */}
+          {lore && <LoreCapsules lore={lore} members={members} tripId={tripId} />}
 
+          {/* Letterboxed 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
             {/* ── LEFT: documentary scroll column ──────────────────────── */}
             <div className="space-y-0">
-
               {/* ① Delusion Index — giant emotional beat */}
               <CookedLevelReveal trip={trip} />
 
@@ -179,7 +207,7 @@ export default function TripRoomPage() {
                 label="Photos Recovered From Device Storage"
                 count={6}
                 accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
-                photos={(photoList as any[] || []).slice(0, 6)}
+                photos={(photoList?.photos ?? []).slice(0, 6)}
                 tripId={tripId}
               />
 
@@ -191,12 +219,17 @@ export default function TripRoomPage() {
                     text="The AI identified a primary chaos source. The data is not flattering."
                     accent="#FF4D4D"
                   />
-                  <StickyChapter number="Chapter 02" title="Who Caused The Collapse" accent="#FF4D4D" />
+                  <StickyChapter
+                    number="Chapter 02"
+                    title="Who Caused The Collapse"
+                    accent="#FF4D4D"
+                  />
                   <CinematicBreak
                     text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
                     sub="AI Findings · Cross-referenced · 0 appeals accepted"
                     accent="#FF4D4D"
                   />
+                  <EmotionalDamageScan members={members} />
                   <FriendshipExpose members={members} />
                 </section>
               )}
@@ -207,7 +240,10 @@ export default function TripRoomPage() {
                   {lore?.season_recap?.act_1 && (
                     <RecoveredArtifact
                       label="Witness Statement · Act I"
-                      content={lore.season_recap.act_1.slice(0, 160) + (lore.season_recap.act_1.length > 160 ? '...' : '')}
+                      content={
+                        lore.season_recap.act_1.slice(0, 160) +
+                        (lore.season_recap.act_1.length > 160 ? '...' : '')
+                      }
                       type="note"
                       rotation={-1.5}
                     />
@@ -241,12 +277,7 @@ export default function TripRoomPage() {
                   <StickyChapter number="Chapter 03" title="How It Unfolded" accent="#7C6AFF" />
                   <div className="pt-4">
                     {lore.trip_eras.map((era: any, i: number) => (
-                      <DocumentaryEra
-                        key={i}
-                        era={era}
-                        index={i}
-                        total={lore.trip_eras.length}
-                      />
+                      <DocumentaryEra key={i} era={era} index={i} total={lore.trip_eras.length} />
                     ))}
                   </div>
                 </section>
@@ -255,7 +286,11 @@ export default function TripRoomPage() {
               {/* ⑩ AI Psychological Profile */}
               {lore && (
                 <section className="py-4">
-                  <StickyChapter number="Chapter 04" title="AI Psychological Profile" accent="#2D9E8B" />
+                  <StickyChapter
+                    number="Chapter 04"
+                    title="AI Psychological Profile"
+                    accent="#2D9E8B"
+                  />
                   <FriendshipVerdict lore={lore} />
                 </section>
               )}
@@ -263,7 +298,11 @@ export default function TripRoomPage() {
               {/* ⑪ Superlatives — yearbook awards */}
               {lore?.superlatives?.length > 0 && (
                 <section className="py-4 space-y-6">
-                  <StickyChapter number="Chapter 05" title="The Official Superlatives" accent="#D49E2D" />
+                  <StickyChapter
+                    number="Chapter 05"
+                    title="The Official Superlatives"
+                    accent="#D49E2D"
+                  />
                   <div className="space-y-4">
                     {lore.superlatives.slice(0, 4).map((sup: any, i: number) => (
                       <SuperlativeCard key={i} sup={sup} index={i} />
@@ -275,7 +314,10 @@ export default function TripRoomPage() {
               {/* ⑫ Closing cinematic break */}
               {lore && (
                 <CinematicBreak
-                  text={lore.what_this_trip_was_really_about || `${trip?.name} happened. The rest is mythology.`}
+                  text={
+                    lore.what_this_trip_was_really_about ||
+                    `${trip?.name} happened. The rest is mythology.`
+                  }
                   sub="What this trip was really about"
                   accent="#2D9E8B"
                 />
@@ -316,6 +358,7 @@ export default function TripRoomPage() {
               <DonutChart trip={trip} />
               <LightCastWidget trip={trip} />
               <RecurringIdentityWidget tripId={tripId} />
+              <ConfessionInput tripId={tripId} />
             </div>
           </div>
 
@@ -330,32 +373,197 @@ export default function TripRoomPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// EMOTIONAL DAMAGE SCAN — scrolls into view as a fake AI scan before FriendshipExpose
+// ─────────────────────────────────────────────────────────────────────────────
+function EmotionalDamageScan({ members }: { members: any[] }) {
+  const [scanning, setScanning] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !scanning && !scanComplete) {
+          setScanning(true);
+          setTimeout(() => setScanComplete(true), 2200);
+        }
+      },
+      { threshold: 0.4 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [scanning, scanComplete]);
+
+  const sorted = [...members]
+    .filter((m: any) => m.role_chaos_rating != null)
+    .sort((a: any, b: any) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0))
+    .slice(0, 4);
+
+  if (sorted.length === 0) return null;
+
+  return (
+    <div
+      ref={ref}
+      className="relative rounded-2xl overflow-hidden my-6 p-6 space-y-4"
+      style={{ background: 'rgba(255,77,77,0.04)', border: '1px solid rgba(255,77,77,0.1)' }}
+    >
+      {/* Scan status header */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-1.5 h-1.5 rounded-full bg-[#FF4D4D]"
+          style={{
+            animation: scanning && !scanComplete ? 'pulse-soft 0.8s ease-in-out infinite' : 'none',
+          }}
+        />
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.45em]"
+          style={{ color: scanComplete ? 'rgba(255,77,77,0.6)' : 'rgba(255,77,77,0.35)' }}
+        >
+          {scanComplete
+            ? '● CHAOS SIGNATURE ANALYSIS COMPLETE'
+            : scanning
+              ? '◌ SCANNING CHAOS SIGNATURES...'
+              : '● AWAITING SCAN'}
+        </p>
+      </div>
+
+      {/* Member rows — reveal one by one after scan */}
+      <div className="space-y-3">
+        {sorted.map((m: any, i: number) => {
+          const delay = 400 + i * 280;
+          const name = m.display_name || m.role_title || '?';
+          const rating = m.role_chaos_rating ?? 0;
+          const barW = Math.round((rating / 10) * 100);
+          const color = rating >= 8 ? '#FF4D4D' : rating >= 5 ? '#D49E2D' : '#2D9E8B';
+
+          return (
+            <div
+              key={m.user_id || i}
+              className="space-y-1.5"
+              style={{
+                opacity: scanComplete ? 1 : 0,
+                transform: scanComplete ? 'translateY(0)' : 'translateY(8px)',
+                transition: `opacity 0.5s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.5s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <p
+                  className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                  style={{ color: 'rgba(245,240,232,0.55)' }}
+                >
+                  {name}
+                </p>
+                <p className="font-mono text-[9px] font-bold tabular-nums" style={{ color }}>
+                  {rating}/10
+                </p>
+              </div>
+              <div
+                className="h-0.5 rounded-full overflow-hidden"
+                style={{ background: 'rgba(245,240,232,0.06)' }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    background: color,
+                    width: `${barW}%`,
+                    boxShadow: `0 0 6px ${color}`,
+                    transition: `width 0.8s cubic-bezier(0.16,1,0.3,1) ${delay + 200}ms`,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* The scan line — sweeps down */}
+      {scanning && !scanComplete && (
+        <div
+          className="absolute inset-x-0 h-px pointer-events-none"
+          style={{
+            background: 'linear-gradient(90deg, transparent, rgba(255,77,77,0.6), transparent)',
+            animation: 'scan-sweep 2s linear forwards',
+          }}
+        />
+      )}
+
+      <style jsx>{`
+        @keyframes pulse-soft {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.2;
+          }
+        }
+        @keyframes scan-sweep {
+          from {
+            top: 0;
+          }
+          to {
+            top: 100%;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FAILED STATE — shown when lore_status = 'failed'
 // ─────────────────────────────────────────────────────────────────────────────
-function FailedState({ trip, tripId, onRetry }: { trip: any; tripId: string; onRetry: () => void }) {
+function FailedState({
+  trip,
+  tripId,
+  onRetry,
+}: {
+  trip: any;
+  tripId: string;
+  onRetry: () => void;
+}) {
   const router = useRouter();
   const generateLore = trpc.trips.generateLore.useMutation({
-    onSuccess: () => { onRetry(); router.push(`/trips/${tripId}/generating`); },
+    onSuccess: () => {
+      onRetry();
+      router.push(`/trips/${tripId}/generating`);
+    },
   });
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center gap-10 py-20 text-center">
       <div className="space-y-3">
-        <p className="font-mono text-[8px] uppercase tracking-[0.5em]" style={{ color: 'rgba(255,77,77,0.5)' }}>
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.5em]"
+          style={{ color: 'rgba(255,77,77,0.5)' }}
+        >
           ● LORE ENGINE INTERRUPTED
         </p>
-        <h2 className="font-display font-black uppercase tracking-tighter leading-tight"
-            style={{ fontSize: 'clamp(28px, 5vw, 52px)', color: 'rgba(245,240,232,0.9)' }}>
+        <h2
+          className="font-display font-black uppercase tracking-tighter leading-tight"
+          style={{ fontSize: 'clamp(28px, 5vw, 52px)', color: 'rgba(245,240,232,0.9)' }}
+        >
           {trip.name}
         </h2>
-        <p className="font-display italic text-sm max-w-xs mx-auto" style={{ color: 'rgba(245,240,232,0.3)' }}>
+        <p
+          className="font-display italic text-sm max-w-xs mx-auto"
+          style={{ color: 'rgba(245,240,232,0.3)' }}
+        >
           "The lore engine encountered an error. The archive is intact — retry to continue."
         </p>
       </div>
 
       {/* Photos are safe */}
-      <div className="px-6 py-4 rounded-2xl" style={{ background: 'rgba(45,158,139,0.08)', border: '1px solid rgba(45,158,139,0.2)' }}>
-        <p className="font-mono text-[8px] uppercase tracking-[0.3em]" style={{ color: 'rgba(45,158,139,0.7)' }}>
+      <div
+        className="px-6 py-4 rounded-2xl"
+        style={{ background: 'rgba(45,158,139,0.08)', border: '1px solid rgba(45,158,139,0.2)' }}
+      >
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.3em]"
+          style={{ color: 'rgba(45,158,139,0.7)' }}
+        >
           ✓ YOUR PHOTOS ARE SAFE IN THE ARCHIVE
         </p>
       </div>
@@ -365,26 +573,57 @@ function FailedState({ trip, tripId, onRetry }: { trip: any; tripId: string; onR
           onClick={() => generateLore.mutate({ tripId })}
           disabled={generateLore.isPending}
           className="px-10 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.35em] transition-all hover:scale-105 active:scale-95 disabled:opacity-40 flex items-center justify-center gap-3"
-          style={{ background: 'rgba(255,77,77,0.12)', border: '1px solid rgba(255,77,77,0.4)', color: 'rgba(255,77,77,0.9)', boxShadow: '0 0 30px rgba(255,77,77,0.1)' }}>
+          style={{
+            background: 'rgba(255,77,77,0.12)',
+            border: '1px solid rgba(255,77,77,0.4)',
+            color: 'rgba(255,77,77,0.9)',
+            boxShadow: '0 0 30px rgba(255,77,77,0.1)',
+          }}
+        >
           {generateLore.isPending ? (
-            <><div style={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid rgba(255,77,77,0.3)', borderTopColor: '#FF4D4D', animation: 'spin 0.8s linear infinite' }} /> RETRYING...</>
-          ) : 'RETRY LORE ENGINE →'}
+            <>
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  border: '1px solid rgba(255,77,77,0.3)',
+                  borderTopColor: '#FF4D4D',
+                  animation: 'spin 0.8s linear infinite',
+                }}
+              />{' '}
+              RETRYING...
+            </>
+          ) : (
+            'RETRY LORE ENGINE →'
+          )}
         </button>
 
         {generateLore.error && (
-          <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-center max-w-xs mx-auto" style={{ color: 'rgba(255,77,77,0.6)' }}>
+          <p
+            className="font-mono text-[8px] uppercase tracking-[0.25em] text-center max-w-xs mx-auto"
+            style={{ color: 'rgba(255,77,77,0.6)' }}
+          >
             {generateLore.error.message}
           </p>
         )}
 
-        <button onClick={() => router.push(`/trips/${tripId}`)}
-                className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
-                style={{ color: 'rgba(245,240,232,0.45)' }}>
+        <button
+          onClick={() => router.push(`/trips/${tripId}`)}
+          className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+          style={{ color: 'rgba(245,240,232,0.45)' }}
+        >
           ← BACK TO ARCHIVE
         </button>
       </div>
 
-      <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style jsx>{`
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -401,64 +640,92 @@ interface ActiveUpload {
   progress: number;
 }
 
-function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: string; onPhotosChanged: () => void }) {
+function UploadState({
+  trip,
+  tripId,
+  onPhotosChanged,
+}: {
+  trip: any;
+  tripId: string;
+  onPhotosChanged: () => void;
+}) {
   const router = useRouter();
   const [active, setActive] = useState<ActiveUpload | null>(null);
   const [queue, setQueue] = useState<File[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [optimisticCount, setOptimisticCount] = useState(0); // immediate count update
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchDone, setBatchDone] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { data: photos, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
+  const { data: photoData, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
   const getUploadUrl = trpc.photos.getUploadUrl.useMutation();
   const confirmUpload = trpc.photos.confirmUpload.useMutation();
   const generateLore = trpc.trips.generateLore.useMutation({
     onSuccess: () => router.push(`/trips/${tripId}/generating`),
   });
+  const warmupWorker = trpc.trips.warmupWorker.useMutation();
+  const warmupFiredRef = useRef(false);
 
   // Process one file: scanning → uploading → absorbing
-  const processFile = useCallback(async (file: File) => {
-    const preview = URL.createObjectURL(file);
-    setErrorMsg('');
+  const processFile = useCallback(
+    async (file: File) => {
+      const preview = URL.createObjectURL(file);
+      setErrorMsg('');
 
-    // Phase 1: scanning (show preview + scan animation)
-    setActive({ file, preview, phase: 'scanning', progress: 0 });
-    await new Promise(r => setTimeout(r, 900));
-
-    // Phase 2: uploading
-    setActive(prev => prev ? { ...prev, phase: 'uploading', progress: 0 } : prev);
-    try {
-      const { uploadUrl, storagePath } = await getUploadUrl.mutateAsync({
-        tripId, fileName: file.name, contentType: file.type as any,
-      });
-
-      // Simulate progress during upload
-      const progressInterval = setInterval(() => {
-        setActive(prev => prev ? { ...prev, progress: Math.min(prev.progress + 12, 88) } : prev);
-      }, 180);
-
-      await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-      clearInterval(progressInterval);
-      setActive(prev => prev ? { ...prev, progress: 100 } : prev);
-
-      await confirmUpload.mutateAsync({ tripId, storagePath, fileSize: file.size, mimeType: file.type });
-      setOptimisticCount(c => c + 1); // enable Generate button immediately on 5th photo
-      await refetchPhotos();
-      onPhotosChanged();
-
-      // Phase 3: absorbing — image flies into lore engine
-      setActive(prev => prev ? { ...prev, phase: 'absorbing' } : prev);
+      // Phase 1: scanning (show preview + scan animation)
+      setActive({ file, preview, phase: 'scanning', progress: 0 });
       await new Promise(r => setTimeout(r, 900));
 
-    } catch {
-      setActive(prev => prev ? { ...prev, phase: 'error' } : prev);
-      setErrorMsg('Upload failed. Tap to retry.');
-      URL.revokeObjectURL(preview);
-      await new Promise(r => setTimeout(r, 1800));
-    }
+      // Phase 2: uploading
+      setActive(prev => (prev ? { ...prev, phase: 'uploading', progress: 0 } : prev));
+      try {
+        const { uploadUrl, storagePath } = await getUploadUrl.mutateAsync({
+          tripId,
+          fileName: file.name,
+          contentType: file.type as any,
+        });
 
-    URL.revokeObjectURL(preview);
-    setActive(null);
-  }, [tripId, getUploadUrl, confirmUpload, refetchPhotos, onPhotosChanged]);
+        // Simulate progress during upload
+        const progressInterval = setInterval(() => {
+          setActive(prev =>
+            prev ? { ...prev, progress: Math.min(prev.progress + 12, 88) } : prev
+          );
+        }, 180);
+
+        await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        clearInterval(progressInterval);
+        setActive(prev => (prev ? { ...prev, progress: 100 } : prev));
+
+        await confirmUpload.mutateAsync({
+          tripId,
+          storagePath,
+          fileSize: file.size,
+          mimeType: file.type,
+        });
+        setOptimisticCount(c => c + 1); // enable Generate button immediately on 5th photo
+        setBatchDone(d => d + 1);
+        await refetchPhotos();
+        onPhotosChanged();
+
+        // Phase 3: absorbing — image flies into lore engine
+        setActive(prev => (prev ? { ...prev, phase: 'absorbing' } : prev));
+        await new Promise(r => setTimeout(r, 900));
+      } catch {
+        setActive(prev => (prev ? { ...prev, phase: 'error' } : prev));
+        setErrorMsg('Upload failed. Tap to retry.');
+        URL.revokeObjectURL(preview);
+        await new Promise(r => setTimeout(r, 1800));
+      }
+
+      URL.revokeObjectURL(preview);
+      setActive(null);
+    },
+    [tripId, getUploadUrl, confirmUpload, refetchPhotos, onPhotosChanged]
+  );
 
   // Drain the queue
   useEffect(() => {
@@ -470,41 +737,67 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
 
   const handleFiles = (files: FileList) => {
     const arr = Array.from(files);
-    if (!active) {
+    if (!active && queue.length === 0) {
+      setBatchTotal(arr.length);
+      setBatchDone(0);
       const [first, ...rest] = arr;
       setQueue(rest);
       processFile(first);
     } else {
+      setBatchTotal(t => t + arr.length);
       setQueue(q => [...q, ...arr]);
     }
   };
 
   // Use whichever is higher — optimistic (immediate) or confirmed (from DB)
+  const photos = photoData?.photos;
   const photoCount = Math.max(photos?.length || 0, optimisticCount);
   const canGenerate = photoCount >= 5;
   const needed = Math.max(0, 5 - photoCount);
   const isActive = !!active;
 
+  // Warm up the AI worker as soon as the user reaches 5 photos — gives Render free tier
+  // 30-60s to exit cold start before they click "Ignite the Lore Engine".
+  useEffect(() => {
+    if (canGenerate && !warmupFiredRef.current) {
+      warmupFiredRef.current = true;
+      warmupWorker.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canGenerate]);
+
   // SVG ring circumference for progress
-  const R = 52; const C = 2 * Math.PI * R;
+  const R = 52;
+  const C = 2 * Math.PI * R;
   const dash = active ? C * (active.progress / 100) : 0;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center py-16 px-6 relative overflow-hidden">
       {/* Atmospheric background glow that pulses during upload */}
-      <div className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
-           style={{ opacity: isActive ? 1 : 0 }}>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px]"
-             style={{ background: 'radial-gradient(circle, rgba(255,77,77,0.08) 0%, transparent 70%)' }} />
+      <div
+        className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
+        style={{ opacity: isActive ? 1 : 0 }}
+      >
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px]"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,77,77,0.08) 0%, transparent 70%)',
+          }}
+        />
       </div>
 
       {/* Header */}
       <div className="text-center space-y-3 mb-12 relative z-10">
-        <p className="font-mono text-[8px] uppercase tracking-[0.5em]" style={{ color: 'rgba(255,77,77,0.5)' }}>
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.5em]"
+          style={{ color: 'rgba(255,77,77,0.5)' }}
+        >
           ● FEEDING THE LORE ENGINE
         </p>
-        <h2 className="font-display font-black tracking-tighter uppercase leading-none"
-            style={{ fontSize: 'clamp(32px, 6vw, 64px)', color: 'rgba(245,240,232,0.92)' }}>
+        <h2
+          className="font-display font-black tracking-tighter uppercase leading-none"
+          style={{ fontSize: 'clamp(32px, 6vw, 64px)', color: 'rgba(245,240,232,0.92)' }}
+        >
           {trip.name}
         </h2>
         <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)' }}>
@@ -514,23 +807,34 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
 
       {/* Central upload slot — this is the cinematic core */}
       <div className="relative flex flex-col items-center gap-8 mb-12 z-10">
-
         {/* The upload portal */}
         <div className="relative" style={{ width: 160, height: 160 }}>
-
           {/* Progress ring SVG */}
           {isActive && (
             <svg className="absolute inset-0 w-full h-full -rotate-90" style={{ zIndex: 3 }}>
               {/* Track */}
-              <circle cx="80" cy="80" r={R} fill="none" stroke="rgba(255,77,77,0.12)" strokeWidth="2.5" />
+              <circle
+                cx="80"
+                cy="80"
+                r={R}
+                fill="none"
+                stroke="rgba(255,77,77,0.12)"
+                strokeWidth="2.5"
+              />
               {/* Progress */}
-              <circle cx="80" cy="80" r={R}
+              <circle
+                cx="80"
+                cy="80"
+                r={R}
                 fill="none"
                 stroke={active?.phase === 'absorbing' ? '#2D9E8B' : '#FF4D4D'}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeDasharray={`${dash} ${C}`}
-                style={{ transition: 'stroke-dasharray 0.2s ease, stroke 0.4s ease', filter: 'drop-shadow(0 0 4px rgba(255,77,77,0.5))' }}
+                style={{
+                  transition: 'stroke-dasharray 0.2s ease, stroke 0.4s ease',
+                  filter: 'drop-shadow(0 0 4px rgba(255,77,77,0.5))',
+                }}
               />
             </svg>
           )}
@@ -546,28 +850,39 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
           >
             {/* Active upload — image preview */}
             {active && active.preview && (
-              <div className="absolute inset-0"
-                   style={{
-                     opacity: active.phase === 'absorbing' ? 0 : 1,
-                     transform: active.phase === 'absorbing' ? 'scale(0.1)' : 'scale(1)',
-                     transition: 'opacity 0.7s cubic-bezier(0.4,0,1,1), transform 0.7s cubic-bezier(0.4,0,1,1)',
-                   }}>
+              <div
+                className="absolute inset-0"
+                style={{
+                  opacity: active.phase === 'absorbing' ? 0 : 1,
+                  transform: active.phase === 'absorbing' ? 'scale(0.1)' : 'scale(1)',
+                  transition:
+                    'opacity 0.7s cubic-bezier(0.4,0,1,1), transform 0.7s cubic-bezier(0.4,0,1,1)',
+                }}
+              >
                 {/* Photo */}
                 <img src={active.preview} alt="" className="w-full h-full object-cover" />
 
                 {/* Dark overlay during upload */}
-                <div className="absolute inset-0 transition-opacity duration-500"
-                     style={{ background: 'rgba(6,6,4,0.45)', opacity: active.phase === 'uploading' ? 1 : 0 }} />
+                <div
+                  className="absolute inset-0 transition-opacity duration-500"
+                  style={{
+                    background: 'rgba(6,6,4,0.45)',
+                    opacity: active.phase === 'uploading' ? 1 : 0,
+                  }}
+                />
 
                 {/* Scan line sweep */}
                 {active.phase === 'scanning' && (
                   <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute left-0 right-0 h-0.5"
-                         style={{
-                           background: 'linear-gradient(90deg, transparent, rgba(255,77,77,0.8), transparent)',
-                           boxShadow: '0 0 8px rgba(255,77,77,0.6)',
-                           animation: 'scan-sweep 0.9s ease-in-out forwards',
-                         }} />
+                    <div
+                      className="absolute left-0 right-0 h-0.5"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, transparent, rgba(255,77,77,0.8), transparent)',
+                        boxShadow: '0 0 8px rgba(255,77,77,0.6)',
+                        animation: 'scan-sweep 0.9s ease-in-out forwards',
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -576,30 +891,50 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
             {/* Idle — "+" plus */}
             {!active && (
               <>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all group-hover:scale-110"
-                     style={{ border: '1px solid rgba(245,240,232,0.1)', background: 'rgba(245,240,232,0.04)' }}>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all group-hover:scale-110"
+                  style={{
+                    border: '1px solid rgba(245,240,232,0.1)',
+                    background: 'rgba(245,240,232,0.04)',
+                  }}
+                >
                   <Plus size={16} style={{ color: 'rgba(245,240,232,0.25)' }} />
                 </div>
-                <span className="font-mono text-[7px] uppercase tracking-[0.35em]"
-                      style={{ color: 'rgba(245,240,232,0.55)' }}>
+                <span
+                  className="font-mono text-[7px] uppercase tracking-[0.35em]"
+                  style={{ color: 'rgba(245,240,232,0.55)' }}
+                >
                   Upload
                 </span>
               </>
             )}
 
-            <input ref={inputRef} type="file" accept="image/*" multiple className="hidden"
-                   onChange={e => e.target.files && handleFiles(e.target.files)} />
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => e.target.files && handleFiles(e.target.files)}
+            />
           </label>
 
           {/* Phase label below ring */}
           {active && (
             <div className="absolute -bottom-8 left-0 right-0 text-center">
-              <span className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
-                    key={active.phase}
-                    style={{
-                      color: active.phase === 'absorbing' ? 'rgba(45,158,139,0.7)' : active.phase === 'error' ? 'rgba(255,77,77,0.7)' : 'rgba(255,77,77,0.5)',
-                      animation: 'fade-in 0.3s ease',
-                    }}>
+              <span
+                className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
+                key={active.phase}
+                style={{
+                  color:
+                    active.phase === 'absorbing'
+                      ? 'rgba(45,158,139,0.7)'
+                      : active.phase === 'error'
+                        ? 'rgba(255,77,77,0.7)'
+                        : 'rgba(255,77,77,0.5)',
+                  animation: 'fade-in 0.3s ease',
+                }}
+              >
                 {active.phase === 'scanning' && '● SCANNING'}
                 {active.phase === 'uploading' && `● ${active.progress}% ARCHIVED`}
                 {active.phase === 'absorbing' && '● FRAGMENT ABSORBED'}
@@ -609,18 +944,59 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
           )}
         </div>
 
+        {/* Batch progress bar — shown when uploading multiple files */}
+        {batchTotal > 1 && (
+          <div className="w-full max-w-[200px] mt-5">
+            <div className="flex justify-between items-center mb-1.5">
+              <span
+                className="font-mono text-[7px] uppercase tracking-[0.3em]"
+                style={{ color: 'rgba(245,240,232,0.22)' }}
+              >
+                ARCHIVING
+              </span>
+              <span className="font-mono text-[7px]" style={{ color: 'rgba(245,240,232,0.32)' }}>
+                {batchDone} / {batchTotal}
+              </span>
+            </div>
+            <div
+              className="w-full h-px rounded-full overflow-hidden"
+              style={{ background: 'rgba(245,240,232,0.07)' }}
+            >
+              <motion.div
+                className="h-full rounded-full"
+                style={{
+                  background: '#FF4D4D',
+                  boxShadow: '0 0 4px rgba(255,77,77,0.5)',
+                  originX: 0,
+                }}
+                animate={{
+                  width: `${batchTotal > 0 ? Math.round((batchDone / batchTotal) * 100) : 0}%`,
+                }}
+                transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Queue indicator */}
-        {queue.length > 0 && (
-          <p className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
-             style={{ color: 'rgba(245,240,232,0.2)', marginTop: 16 }}>
+        {queue.length > 0 && batchTotal <= 1 && (
+          <p
+            className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
+            style={{ color: 'rgba(245,240,232,0.2)', marginTop: 16 }}
+          >
             {queue.length} FRAGMENT{queue.length !== 1 ? 'S' : ''} QUEUED
           </p>
         )}
 
         {errorMsg && (
-          <p className="font-mono text-[8px] uppercase tracking-[0.25em] cursor-pointer hover:opacity-80"
-             onClick={() => { setActive(null); setErrorMsg(''); }}
-             style={{ color: 'rgba(255,77,77,0.7)', marginTop: 8 }}>
+          <p
+            className="font-mono text-[8px] uppercase tracking-[0.25em] cursor-pointer hover:opacity-80"
+            onClick={() => {
+              setActive(null);
+              setErrorMsg('');
+            }}
+            style={{ color: 'rgba(255,77,77,0.7)', marginTop: 8 }}
+          >
             {errorMsg}
           </p>
         )}
@@ -629,27 +1005,44 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
       {/* Archived fragments grid — confirmed photos */}
       {photoCount > 0 && (
         <div className="w-full max-w-md px-4 mb-10 z-10">
-          <p className="font-mono text-[7.5px] uppercase tracking-[0.5em] mb-4 text-center"
-             style={{ color: 'rgba(245,240,232,0.2)' }}>
+          <p
+            className="font-mono text-[7.5px] uppercase tracking-[0.5em] mb-4 text-center"
+            style={{ color: 'rgba(245,240,232,0.2)' }}
+          >
             {photoCount} FRAGMENT{photoCount !== 1 ? 'S' : ''} IN ARCHIVE
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
-            {(photos || []).map((photo: any) => (
-              <div key={photo.id}
-                   className="rounded-xl overflow-hidden relative"
-                   style={{
-                     width: 48, height: 48,
-                     border: '1px solid rgba(245,240,232,0.08)',
-                     background: 'rgba(245,240,232,0.04)',
-                     animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
-                   }}>
-                {(photo.thumbnailUrl || photo.url) ? (
-                  <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" />
+            {(photos ?? []).map(photo => (
+              <div
+                key={photo.id}
+                className="rounded-xl overflow-hidden relative"
+                style={{
+                  width: 48,
+                  height: 48,
+                  border: '1px solid rgba(245,240,232,0.08)',
+                  background: 'rgba(245,240,232,0.04)',
+                  animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
+                }}
+              >
+                {photo.thumbnailUrl || photo.url ? (
+                  <img
+                    src={photo.thumbnailUrl || photo.url || undefined}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   // Placeholder — photo uploaded but thumbnail not generated yet
-                  <div className="w-full h-full flex items-center justify-center"
-                       style={{ background: 'rgba(255,77,77,0.06)' }}>
-                    <div className="w-3 h-3 rounded-full" style={{ background: 'rgba(255,77,77,0.3)', animation: 'pulse-soft 1.5s ease-in-out infinite' }} />
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ background: 'rgba(255,77,77,0.06)' }}
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{
+                        background: 'rgba(255,77,77,0.3)',
+                        animation: 'pulse-soft 1.5s ease-in-out infinite',
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -658,17 +1051,32 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
         </div>
       )}
 
+      {/* Confessional booth — pre-generation */}
+      {photoCount >= 1 && (
+        <div className="w-full max-w-xs mb-10 z-10 px-4">
+          <ConfessionInput tripId={tripId} />
+        </div>
+      )}
+
       {/* Progress toward lore generation */}
       {needed > 0 && photoCount > 0 && (
         <div className="flex items-center gap-3 mb-8 z-10">
           <div className="flex gap-1">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="w-6 h-1 rounded-full transition-all duration-500"
-                   style={{ background: i < photoCount ? '#FF4D4D' : 'rgba(245,240,232,0.1)', boxShadow: i < photoCount ? '0 0 4px rgba(255,77,77,0.4)' : 'none' }} />
+              <div
+                key={i}
+                className="w-6 h-1 rounded-full transition-all duration-500"
+                style={{
+                  background: i < photoCount ? '#FF4D4D' : 'rgba(245,240,232,0.1)',
+                  boxShadow: i < photoCount ? '0 0 4px rgba(255,77,77,0.4)' : 'none',
+                }}
+              />
             ))}
           </div>
-          <span className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
-                style={{ color: 'rgba(245,240,232,0.55)' }}>
+          <span
+            className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
+            style={{ color: 'rgba(245,240,232,0.55)' }}
+          >
             {needed} MORE TO UNLOCK LORE
           </span>
         </div>
@@ -686,18 +1094,42 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
             color: canGenerate ? 'rgba(255,77,77,0.95)' : 'rgba(245,240,232,0.2)',
             boxShadow: canGenerate ? '0 0 30px rgba(255,77,77,0.12)' : 'none',
           }}
-          onMouseEnter={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 50px rgba(255,77,77,0.3)'; }}
-          onMouseLeave={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 30px rgba(255,77,77,0.12)'; }}
+          onMouseEnter={e => {
+            if (canGenerate)
+              (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                '0 0 50px rgba(255,77,77,0.3)';
+          }}
+          onMouseLeave={e => {
+            if (canGenerate)
+              (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                '0 0 30px rgba(255,77,77,0.12)';
+          }}
         >
           {generateLore.isPending ? (
-            <><div style={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid rgba(255,77,77,0.3)', borderTopColor: '#FF4D4D', animation: 'spin 0.8s linear infinite' }} /> IGNITING...</>
+            <>
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  border: '1px solid rgba(255,77,77,0.3)',
+                  borderTopColor: '#FF4D4D',
+                  animation: 'spin 0.8s linear infinite',
+                }}
+              />{' '}
+              IGNITING...
+            </>
           ) : generateLore.error ? (
             '⚠ ' + (generateLore.error.message?.slice(0, 40) ?? 'Error')
-          ) : 'IGNITE THE LORE ENGINE →'}
+          ) : (
+            'IGNITE THE LORE ENGINE →'
+          )}
         </button>
         {needed === 0 && (
-          <p className="text-center font-mono text-[7.5px] uppercase tracking-[0.3em] mt-3"
-             style={{ color: 'rgba(245,240,232,0.50)' }}>
+          <p
+            className="text-center font-mono text-[7.5px] uppercase tracking-[0.3em] mt-3"
+            style={{ color: 'rgba(245,240,232,0.50)' }}
+          >
             {photoCount} FRAGMENTS READY
           </p>
         )}
@@ -705,15 +1137,38 @@ function UploadState({ trip, tripId, onPhotosChanged }: { trip: any; tripId: str
 
       <style jsx>{`
         @keyframes scan-sweep {
-          from { top: -2px; opacity: 1; }
-          to   { top: 100%; opacity: 0.4; }
+          from {
+            top: -2px;
+            opacity: 1;
+          }
+          to {
+            top: 100%;
+            opacity: 0.4;
+          }
         }
         @keyframes fragment-in {
-          from { opacity: 0; transform: scale(0.6); }
-          to   { opacity: 1; transform: scale(1); }
+          from {
+            opacity: 0;
+            transform: scale(0.6);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
       `}</style>
     </div>
   );
@@ -743,7 +1198,7 @@ function GeneratingState({ tripId }: { tripId: string }) {
   }, [phaseIdx]);
 
   useEffect(() => {
-    const t = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
+    const t = setInterval(() => setDots(d => (d.length >= 3 ? '' : d + '.')), 500);
     return () => clearInterval(t);
   }, []);
 
@@ -758,35 +1213,112 @@ function GeneratingState({ tripId }: { tripId: string }) {
         </h2>
         <div className="space-y-2 min-h-[60px]">
           <p className="text-xl font-vibe font-medium text-white/80 transition-all duration-700">
-            {PHASES[phaseIdx].label}{dots}
+            {PHASES[phaseIdx].label}
+            {dots}
           </p>
-          <p className="text-sm font-data font-light text-white/30 italic">{PHASES[phaseIdx].sub}</p>
+          <p className="text-sm font-data font-light text-white/30 italic">
+            {PHASES[phaseIdx].sub}
+          </p>
         </div>
       </div>
 
       {/* Phase dots */}
       <div className="flex gap-2">
         {PHASES.map((_, i) => (
-          <div key={i} className={`rounded-full transition-all duration-500 ${
-            i < phaseIdx ? 'w-2 h-2 bg-chill-accent'
-            : i === phaseIdx ? 'w-8 h-2 bg-cooked-accent animate-pulse-soft'
-            : 'w-2 h-2 bg-white/10'
-          }`} />
+          <div
+            key={i}
+            className={`rounded-full transition-all duration-500 ${
+              i < phaseIdx
+                ? 'w-2 h-2 bg-chill-accent'
+                : i === phaseIdx
+                  ? 'w-8 h-2 bg-cooked-accent animate-pulse-soft'
+                  : 'w-2 h-2 bg-white/10'
+            }`}
+          />
         ))}
       </div>
 
-      <p className="text-[9px] uppercase tracking-widest text-white/35 font-vibe">Usually 2–5 minutes</p>
+      <p className="text-[9px] uppercase tracking-widest text-white/35 font-vibe">
+        Usually 2–5 minutes
+      </p>
     </div>
+  );
+}
+
+function SkeletonBlock({
+  w = '100%',
+  h = 24,
+  radius = 6,
+}: {
+  w?: string | number;
+  h?: number;
+  radius?: number;
+}) {
+  return (
+    <div
+      style={{
+        width: w,
+        height: h,
+        borderRadius: radius,
+        background: 'rgba(245,240,232,0.04)',
+        animation: 'sk-pulse 1.6s ease-in-out infinite',
+      }}
+    />
   );
 }
 
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-[#060604] flex flex-col items-center justify-center gap-6">
-      <div className="w-10 h-10 border-2 border-cooked-accent/20 border-t-cooked-accent rounded-full animate-spin" />
-      <p className="text-[9px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black animate-pulse-soft">
-        Opening Archives...
-      </p>
+    <div className="min-h-screen bg-[#060604] overflow-hidden">
+      {/* Navbar skeleton */}
+      <div
+        className="flex items-center justify-between px-6 py-4"
+        style={{ borderBottom: '1px solid rgba(245,240,232,0.04)' }}
+      >
+        <SkeletonBlock w={120} h={14} radius={4} />
+        <SkeletonBlock w={72} h={14} radius={4} />
+      </div>
+
+      <div className="max-w-[1600px] mx-auto px-6 pt-12 pb-8">
+        {/* Hero skeleton */}
+        <div className="space-y-4 mb-10">
+          <SkeletonBlock w={80} h={10} radius={3} />
+          <SkeletonBlock w="70%" h={56} radius={8} />
+          <SkeletonBlock w="45%" h={14} radius={4} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
+          {/* Left column skeleton */}
+          <div className="space-y-6">
+            <SkeletonBlock h={280} radius={16} />
+            <SkeletonBlock h={160} radius={16} />
+            <div className="grid grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <SkeletonBlock key={i} h={120} radius={12} />
+              ))}
+            </div>
+            <SkeletonBlock h={200} radius={16} />
+          </div>
+          {/* Right sidebar skeleton */}
+          <div className="space-y-4">
+            <SkeletonBlock h={180} radius={16} />
+            <SkeletonBlock h={120} radius={16} />
+            <SkeletonBlock h={100} radius={16} />
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes sk-pulse {
+          0%,
+          100% {
+            opacity: 0.6;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -795,7 +1327,10 @@ function NotFoundState() {
   return (
     <div className="min-h-screen bg-[#060604] flex flex-col items-center justify-center gap-6">
       <p className="text-white/20 font-cinematic italic text-xl">Archive not found.</p>
-      <Link href="/trips" className="text-[10px] uppercase tracking-widest font-vibe font-black text-white/30 hover:text-white transition-colors">
+      <Link
+        href="/trips"
+        className="text-[10px] uppercase tracking-widest font-vibe font-black text-white/30 hover:text-white transition-colors"
+      >
         ← Return to Dossier
       </Link>
     </div>

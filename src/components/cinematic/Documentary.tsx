@@ -31,13 +31,17 @@ export function CinematicBreak({
     >
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at ${align === 'center' ? '50%' : '20%'} 50%, ${accent}08, transparent 70%)` }}
+        style={{
+          background: `radial-gradient(ellipse at ${align === 'center' ? '50%' : '20%'} 50%, ${accent}08, transparent 70%)`,
+        }}
       />
       <div className="absolute inset-0 pointer-events-none opacity-[0.025] bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:200px_200px]" />
 
-      <div className={cn("relative z-10", align === 'center' && 'text-center')}>
+      <div className={cn('relative z-10', align === 'center' && 'text-center')}>
         {timestamp && (
-          <div className="font-mono text-[9px] text-white/15 uppercase tracking-[0.4em] mb-5">{timestamp}</div>
+          <div className="font-mono text-[9px] text-white/15 uppercase tracking-[0.4em] mb-5">
+            {timestamp}
+          </div>
         )}
         <p className="text-[28px] md:text-[40px] font-cinematic italic text-[#F5F0E8]/75 leading-[1.15] tracking-tight max-w-2xl">
           &ldquo;{text}&rdquo;
@@ -75,7 +79,9 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
       {/* Glow */}
       <div
         className="absolute inset-0 pointer-events-none blur-[200px] opacity-[0.15]"
-        style={{ background: `radial-gradient(ellipse at 40% 60%, ${accentColor}, transparent 65%)` }}
+        style={{
+          background: `radial-gradient(ellipse at 40% 60%, ${accentColor}, transparent 65%)`,
+        }}
       />
 
       {/* Scanline overlay — VHS signal feel */}
@@ -83,7 +89,8 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
         <div
           className="absolute left-0 right-0 h-8 opacity-[0.04] animate-scan"
           style={{
-            background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent)',
+            background:
+              'linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent)',
           }}
         />
       </div>
@@ -118,7 +125,11 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
           )}
           <div
             className="inline-block px-4 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-wider"
-            style={{ backgroundColor: `${accentColor}12`, color: accentColor, border: `1px solid ${accentColor}25` }}
+            style={{
+              backgroundColor: `${accentColor}12`,
+              color: accentColor,
+              border: `1px solid ${accentColor}25`,
+            }}
           >
             / 100 possible chaos units
           </div>
@@ -137,7 +148,7 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export function FriendshipExpose({ members }: { members: any[] }) {
   const sorted = [...(members || [])]
-    .filter((m) => m.role_chaos_rating != null)
+    .filter(m => m.role_chaos_rating != null)
     .sort((a, b) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0));
 
   if (sorted.length === 0) return null;
@@ -157,7 +168,9 @@ export function FriendshipExpose({ members }: { members: any[] }) {
           Classified · AI Findings
         </div>
         <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
-          Who Caused<br />The Collapse
+          Who Caused
+          <br />
+          The Collapse
         </h2>
       </div>
 
@@ -165,7 +178,9 @@ export function FriendshipExpose({ members }: { members: any[] }) {
       <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-cooked-accent/10 via-[#0E0E0C] to-[#060604] border border-cooked-accent/20 p-8">
         {/* Evidence stamp */}
         <div className="absolute top-5 right-5 px-3 py-1.5 rounded-full bg-cooked-accent/10 border border-cooked-accent/20">
-          <span className="text-[7px] font-mono text-cooked-accent/70 uppercase tracking-[0.25em]">Confirmed</span>
+          <span className="text-[7px] font-mono text-cooked-accent/70 uppercase tracking-[0.25em]">
+            Confirmed
+          </span>
         </div>
 
         <div className="space-y-4">
@@ -196,7 +211,9 @@ export function FriendshipExpose({ members }: { members: any[] }) {
 
       {/* Full ranking */}
       <div className="space-y-2">
-        <div className="text-[8px] uppercase tracking-[0.4em] text-white/15 font-vibe font-black mb-4">Full Damage Report</div>
+        <div className="text-[8px] uppercase tracking-[0.4em] text-white/15 font-vibe font-black mb-4">
+          Full Damage Report
+        </div>
         {sorted.map((m, i) => {
           const barPct = ((m.role_chaos_rating ?? 0) / 10) * 100;
           const color = COLORS[i % COLORS.length];
@@ -210,7 +227,9 @@ export function FriendshipExpose({ members }: { members: any[] }) {
                   : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]'
               )}
             >
-              <span className="w-4 text-right text-[9px] font-mono text-white/15 flex-shrink-0">{i + 1}</span>
+              <span className="w-4 text-right text-[9px] font-mono text-white/15 flex-shrink-0">
+                {i + 1}
+              </span>
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-vibe font-black text-white flex-shrink-0"
                 style={{ background: color }}
@@ -219,7 +238,9 @@ export function FriendshipExpose({ members }: { members: any[] }) {
               </div>
               <div className="flex-1 min-w-0 space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <span className="text-[13px] font-vibe font-black text-[#F5F0E8] truncate">{m.display_name}</span>
+                  <span className="text-[13px] font-vibe font-black text-[#F5F0E8] truncate">
+                    {m.display_name}
+                  </span>
                   <span className="text-[10px] font-mono text-white/35 ml-3 flex-shrink-0 tabular-nums">
                     {m.role_chaos_rating}/10
                   </span>
@@ -358,13 +379,37 @@ export function FriendshipVerdict({ lore }: { lore: any }) {
   if (!dynamics && !awards) return null;
 
   const items = [
-    awards?.movie_genre && { label: 'If this were a film', value: awards.movie_genre, color: '#7C6AFF' },
-    awards?.trip_villain && { label: 'Confirmed Villain', value: awards.trip_villain, color: '#FF4D4D' },
+    awards?.movie_genre && {
+      label: 'If this were a film',
+      value: awards.movie_genre,
+      color: '#7C6AFF',
+    },
+    awards?.trip_villain && {
+      label: 'Confirmed Villain',
+      value: awards.trip_villain,
+      color: '#FF4D4D',
+    },
     awards?.trip_mvp && { label: 'Unlikely Hero', value: awards.trip_mvp, color: '#2D9E8B' },
-    dynamics?.chaos_source && { label: 'Primary chaos source', value: dynamics.chaos_source, color: '#D49E2D' },
-    dynamics?.collective_energy && { label: 'Group energy', value: dynamics.collective_energy, color: '#FF6B35' },
-    awards?.core_memory && { label: 'Core memory (non-removable)', value: awards.core_memory, color: '#2D9E8B' },
-    dynamics?.emotional_center && { label: 'Emotional support unit', value: dynamics.emotional_center, color: '#7C6AFF' },
+    dynamics?.chaos_source && {
+      label: 'Primary chaos source',
+      value: dynamics.chaos_source,
+      color: '#D49E2D',
+    },
+    dynamics?.collective_energy && {
+      label: 'Group energy',
+      value: dynamics.collective_energy,
+      color: '#FF6B35',
+    },
+    awards?.core_memory && {
+      label: 'Core memory (non-removable)',
+      value: awards.core_memory,
+      color: '#2D9E8B',
+    },
+    dynamics?.emotional_center && {
+      label: 'Emotional support unit',
+      value: dynamics.emotional_center,
+      color: '#7C6AFF',
+    },
   ].filter(Boolean) as { label: string; value: string; color: string }[];
 
   if (items.length === 0) return null;
@@ -381,7 +426,9 @@ export function FriendshipVerdict({ lore }: { lore: any }) {
           AI Psychological Profile · Classified
         </div>
         <h2 className="text-5xl font-cinematic font-black italic tracking-tighter text-[#F5F0E8] uppercase leading-[0.88]">
-          What Kind of<br />Friendship Is This?
+          What Kind of
+          <br />
+          Friendship Is This?
         </h2>
       </div>
 
@@ -430,7 +477,8 @@ export function StickyChapter({
   accent?: string;
 }) {
   return (
-    <div className="sticky top-[73px] z-30 py-3 -mx-6 px-6 mb-8 backdrop-blur-xl"
+    <div
+      className="sticky top-[73px] z-30 py-3 -mx-6 px-6 mb-8 backdrop-blur-xl"
       style={{ background: 'rgba(6,6,4,0.88)' }}
     >
       <div className="flex items-center gap-4 border-b border-white/[0.05] pb-3">
@@ -492,13 +540,17 @@ export function EvidenceBoard({
       <div className="relative z-10 px-8 pt-8 pb-4 border-b border-white/[0.05]">
         <div className="flex justify-between items-start">
           <div>
-            <div className="text-[7px] font-mono text-white/15 uppercase tracking-[0.5em] mb-1">Case File</div>
+            <div className="text-[7px] font-mono text-white/15 uppercase tracking-[0.5em] mb-1">
+              Case File
+            </div>
             <h3 className="text-2xl font-cinematic font-black italic tracking-tight text-[#F5F0E8] uppercase">
               Evidence Board
             </h3>
           </div>
           <div className="text-right space-y-1">
-            <div className="text-[7px] font-mono text-white/12 uppercase tracking-[0.3em]">Case ID</div>
+            <div className="text-[7px] font-mono text-white/12 uppercase tracking-[0.3em]">
+              Case ID
+            </div>
             <div className="font-mono text-[11px] text-white/25">{caseId}</div>
             <div
               className="text-[6px] font-mono uppercase tracking-[0.4em] border px-2 py-0.5 rounded text-cooked-accent/50 border-cooked-accent/20"
@@ -585,13 +637,21 @@ export function EvidenceBoard({
           <div className="relative h-8 -my-2">
             <svg className="absolute inset-0 w-full h-full overflow-visible" aria-hidden="true">
               <line
-                x1="25%" y1="0" x2="50%" y2="100%"
-                stroke="rgba(255,77,77,0.12)" strokeWidth="1"
+                x1="25%"
+                y1="0"
+                x2="50%"
+                y2="100%"
+                stroke="rgba(255,77,77,0.12)"
+                strokeWidth="1"
                 strokeDasharray="4 3"
               />
               <line
-                x1="75%" y1="0" x2="50%" y2="100%"
-                stroke="rgba(255,77,77,0.12)" strokeWidth="1"
+                x1="75%"
+                y1="0"
+                x2="50%"
+                y2="100%"
+                stroke="rgba(255,77,77,0.12)"
+                strokeWidth="1"
                 strokeDasharray="4 3"
               />
             </svg>
@@ -672,7 +732,9 @@ export function EmotionalTimestamp({
       <div className="text-center space-y-1 flex-shrink-0">
         {(day || time) && (
           <div className="font-mono text-[8px] text-white/15 uppercase tracking-[0.45em]">
-            {day}{day && time ? ' · ' : ''}{time}
+            {day}
+            {day && time ? ' · ' : ''}
+            {time}
           </div>
         )}
         <div className="font-cinematic italic text-[13px]" style={{ color: `${accent}75` }}>
@@ -766,10 +828,7 @@ export function RecoveredArtifact({
         {/* Perforated bottom on receipts */}
         {isReceipt && (
           <div className="absolute bottom-0 left-0 right-0 h-2 overflow-hidden">
-            <div
-              className="flex gap-1.5 px-2"
-              style={{ marginTop: '-4px' }}
-            >
+            <div className="flex gap-1.5 px-2" style={{ marginTop: '-4px' }}>
               {Array.from({ length: 24 }).map((_, i) => (
                 <div key={i} className="w-1.5 h-3 rounded-full bg-[#FAF1E4]" />
               ))}
@@ -802,9 +861,14 @@ export function MemoryCollage({
   const viewStartRef = useRef<number>(0);
   const recordView = trpc.photos.recordView.useMutation();
   const activePhotoId = activeIdx !== null ? (photos[activeIdx]?.id ?? null) : null;
+  const { data: embeddingHealth } = trpc.photos.embeddingHealth.useQuery(
+    { tripId: tripId! },
+    { enabled: !!tripId, staleTime: 5 * 60 * 1000 }
+  );
   const { data: echoes } = trpc.photos.findSimilar.useQuery(
     { photoId: activePhotoId!, limit: 4 },
-    { enabled: !!activePhotoId }
+    // Skip if embeddings are mostly failing — avoids showing a perpetually empty section
+    { enabled: !!activePhotoId && (embeddingHealth?.healthy ?? true) }
   );
 
   const openPhoto = useCallback((idx: number) => {
@@ -818,7 +882,11 @@ export function MemoryCollage({
       const photo = photos[activeIdx];
       // Only record if viewed for at least 500ms and we have all IDs
       if (photo?.id && tripId && durationMs >= 500) {
-        recordView.mutate({ photoId: photo.id, tripId, viewDurationMs: Math.min(durationMs, 300000) });
+        recordView.mutate({
+          photoId: photo.id,
+          tripId,
+          viewDurationMs: Math.min(durationMs, 300000),
+        });
       }
     }
     setActiveIdx(null);
@@ -827,7 +895,9 @@ export function MemoryCollage({
   // Close on Escape key
   useEffect(() => {
     if (activeIdx === null) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closePhoto(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePhoto();
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [activeIdx, closePhoto]);
@@ -858,7 +928,9 @@ export function MemoryCollage({
         {/* Atmospheric glow */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)` }}
+          style={{
+            background: `radial-gradient(ellipse at 50% 50%, ${accent}08, transparent 70%)`,
+          }}
         />
 
         {/* Polaroids */}
@@ -909,7 +981,9 @@ export function MemoryCollage({
 
         {/* Label */}
         <div className="absolute bottom-4 left-0 right-0 text-center">
-          <span className="text-[7px] font-mono text-white/30 uppercase tracking-[0.5em]">{label}</span>
+          <span className="text-[7px] font-mono text-white/30 uppercase tracking-[0.5em]">
+            {label}
+          </span>
         </div>
 
         {/* Film grain */}
@@ -943,10 +1017,18 @@ export function MemoryCollage({
             <button
               onClick={closePhoto}
               className="absolute -top-4 -right-4 w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path
+                  d="M1 1l12 12M13 1L1 13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
             </button>
           </motion.div>
@@ -955,26 +1037,47 @@ export function MemoryCollage({
             {/* Memory echo strip */}
             {echoes && echoes.length > 0 && (
               <div className="text-center">
-                <p className="font-mono text-[7px] uppercase tracking-[0.5em] mb-2"
-                   style={{ color: 'rgba(255,77,77,0.4)' }}>
+                <p
+                  className="font-mono text-[7px] uppercase tracking-[0.5em] mb-2"
+                  style={{ color: 'rgba(255,77,77,0.4)' }}
+                >
                   ● MEMORY ECHO
                 </p>
                 <div className="flex gap-2 justify-center">
                   {echoes.map((e: any) => (
-                    <a key={e.photo_id} href={`/trips/${e.trip_id}`}
-                       className="relative rounded-lg overflow-hidden"
-                       style={{ width: 52, height: 52, flexShrink: 0 }}
-                       onClick={ev => ev.stopPropagation()}
-                       title={`${e.trip_name} (${e.trip_year})`}>
-                      {(e.thumbnailUrl || e.url) ? (
-                        <img src={e.thumbnailUrl ?? e.url} alt=""
-                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <a
+                      key={e.photo_id}
+                      href={`/trips/${e.trip_id}`}
+                      className="relative rounded-lg overflow-hidden"
+                      style={{ width: 52, height: 52, flexShrink: 0 }}
+                      onClick={ev => ev.stopPropagation()}
+                      title={`${e.trip_name} (${e.trip_year})`}
+                    >
+                      {e.thumbnailUrl || e.url ? (
+                        <img
+                          src={e.thumbnailUrl ?? e.url}
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', background: 'rgba(255,77,77,0.1)' }} />
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            background: 'rgba(255,77,77,0.1)',
+                          }}
+                        />
                       )}
-                      <div className="absolute inset-0 flex items-end p-0.5"
-                           style={{ background: 'linear-gradient(to top, rgba(6,6,4,0.85), transparent)' }}>
-                        <span className="font-mono" style={{ fontSize: 5, color: 'rgba(255,77,77,0.9)', lineHeight: 1 }}>
+                      <div
+                        className="absolute inset-0 flex items-end p-0.5"
+                        style={{
+                          background: 'linear-gradient(to top, rgba(6,6,4,0.85), transparent)',
+                        }}
+                      >
+                        <span
+                          className="font-mono"
+                          style={{ fontSize: 5, color: 'rgba(255,77,77,0.9)', lineHeight: 1 }}
+                        >
                           {e.trip_year}
                         </span>
                       </div>
@@ -1055,7 +1158,10 @@ export function SuperlativeCard({
         <div>
           <p className="text-2xl font-vibe font-black text-[#F5F0E8]">{sup.winner_name}</p>
           {sup.archetype && (
-            <p className="text-[9px] uppercase tracking-widest font-vibe font-black" style={{ color: `${color}70` }}>
+            <p
+              className="text-[9px] uppercase tracking-widest font-vibe font-black"
+              style={{ color: `${color}70` }}
+            >
               {sup.archetype}
             </p>
           )}

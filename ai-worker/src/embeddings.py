@@ -72,11 +72,22 @@ async def embed_photo(photo_id: str) -> None:
         raw = supabase.storage.from_("trip-photos").download(photo["storage_path"])
         embedding = await asyncio.to_thread(_extract_sync, raw)
 
-        supabase.table("photos").update({"clip_embedding": embedding}).eq("id", photo_id).execute()
+        supabase.table("photos").update({
+            "clip_embedding": embedding,
+            "embedding_status": "ready",
+        }).eq("id", photo_id).execute()
         log.info(f"[embed] {photo_id}: stored {len(embedding)}-dim embedding")
 
     except Exception:
         log.exception(f"[embed] {photo_id}: failed")
+        # Mark as failed so the frontend can detect silent embedding failures and
+        # hide the findSimilar UI for trips where > 20% of photos couldn't be embedded.
+        try:
+            supabase.table("photos").update({
+                "embedding_status": "failed",
+            }).eq("id", photo_id).execute()
+        except Exception:
+            log.exception(f"[embed] {photo_id}: could not write failed status")
 
 
 async def backfill_trip_embeddings(trip_id: str) -> int:

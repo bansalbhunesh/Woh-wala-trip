@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { checkEmail, checkRateLimit, computeFraudScore } from '@/lib/anti-spam';
+import { traceSecurityEvent } from '@/lib/langfuse';
 
 function hashOtp(otp: string): string {
-  const secret = process.env.OTP_HMAC_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'wwt-otp-salt';
+  const secret = process.env.OTP_HMAC_SECRET;
+  if (!secret) throw new Error('OTP_HMAC_SECRET is required but not set');
   return createHmac('sha256', secret).update(otp).digest('hex');
 }
 
-async function storeOtp(supabase: ReturnType<typeof createSupabaseServiceClient>, email: string, otp: string) {
+async function storeOtp(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  email: string,
+  otp: string
+) {
   const hashed = hashOtp(otp);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
   await supabase.from('otp_codes' as never).insert({
@@ -18,13 +25,36 @@ async function storeOtp(supabase: ReturnType<typeof createSupabaseServiceClient>
   } as never);
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export async function POST(req: NextRequest) {
+  // Single request trace ID groups all security events for this request in Langfuse
+  const requestId = crypto.randomUUID();
+
   try {
+    // IP-level burst protection (in-memory, defense-in-depth)
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    if (!checkRateLimit(`otp:${ip}`, 10, 60_000)) {
+      traceSecurityEvent('rate_limited', { ip, reason: 'ip_burst', requestId }, requestId);
+      return NextResponse.json({ error: 'Too many requests. Slow down.' }, { status: 429 });
+    }
+
     const { email } = await req.json();
-    if (!email || !EMAIL_RE.test(email.trim())) {
-      return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 });
+
+    // Anti-spam: composite fraud score (format + disposable + role account + API checks)
+    const fraudResult = await computeFraudScore(email ?? '');
+    if (!fraudResult.allowed) {
+      const isDisposable = fraudResult.signals.disposableLocal || fraudResult.signals.disposableApi;
+      traceSecurityEvent(
+        isDisposable ? 'disposable_email' : 'api_fraud_score',
+        {
+          ip,
+          fraudScore: fraudResult.fraudScore,
+          action: fraudResult.action,
+          signals: fraudResult.signals,
+          requestId,
+        },
+        requestId
+      );
+      return NextResponse.json({ error: fraudResult.reason }, { status: 400 });
     }
 
     // Use Supabase admin (service role) for all operations — queries across all sessions
@@ -38,7 +68,20 @@ export async function POST(req: NextRequest) {
       .gte('created_at' as never, new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
     if ((count || 0) >= 5) {
-      return NextResponse.json({ error: 'Too many requests. Try again in 15 minutes.' }, { status: 429 });
+      traceSecurityEvent(
+        'rate_limited',
+        {
+          ip,
+          reason: 'db_otp_limit',
+          email: email.trim().replace(/^(.{2}).*@/, '$1***@'),
+          requestId,
+        },
+        requestId
+      );
+      return NextResponse.json(
+        { error: 'Too many requests. Try again in 15 minutes.' },
+        { status: 429 }
+      );
     }
 
     // Use Supabase admin to generate the OTP token without sending email

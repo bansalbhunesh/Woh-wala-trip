@@ -2,6 +2,18 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 
+interface TripLoreRow {
+  id: string;
+  lore_json: unknown;
+  lore_status: string;
+}
+interface TripMemberRow {
+  user_id: string;
+  role_title: string | null;
+  role_chaos_rating?: number | null;
+  profiles?: { display_name?: string | null } | null;
+}
+
 export const cardsRouter = router({
   /**
    * List all available cards for a trip — used by the share selector UX.
@@ -9,15 +21,27 @@ export const cardsRouter = router({
   listForTrip: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const supabase = ctx.supabase as any;
-      const { data: trip, error } = await supabase
+      const { data: tripRaw, error } = await ctx.supabase
         .from('trips')
         .select('id, lore_json, lore_status')
         .eq('id', input.tripId)
         .single();
+      const trip = tripRaw as TripLoreRow | null;
 
       if (error || !trip) {
         throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+
+      // Verify the requesting user is a member of this trip
+      const { data: membership } = await ctx.supabase
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .maybeSingle();
+
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
       if (trip.lore_status !== 'ready') {
@@ -27,10 +51,11 @@ export const cardsRouter = router({
         });
       }
 
-      const { data: members } = await supabase
+      const { data: membersRaw } = await ctx.supabase
         .from('trip_members')
         .select('user_id, role_title, role_chaos_rating, profiles:user_id(display_name)')
         .eq('trip_id', input.tripId);
+      const members = (membersRaw || []) as TripMemberRow[];
 
       const lore = trip.lore_json as Record<string, unknown> | null;
       const superlatives =
@@ -40,8 +65,7 @@ export const cardsRouter = router({
           question: string;
         }>) || [];
       const hasReceipt =
-        Array.isArray(lore?.receipt_stats) &&
-        (lore.receipt_stats as unknown[]).length > 0;
+        Array.isArray(lore?.receipt_stats) && (lore.receipt_stats as unknown[]).length > 0;
 
       const cards: Array<{
         id: string;
@@ -61,14 +85,14 @@ export const cardsRouter = router({
         sublabel: 'The main one',
       });
 
-      for (const m of (members as any[] || [])) {
+      for (const m of members) {
         if (!m.role_title) continue;
         cards.push({
           id: `character-${m.user_id}`,
           type: 'character',
           url: `/api/card/character/${input.tripId}/${m.user_id}`,
           label: m.role_title,
-          sublabel: m.profiles?.display_name,
+          sublabel: m.profiles?.display_name ?? undefined,
           isYours: m.user_id === ctx.user.id,
           memberId: m.user_id,
         });

@@ -2,24 +2,44 @@ import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 
+// Columns read from the trips table — typed explicitly because the Supabase
+// select() generic doesn't narrow correctly for cross-table queries.
+interface TripRow {
+  creator_id: string;
+  lore_status: string | null;
+}
+interface TripIdRow {
+  id: string;
+}
+interface BattleVoteResult {
+  error?: string;
+}
+interface BattleRow {
+  id: string;
+  [key: string]: unknown;
+}
+
 export const battlesRouter = router({
   challenge: protectedProcedure
     .input(
-      z.object({
-        myTripId: z.string().uuid(),
-        opponentTripId: z.string().uuid(),
-      }).refine(d => d.myTripId !== d.opponentTripId, {
-        message: 'Cannot challenge your own trip',
-        path: ['opponentTripId'],
-      })
+      z
+        .object({
+          myTripId: z.string().uuid(),
+          opponentTripId: z.string().uuid(),
+        })
+        .refine(d => d.myTripId !== d.opponentTripId, {
+          message: 'Cannot challenge your own trip',
+          path: ['opponentTripId'],
+        })
     )
     .mutation(async ({ ctx, input }) => {
-      const supabase = ctx.supabase as any;
-      const { data: myTrip } = await supabase
+      const myTripResult = await ctx.supabase
         .from('trips')
         .select('creator_id, lore_status')
         .eq('id', input.myTripId)
         .single();
+
+      const myTrip = myTripResult.data as TripRow | null;
 
       if (!myTrip || myTrip.creator_id !== ctx.user.id) {
         throw new TRPCError({ code: 'FORBIDDEN' });
@@ -32,25 +52,34 @@ export const battlesRouter = router({
         });
       }
 
-      // Rate limit: max 3 active battles created by this user in the last 24h
-      const { count: recentBattles } = await supabase
-        .from('trip_vs_trip')
+      // Rate limit: max 3 battles per user (not per trip) in the last 24h
+      const userTripsResult = await ctx.supabase
+        .from('trips')
+        .select('id')
+        .eq('creator_id', ctx.user.id);
+
+      const ownedIds = ((userTripsResult.data || []) as TripIdRow[]).map(t => t.id);
+
+      const { count: recentBattles } = await ctx.supabase
+        .from('trip_vs_trip' as never)
         .select('id', { count: 'exact', head: true })
-        .eq('trip_a_id', input.myTripId)
-        .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+        .in('trip_a_id' as never, ownedIds)
+        .gte('created_at' as never, new Date(Date.now() - 24 * 3600 * 1000).toISOString());
 
       if ((recentBattles || 0) >= 3) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
-          message: 'Max 3 battle challenges per trip per day. Try again tomorrow.',
+          message: 'Max 3 battle challenges per day. Try again tomorrow.',
         });
       }
 
-      const { data: oppTrip } = await supabase
+      const oppTripResult = await ctx.supabase
         .from('trips')
         .select('lore_status')
         .eq('id', input.opponentTripId)
         .single();
+
+      const oppTrip = oppTripResult.data as Pick<TripRow, 'lore_status'> | null;
 
       if (!oppTrip || oppTrip.lore_status !== 'ready') {
         throw new TRPCError({
@@ -59,14 +88,14 @@ export const battlesRouter = router({
         });
       }
 
-      const { data: battle, error } = await supabase
-        .from('trip_vs_trip')
+      const { data: battle, error } = await ctx.supabase
+        .from('trip_vs_trip' as never)
         .insert({
           trip_a_id: input.myTripId,
           trip_b_id: input.opponentTripId,
           status: 'pending',
           voting_ends_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
-        })
+        } as never)
         .select()
         .single();
 
@@ -78,10 +107,13 @@ export const battlesRouter = router({
 
       fetch(`${process.env.AI_WORKER_URL ?? ''}/judge-battle`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}` },
-        body: JSON.stringify({ battle_id: battle.id }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+        },
+        body: JSON.stringify({ battle_id: (battle as BattleRow).id }),
         signal: AbortSignal.timeout(8000),
-      }).catch(e => console.error('[challenge] worker failed:', e.message));
+      }).catch(e => console.error('[challenge] worker failed:', (e as Error).message));
 
       return battle;
     }),
@@ -89,15 +121,16 @@ export const battlesRouter = router({
   get: publicProcedure
     .input(z.object({ battleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const supabase = ctx.supabase as any;
-      const { data, error } = await supabase
-        .from('trip_vs_trip')
-        .select(`
+      const { data, error } = await ctx.supabase
+        .from('trip_vs_trip' as never)
+        .select(
+          `
           *,
           trip_a:trip_a_id (id, name, destination, chaos_score, lore_json, total_photos),
           trip_b:trip_b_id (id, name, destination, chaos_score, lore_json, total_photos)
-        `)
-        .eq('id', input.battleId)
+        `
+        )
+        .eq('id' as never, input.battleId)
         .single();
 
       if (error || !data) {
@@ -112,18 +145,22 @@ export const battlesRouter = router({
       z.object({
         battleId: z.string().uuid(),
         votedForTripId: z.string().uuid(),
-        fingerprint: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const supabase = ctx.supabase as any;
-      const { data, error } = await supabase.rpc('cast_vs_vote', {
-        p_battle_id: input.battleId,
-        p_voted_for_trip_id: input.votedForTripId,
-        p_fingerprint: input.fingerprint || null,
-      });
+      // Use server-authoritative user ID as the deduplication key.
+      // Client-supplied fingerprints are not accepted for authenticated sessions —
+      // they can be faked to bypass deduplication.
+      const { data, error } = await ctx.supabase.rpc(
+        'cast_vs_vote' as never,
+        {
+          p_battle_id: input.battleId,
+          p_voted_for_trip_id: input.votedForTripId,
+          p_fingerprint: ctx.user.id,
+        } as never
+      );
 
-      const res = data as any;
+      const res = data as unknown as BattleVoteResult | null;
       if (error || res?.error) {
         throw new TRPCError({
           code: 'BAD_REQUEST',

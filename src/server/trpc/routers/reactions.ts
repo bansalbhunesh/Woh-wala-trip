@@ -7,21 +7,25 @@ const VALID_EMOJIS = ['🔥', '😂', '💔', '👑', '😭'] as const;
 export const reactionsRouter = router({
   // Add a reaction (requires auth) — user-scoped client so RLS enforces ownership
   add: protectedProcedure
-    .input(z.object({
-      tripId: z.string().uuid(),
-      slideType: z.string(),
-      slideIdx: z.number().optional(),
-      emoji: z.enum(VALID_EMOJIS),
-    }))
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        slideType: z.string(),
+        slideIdx: z.number().optional(),
+        emoji: z.enum(VALID_EMOJIS),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
-      const supabase = ctx.supabase as any;
-      await supabase.from('lore_reactions').upsert({
-        trip_id: input.tripId,
-        user_id: ctx.user.id,
-        slide_type: input.slideType,
-        slide_idx: input.slideIdx ?? null,
-        emoji: input.emoji,
-      }, { onConflict: 'trip_id,user_id,slide_type,slide_idx' });
+      await ctx.supabase.from('lore_reactions' as never).upsert(
+        {
+          trip_id: input.tripId,
+          user_id: ctx.user.id,
+          slide_type: input.slideType,
+          slide_idx: input.slideIdx ?? null,
+          emoji: input.emoji,
+        } as never,
+        { onConflict: 'trip_id,user_id,slide_type,slide_idx' }
+      );
       return { ok: true };
     }),
 
@@ -37,7 +41,11 @@ export const reactionsRouter = router({
 
       // Aggregate counts client-side
       const counts: Record<string, number> = {};
-      for (const row of (data as any[] || [])) {
+      for (const row of (data as Array<{
+        slide_type: string;
+        slide_idx: number | null;
+        emoji: string;
+      }> | null) ?? []) {
         const key = `${row.slide_type}:${row.slide_idx ?? -1}:${row.emoji}`;
         counts[key] = (counts[key] || 0) + 1;
       }

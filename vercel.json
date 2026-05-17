@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/stuck-jobs",
-      "schedule": "*/30 * * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }

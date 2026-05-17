@@ -6,7 +6,11 @@ import type { LoreJson } from '@/lib/types';
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const supabase = createSupabaseServiceClient();
-  const { data } = await supabase.from('trips').select('name,lore_json').eq('invite_code', code.toUpperCase()).single();
+  const { data } = await supabase
+    .from('trips')
+    .select('name,lore_json')
+    .eq('invite_code', code.toUpperCase())
+    .single();
   const lore = (data as any)?.lore_json as LoreJson | null;
   return {
     title: lore?.trip_title || (data as any)?.name || 'Friendship Lore',
@@ -20,7 +24,7 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
 
   const { data: tripData } = await supabase
     .from('trips')
-    .select('id, name, invite_code, lore_status, lore_json, chaos_score, member_count')
+    .select('id, name, invite_code, lore_status, lore_json, chaos_score, member_count, tier')
     .eq('invite_code', code.toUpperCase())
     .single();
 
@@ -34,7 +38,9 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
   // Fetch members for character slides (public — display names only)
   const { data: members } = await supabase
     .from('trip_members')
-    .select('user_id, role_title, role_description, role_chaos_rating, profiles:user_id(display_name)')
+    .select(
+      'user_id, role_title, role_description, role_chaos_rating, profiles:user_id(display_name)'
+    )
     .eq('trip_id', trip.id);
 
   const membersClean = (members || []).map((m: any) => ({
@@ -51,6 +57,7 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
       inviteCode={code}
       lore={trip.lore_json as LoreJson}
       members={membersClean}
+      tier={trip.tier ?? 'free'}
     />
   );
 }

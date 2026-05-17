@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/anti-spam';
 
 const VALID_EMOJIS = new Set(['🔥', '😂', '💔', '👑', '😭']);
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     .eq('slide_type' as never, slideType);
 
   const counts: Record<string, number> = {};
-  for (const row of (data as any[] || [])) {
+  for (const row of (data as any[]) || []) {
     counts[row.emoji] = (counts[row.emoji] || 0) + 1;
   }
   return NextResponse.json({ counts });
@@ -28,6 +29,11 @@ export async function GET(req: NextRequest) {
 // POST /api/reactions — add reaction (works with or without auth)
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous';
+    if (!checkRateLimit(`reactions:${ip}`, 30, 60_000)) {
+      return NextResponse.json({ error: 'Too many reactions' }, { status: 429 });
+    }
+
     const { tripId, slideType, slideIdx, emoji } = await req.json();
     if (!tripId || !slideType || !VALID_EMOJIS.has(emoji)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
@@ -43,22 +49,29 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() { return cookieStore.getAll(); },
+          getAll() {
+            return cookieStore.getAll();
+          },
           setAll() {},
         },
       }
     );
-    const { data: { user } } = await supabaseSSR.auth.getUser();
+    const {
+      data: { user },
+    } = await supabaseSSR.auth.getUser();
 
     if (user) {
       // Auth'd users: upsert to deduplicate per slide
-      await admin.from('lore_reactions' as never).upsert({
-        trip_id: tripId,
-        user_id: user.id,
-        slide_type: slideType,
-        slide_idx: slideIdx ?? null,
-        emoji,
-      } as never, { onConflict: 'trip_id,user_id,slide_type,slide_idx' } as never);
+      await admin.from('lore_reactions' as never).upsert(
+        {
+          trip_id: tripId,
+          user_id: user.id,
+          slide_type: slideType,
+          slide_idx: slideIdx ?? null,
+          emoji,
+        } as never,
+        { onConflict: 'trip_id,user_id,slide_type,slide_idx' } as never
+      );
     } else {
       // Anonymous: just insert (can't deduplicate without user identity)
       await admin.from('lore_reactions' as never).insert({

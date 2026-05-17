@@ -20,11 +20,13 @@ export async function GET(req: NextRequest) {
 
   const { data: due, error } = await supabase
     .from('scheduled_emails' as never)
-    .select(`
+    .select(
+      `
       id, trip_id, user_id, email_type,
       trips:trip_id(id, name, destination, lore_json, chaos_score, invite_code, trip_start_date),
       profiles:user_id(email, display_name)
-    `)
+    `
+    )
     .is('sent_at', null)
     .gte('send_at', windowStart)
     .lte('send_at', windowEnd);
@@ -72,7 +74,11 @@ export async function GET(req: NextRequest) {
   }
 
   if (filtered.length === 0) {
-    return NextResponse.json({ sent: 0, skipped: skippedByFatigue, message: 'All suppressed by fatigue limit' });
+    return NextResponse.json({
+      sent: 0,
+      skipped: skippedByFatigue,
+      message: 'All suppressed by fatigue limit',
+    });
   }
 
   let sent = 0;
@@ -92,6 +98,19 @@ export async function GET(req: NextRequest) {
       : new Date().getFullYear() - 1;
 
     try {
+      // Claim row before sending to prevent duplicate sends if process crashes mid-loop
+      const { error: claimError } = await supabase
+        .from('scheduled_emails' as never)
+        .update({ sent_at: new Date().toISOString() } as never)
+        .eq('id' as never, (row as any).id)
+        .is('sent_at' as never, null);
+
+      // Another process already claimed this row — skip
+      if (claimError) {
+        console.log(`[anniversary] row ${(row as any).id} already claimed, skipping`);
+        continue;
+      }
+
       if (process.env.RESEND_API_KEY) {
         const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
@@ -152,18 +171,14 @@ export async function GET(req: NextRequest) {
         console.log(`[anniversary] Would send to ${profile.email} for trip: ${trip.name}`);
       }
 
-      // Mark as sent
-      await supabase
-        .from('scheduled_emails' as never)
-        .update({ sent_at: new Date().toISOString() } as never)
-        .eq('id' as never, (row as any).id);
-
       sent++;
     } catch (err) {
       console.error(`[anniversary] failed for ${profile.email}:`, err);
     }
   }
 
-  console.log(`[cron/anniversaries] Sent ${sent}/${filtered.length} anniversary emails (${skippedByFatigue} suppressed by fatigue limit)`);
+  console.log(
+    `[cron/anniversaries] Sent ${sent}/${filtered.length} anniversary emails (${skippedByFatigue} suppressed by fatigue limit)`
+  );
   return NextResponse.json({ sent, total: filtered.length, skipped_fatigue: skippedByFatigue });
 }

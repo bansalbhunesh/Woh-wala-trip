@@ -19,6 +19,7 @@ sys.modules.setdefault("anthropic", _stub)
 sys.modules.setdefault("pydantic_settings", _stub)
 sys.modules.setdefault("fastapi", _stub)
 sys.modules.setdefault("tenacity", _stub)
+sys.modules.setdefault("httpx", _stub)
 
 # Make Settings importable without real env
 import types
@@ -32,6 +33,10 @@ _settings.AI_WORKER_SECRET = "test"
 _settings.CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 _settings.CLAUDE_HAIKU_MODEL = "claude-haiku-4-5-20251001"
 _settings.DEBUG_ENABLED = "false"
+_settings.FAL_API_KEY = ""
+_settings.FAL_DAILY_BUDGET = 200
+_settings.FAL_TRIP_DAILY_LIMIT = 2
+_settings.FAL_MAX_ERAS = 5
 _config_mod.settings = _settings
 sys.modules["src.config"] = _config_mod
 
@@ -43,6 +48,8 @@ sys.modules["src.clients"] = _clients_mod
 
 from src.lore.validators import validate_lore_json, scan_forbidden_phrases
 from src.nostalgia import NostalgiaEngine
+from src.image_gen import _time_mood, _budget_ok, _trip_quota_ok
+import src.image_gen as _ig
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -315,6 +322,110 @@ check(
         if chill_verdict not in ("Mildly Simmering", "Emotionally Unstable") else None
     )
 )
+
+# ── Image gen: _time_mood helper ─────────────────────────────────────────────
+print("\n── Image Gen: _time_mood ──")
+
+TIME_MOOD_CASES = [
+    ("3 AM chaos session",        "blue-hour night"),
+    ("late night beach walk",      "blue-hour night"),
+    ("midnight confession",        "blue-hour night"),
+    ("sunrise yoga fail",          "soft pastel morning light"),
+    ("early morning departure",    "soft pastel morning light"),
+    ("dawn at the ghats",          "soft pastel morning light"),
+    ("lunch panic",                "harsh midday sun"),
+    ("midday trek",                "harsh midday sun"),
+    ("afternoon swimming",         "harsh midday sun"),
+    ("completely vague timeframe", "golden hour"),
+    ("",                           "golden hour"),
+]
+
+for timeframe, expected_fragment in TIME_MOOD_CASES:
+    check(
+        f"_time_mood({repr(timeframe)[:30]}) contains '{expected_fragment}'",
+        lambda t=timeframe, e=expected_fragment: (
+            (_ for _ in ()).throw(AssertionError(f"got: {_time_mood(t)!r}"))
+            if e not in _time_mood(t) else None
+        )
+    )
+
+# ── Image gen: budget guard ───────────────────────────────────────────────────
+print("\n── Image Gen: Budget Guard ──")
+
+import time as _time
+
+def _reset_budget():
+    _ig._fal_calls_today = 0
+    _ig._budget_window_end = 0.0
+
+def _test_budget_increments():
+    _reset_budget()
+    _ig.settings.FAL_DAILY_BUDGET = 200
+    _budget_ok()
+    assert _ig._fal_calls_today == 1
+
+def _test_budget_blocks_at_limit():
+    _reset_budget()
+    _ig.settings.FAL_DAILY_BUDGET = 3
+    _budget_ok(); _budget_ok(); _budget_ok()
+    assert _budget_ok() is False and _ig._fal_calls_today == 3
+
+def _test_budget_resets_after_window():
+    _reset_budget()
+    _ig.settings.FAL_DAILY_BUDGET = 2
+    _budget_ok(); _budget_ok()
+    assert _budget_ok() is False
+    _ig._budget_window_end = _time.time() - 1
+    assert _budget_ok() is True
+    assert _ig._fal_calls_today == 1
+
+check("budget increments on each call", _test_budget_increments)
+check("budget blocks at exact limit", _test_budget_blocks_at_limit)
+check("budget resets after window expires", _test_budget_resets_after_window)
+
+# ── Image gen: trip quota guard ───────────────────────────────────────────────
+print("\n── Image Gen: Trip Quota Guard ──")
+
+def _reset_quota():
+    _ig._trip_window.clear()
+
+def _test_quota_first_run():
+    _reset_quota()
+    _ig.settings.FAL_TRIP_DAILY_LIMIT = 2
+    assert _trip_quota_ok("trip-test") is True
+
+def _test_quota_second_run():
+    _reset_quota()
+    _ig.settings.FAL_TRIP_DAILY_LIMIT = 2
+    _trip_quota_ok("trip-test")
+    assert _trip_quota_ok("trip-test") is True
+
+def _test_quota_blocks_third():
+    _reset_quota()
+    _ig.settings.FAL_TRIP_DAILY_LIMIT = 2
+    _trip_quota_ok("trip-test"); _trip_quota_ok("trip-test")
+    assert _trip_quota_ok("trip-test") is False
+
+def _test_quota_trips_independent():
+    _reset_quota()
+    _ig.settings.FAL_TRIP_DAILY_LIMIT = 1
+    _trip_quota_ok("trip-a")
+    assert _trip_quota_ok("trip-a") is False
+    assert _trip_quota_ok("trip-b") is True
+
+def _test_quota_resets_after_window():
+    _reset_quota()
+    _ig.settings.FAL_TRIP_DAILY_LIMIT = 1
+    _trip_quota_ok("trip-test")
+    assert _trip_quota_ok("trip-test") is False
+    _ig._trip_window["trip-test"] = (1, _time.time() - 1)
+    assert _trip_quota_ok("trip-test") is True
+
+check("quota: first run allowed", _test_quota_first_run)
+check("quota: second run allowed", _test_quota_second_run)
+check("quota: third run blocked", _test_quota_blocks_third)
+check("quota: different trips independent", _test_quota_trips_independent)
+check("quota: resets after window expires", _test_quota_resets_after_window)
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print(f"\n{'='*50}")

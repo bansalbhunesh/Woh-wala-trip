@@ -6,13 +6,12 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server';
 export const archetypesRouter = router({
   // Get a user's archetype history — user-scoped client so RLS limits to own rows
   getHistory: protectedProcedure.query(async ({ ctx }) => {
-    const supabase = ctx.supabase as any;
-    const { data } = await supabase
-      .from('user_archetypes')
+    const { data } = await ctx.supabase
+      .from('user_archetypes' as never)
       .select('*')
-      .eq('user_id', ctx.user.id)
-      .order('created_at', { ascending: false });
-    return (data as any[]) || [];
+      .eq('user_id' as never, ctx.user.id)
+      .order('created_at' as never, { ascending: false });
+    return (data as unknown[]) || [];
   }),
 
   // Sync archetype from a trip's lore into user_archetypes
@@ -29,7 +28,17 @@ export const archetypesRouter = router({
         .eq('user_id' as never, ctx.user.id)
         .single();
 
-      const m = member as any;
+      const m = member as {
+        role_title?: string;
+        role_archetype_tag?: string;
+        role_chaos_rating?: number;
+        trips?: {
+          lore_status?: string;
+          name?: string;
+          destination?: string;
+          trip_start_date?: string;
+        };
+      } | null;
       if (!m?.role_title) return { synced: false, reason: 'no role assigned yet' };
       if (m?.trips?.lore_status !== 'ready') return { synced: false, reason: 'lore not ready' };
 
@@ -37,16 +46,19 @@ export const archetypesRouter = router({
         ? new Date(m.trips.trip_start_date).getFullYear()
         : new Date().getFullYear();
 
-      await admin.rpc('upsert_user_archetype' as never, {
-        p_user_id: ctx.user.id,
-        p_trip_id: input.tripId,
-        p_role_title: m.role_title,
-        p_archetype_tag: m.role_archetype_tag ?? m.role_title,
-        p_chaos_rating: m.role_chaos_rating ?? 5,
-        p_trip_name: m.trips.name,
-        p_trip_destination: m.trips.destination ?? '',
-        p_trip_year: tripYear,
-      } as never);
+      await admin.rpc(
+        'upsert_user_archetype' as never,
+        {
+          p_user_id: ctx.user.id,
+          p_trip_id: input.tripId,
+          p_role_title: m.role_title,
+          p_archetype_tag: m.role_archetype_tag ?? m.role_title,
+          p_chaos_rating: m.role_chaos_rating ?? 5,
+          p_trip_name: m.trips.name,
+          p_trip_destination: m.trips.destination ?? '',
+          p_trip_year: tripYear,
+        } as never
+      );
 
       return { synced: true };
     }),
@@ -66,8 +78,8 @@ export const archetypesRouter = router({
       const { data } = await admin
         .from('user_archetypes' as never)
         .select('*')
-        .eq('user_id' as never, (profile as any).id)
+        .eq('user_id' as never, (profile as { id: string }).id)
         .order('created_at' as never, { ascending: false });
-      return (data as any[]) || [];
+      return (data as unknown[]) || [];
     }),
 });

@@ -7,7 +7,36 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:visual": "playwright test tests/e2e/visual-regression.spec.ts",
+    "test:e2e:update-snapshots": "playwright test tests/e2e/visual-regression.spec.ts --update-snapshots",
+    "test:ai:deterministic": "cd ai-worker && python -X utf8 -m tests.run_deterministic",
+    "test:ai:eval": "cd ai-worker && python -m pytest tests/ -v --tb=short -k 'not llm'",
+    "test:ai:promptfoo": "npx promptfoo eval --config tests/ai/promptfoo.yaml",
+    "test": "npm run type-check && npm run lint && npm run test:unit",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build --output-dir storybook-static",
+    "chromatic": "npx chromatic --project-token=$CHROMATIC_PROJECT_TOKEN --storybook-build-dir=storybook-static",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yaml,yml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
@@ -37,15 +66,29 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/supertest": "^7.2.0",
+    "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.20",
+    "chromatic": "^16.10.1",
     "eslint": "^9.15.0",
-    "eslint-config-next": "15.0.3",
+    "eslint-config-next": "16.2.6",
+    "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.5",
+    "msw": "^2.14.6",
     "postcss": "^8.4.49",
+    "prettier": "^3.8.3",
+    "supertest": "^7.2.2",
     "tailwindcss": "^3.4.15",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.6"
   }
 }

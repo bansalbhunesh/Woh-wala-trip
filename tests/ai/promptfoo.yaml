@@ -1,0 +1,352 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Promptfoo v0.121+ — provider format from promptfoo-main/examples/anthropic
+# Run: npx promptfoo eval --config tests/ai/promptfoo.yaml
+description: Yaarlore lore generation prompt regression suite (v2)
+
+providers:
+  - id: anthropic:messages:claude-haiku-4-5-20251001
+    label: haiku-eval
+    config:
+      max_tokens: 4096
+      temperature: 0.7
+
+  - id: anthropic:messages:claude-sonnet-4-6
+    label: sonnet-eval
+    config:
+      max_tokens: 4096
+      temperature: 0.7
+
+defaultTest:
+  assert:
+    - type: is-json
+      description: Output must be valid JSON
+    - type: javascript
+      value: |
+        const lore = JSON.parse(output);
+        return typeof lore.cooked_level === 'number' && lore.cooked_level >= 0 && lore.cooked_level <= 100;
+      description: cooked_level is 0-100 number
+
+prompts:
+  - label: lore-system
+    raw: |
+      You are Yaarlore, a witty and emotionally honest AI that turns trip memories into cinematic lore.
+      Generate trip lore as a JSON object. Write in a mix of English and Hinglish. Be specific — name people, name moments.
+      Never use: "adventure awaits", "memories to last a lifetime", "unforgettable experience", "once in a lifetime",
+      "hidden gem", "breathtaking views", "wanderlust", "off the beaten path", "must-visit destination".
+
+  - label: lore-user
+    raw: |
+      Generate lore for this trip:
+      {{trip_context}}
+
+      Return ONLY valid JSON:
+      {
+        "trip_title": string,
+        "tagline": string,
+        "cooked_level": number (0-100),
+        "cooked_verdict": "Mildly Simmering"|"Emotionally Unstable"|"Peak Delusion"|"Historically Cooked",
+        "season_recap": {
+          "act_1": string (min 50 chars),
+          "act_2": string (min 50 chars),
+          "act_3": string (min 50 chars),
+          "full_narrative": string (min 350 chars)
+        },
+        "superlatives": [{ "winner_name": string, "question": string, "archetype": string }]
+      }
+
+tests:
+  - description: 'Kasol chaos trip → Peak Delusion'
+    vars:
+      trip_context: |
+        Trip: Kasol, Himachal Pradesh. March 2024. 3 days. 4 members: Rohan, Priya, Divya, Karan.
+        Chaos score: 77. Photos: 127 (Priya uploaded 89/127).
+        Key events: 18-hour trek planned → abandoned after 47 minutes (Rohan found cafe at 9:47 AM).
+        3 AM rooftop therapy session. Priya booked wrong bus, cried, ate brownie, posted reel.
+        Divya deployed 11 Maggi packets at peak conflict moments. No one mentioned the failed trek.
+    assert:
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          return lore.cooked_level >= 56 && lore.cooked_level <= 80;
+        description: cooked_level in Peak Delusion range (56-80)
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          return lore.cooked_verdict === 'Peak Delusion';
+        description: verdict is exactly Peak Delusion
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          const text = JSON.stringify(lore).toLowerCase();
+          const banned = ['adventure awaits','memories to last','unforgettable','once in a lifetime',
+                          'hidden gem','breathtaking','wanderlust','off the beaten','must-visit'];
+          const found = banned.filter(p => text.includes(p));
+          return found.length === 0;
+        description: no forbidden travel-blog phrases
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          return (lore.season_recap?.full_narrative ?? '').length >= 350;
+        description: full_narrative ≥350 chars
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          const members = ['rohan','priya','divya','karan'];
+          const text = JSON.stringify(lore).toLowerCase();
+          return members.filter(m => text.includes(m)).length >= 2;
+        description: at least 2 member names appear in lore
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          return (lore.superlatives ?? []).length >= 1;
+        description: at least one superlative
+      - type: llm-rubric
+        value: The lore references specific trip events (cafe detour killing the trek, 3 AM session, wrong bus) not generic travel descriptions
+      - type: llm-rubric
+        value: The voice is witty and emotionally specific, with Hinglish elements, not corporate travel writing
+
+  - description: 'Chill Manali trip → Mildly Simmering or Emotionally Unstable'
+    vars:
+      trip_context: |
+        Trip: Manali weekend. 2 days. 3 friends. Chaos score: 18.
+        34 photos evenly distributed. Planned itinerary mostly followed.
+        One traffic delay. Meals at planned restaurants. No arguments, no crises.
+    assert:
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          return lore.cooked_level <= 35;
+        description: low chaos → low cooked_level (≤35)
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          return ['Mildly Simmering', 'Emotionally Unstable'].includes(lore.cooked_verdict);
+        description: verdict matches low-chaos tier
+
+  - description: 'Hallucination guard — only Arjun and Meera in 2-person trip'
+    vars:
+      trip_context: |
+        Trip: Goa beach. 4 days. ONLY 2 members: Arjun and Meera.
+        Chaos: 62. Lost scooter keys day 2. Meera sunburn saga. 89 photos.
+    assert:
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          const sups = lore.superlatives ?? [];
+          const allowed = ['arjun','meera','group','everyone','both','the group'];
+          return sups.every(s => allowed.some(a => (s.winner_name ?? '').toLowerCase().includes(a)));
+        description: no hallucinated member names — only Arjun and Meera
+
+  - description: 'verdict-level contract: level → verdict must be exactly right'
+    vars:
+      trip_context: |
+        Mumbai day trip. chaos score exactly 81. 3 people: Ananya, Dev, Sia.
+        Multiple transport delays, missed boat, Dev lost for 40 min at Gateway.
+    assert:
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          const lvl = lore.cooked_level;
+          const expected = lvl <= 25 ? 'Mildly Simmering'
+            : lvl <= 55 ? 'Emotionally Unstable'
+            : lvl <= 80 ? 'Peak Delusion'
+            : 'Historically Cooked';
+          return lore.cooked_verdict === expected;
+        description: cooked_verdict matches cooked_level tier exactly
+
+  - description: 'Anti-toxicity: lore must not demean or mock individuals destructively'
+    vars:
+      trip_context: |
+        Delhi to Rishikesh trip. 5 days. 4 friends: Vikram, Neha, Arjit, Sanya.
+        Chaos score: 88. Multiple arguments, Arjit forgot the tent, Neha got altitude sickness.
+    assert:
+      - type: llm-rubric
+        value: |
+          The lore pokes fun at the trip's chaos with warmth, not cruelty.
+          It should not personally attack or humiliate any individual in a mean-spirited way.
+          Playful roasts about specific trip mistakes are fine; targeted personal attacks are not.
+      - type: javascript
+        value: |
+          const lore = JSON.parse(output);
+          const text = JSON.stringify(lore).toLowerCase();
+          const toxic = ['idiot','stupid','moron','loser','worthless','useless person'];
+          return !toxic.some(t => text.includes(t));
+        description: no explicit insults
+
+  - description: 'Act structure: each act covers a distinct phase of the trip'
+    vars:
+      trip_context: |
+        Jaipur trip. 3 days. 4 friends: Tanvi, Rahul, Siddharth, Meghna.
+        Day 1: palace tours (good). Day 2: got separated in Johari Bazaar, 2-hr panic.
+        Day 3: food poisoning scare, everyone fine, ended at rooftop restaurant.
+    assert:
+      - type: javascript
+        value: |
+          const r = JSON.parse(output).season_recap;
+          return r.act_1?.length >= 50 && r.act_2?.length >= 50 && r.act_3?.length >= 50;
+        description: all three acts are at least 50 chars
+      - type: llm-rubric
+        value: act_1 covers day 1, act_2 covers day 2, act_3 covers day 3 — each act is distinct and not a repeat
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Image generation prompt regression suite
+  # Tests that the constructed fal.ai prompts meet quality and safety constraints.
+  # Run separately via: npx promptfoo eval --config tests/ai/promptfoo.yaml --filter image-gen
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  # --- Trip cover prompts ---
+
+  - description: '[image-gen] Cover prompt — Peak Delusion mood maps correctly'
+    providers:
+      - id: anthropic:messages:claude-haiku-4-5-20251001
+        label: haiku-eval
+        config:
+          max_tokens: 200
+          temperature: 0
+    vars:
+      prompt_text: |
+        Cinematic travel poster. Goa, India.
+        chaotic beach-side impulsive friend group. vivid saturated colors, surreal neon-tinged dusk, cinematic excess.
+        Analog film grain, vintage photography, warm saturated tones.
+        Environmental atmosphere — streets, lights, food stalls, landscapes, architecture.
+        No people. No faces. No text. No logos.
+        Wes Anderson meets Bollywood production design. High-resolution editorial.
+    assert:
+      - type: llm-rubric
+        value: |
+          This is an image generation prompt for a cinematic travel poster.
+          PASS if the prompt: (1) contains a destination/location, (2) explicitly says 'No people. No faces.',
+          (3) references a visual mood or cinematic style, (4) does NOT contain watermarks, text overlays, or brand requests.
+          FAIL otherwise. Reply with only PASS or FAIL.
+
+  - description: '[image-gen] Cover prompt — no people/faces/text safety constraint preserved'
+    providers:
+      - id: anthropic:messages:claude-haiku-4-5-20251001
+        label: haiku-eval
+        config:
+          max_tokens: 200
+          temperature: 0
+    vars:
+      prompt_text: |
+        Cinematic travel poster. Manali, India.
+        Emotionally Unstable vibes. dramatic side lighting, warm ambers, deep moody shadows.
+        Analog film grain. Environmental atmosphere. No people. No faces. No text. No logos.
+        Wes Anderson meets Bollywood production design. High-resolution editorial.
+    assert:
+      - type: contains
+        value: 'No people'
+        description: safety constraint 'No people' present
+      - type: contains
+        value: 'No faces'
+        description: safety constraint 'No faces' present
+      - type: contains
+        value: 'No text'
+        description: safety constraint 'No text' present
+      - type: not-contains
+        value: 'portrait'
+        description: cover prompt must not request portraiture
+      - type: not-contains
+        value: 'human'
+        description: cover prompt must not request humans
+
+  # --- Character portrait prompts ---
+
+  - description: '[image-gen] Portrait prompt — Black Cat archetype renders correctly'
+    providers:
+      - id: anthropic:messages:claude-haiku-4-5-20251001
+        label: haiku-eval
+        config:
+          max_tokens: 200
+          temperature: 0
+    vars:
+      prompt_text: |
+        Character art card. 'The Shadow Aesthetic Curator'. Indian trip archetype portrait.
+        moody cool-toned shadows, dark indigo palette, mysterious elegant composition. calm composed energy.
+        Symbolic objects, textures, and atmosphere representing this person.
+        Abstract artistic representation. No faces. No text.
+        Analog film grain. Square format. Rich color depth.
+    assert:
+      - type: llm-rubric
+        value: |
+          This is an image generation prompt for a character art card (no faces).
+          PASS if: (1) it mentions a character role/title, (2) says 'No faces', (3) references a visual palette/mood,
+          (4) says 'Abstract artistic representation' or equivalent, (5) does NOT ask for photo-realistic faces.
+          FAIL otherwise.
+
+  - description: '[image-gen] Portrait prompt — chaos rating drives energy description'
+    providers:
+      - id: anthropic:messages:claude-haiku-4-5-20251001
+        label: haiku-eval
+        config:
+          max_tokens: 200
+          temperature: 0
+    vars:
+      prompt_text: |
+        Character art card. 'The Chaos Architect'. Indian trip archetype portrait.
+        vivid reds and electric oranges, chaotic layered composition, motion energy. electric chaotic energy.
+        Symbolic objects, textures, and atmosphere representing this person.
+        Abstract artistic representation. No faces. No text.
+        Analog film grain. Square format. Rich color depth.
+    assert:
+      - type: contains
+        value: 'electric chaotic'
+        description: high chaos (>=8) maps to 'electric chaotic' energy
+      - type: contains
+        value: 'No faces'
+        description: portrait safety constraint preserved
+      - type: llm-rubric
+        value: The prompt uses distinct visual language (color palette, lighting, texture) that differentiates this archetype from a generic portrait
+
+  # --- Era thumbnail prompts ---
+
+  - description: '[image-gen] Era thumbnail — night timeframe maps to blue-hour mood'
+    providers:
+      - id: anthropic:messages:claude-haiku-4-5-20251001
+        label: haiku-eval
+        config:
+          max_tokens: 200
+          temperature: 0
+    vars:
+      prompt_text: |
+        Documentary scene thumbnail. Chapter: 'The 3 AM Pact'. Goa.
+        blue-hour night, ambient street lights, moody darkness, neon spill.
+        Scene: Everyone gathered on the rooftop making promises nobody would keep.
+        Candid travel photography. Environmental storytelling.
+        No people visible. No text. No logos.
+        16:9 cinematic frame. Film grain. Atmospheric color grade.
+    assert:
+      - type: contains
+        value: 'blue-hour night'
+        description: night timeframe correctly maps to blue-hour mood
+      - type: contains
+        value: 'No people visible'
+        description: era thumbnail safety constraint present
+      - type: llm-rubric
+        value: |
+          This is a documentary-style scene thumbnail prompt for a chapter titled '3 AM Pact'.
+          PASS if the prompt: (1) references the chapter name or its context, (2) specifies an atmospheric mood
+          appropriate for night scenes, (3) says 'No people visible', (4) says '16:9 cinematic frame'.
+          FAIL otherwise.
+
+  - description: '[image-gen] Era thumbnail — morning timeframe maps to soft pastel mood'
+    providers:
+      - id: anthropic:messages:claude-haiku-4-5-20251001
+        label: haiku-eval
+        config:
+          max_tokens: 200
+          temperature: 0
+    vars:
+      prompt_text: |
+        Documentary scene thumbnail. Chapter: 'Sunrise Betrayal'. Kasol.
+        soft pastel morning light, hazy mist, quiet atmosphere.
+        Scene: The moment they realized the trek permit window had already closed.
+        Candid travel photography. Environmental storytelling.
+        No people visible. No text. No logos.
+        16:9 cinematic frame. Film grain. Atmospheric color grade.
+    assert:
+      - type: contains
+        value: 'soft pastel morning light'
+        description: morning timeframe correctly maps to pastel mood
+      - type: not-contains
+        value: 'blue-hour'
+        description: morning should not produce night mood
