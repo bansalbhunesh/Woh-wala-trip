@@ -20,20 +20,17 @@ import {
 
 export const runtime = 'edge';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ tripId: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ tripId: string }> }) {
   try {
     const { tripId } = await params;
     const supabase = createSupabaseServiceClient();
-    
+
     // 1. Parallelize initial data and font loading
-    const origin = req.headers.get('origin') || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    
+    const origin = req.nextUrl.origin;
+
     const [tripResult, fonts] = await Promise.all([
       supabase.from('trips').select('*').eq('id', tripId).single(),
-      loadCardFonts(origin).catch(() => null)
+      loadCardFonts(origin).catch(() => null),
     ]);
 
     const { data, error: tripError } = tripResult;

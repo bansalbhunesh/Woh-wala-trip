@@ -44,7 +44,6 @@ export default function TripRoomPage() {
   const router = useRouter();
   const tripId = params.tripId as string;
   const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
-  const [lightMode, setLightMode] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
@@ -53,16 +52,8 @@ export default function TripRoomPage() {
   useEffect(() => {
     const hasSeen = localStorage.getItem(`wrapped_${tripId}`);
     if (!hasSeen) setShowWrapped(true);
-    setLightMode(localStorage.getItem('archive_light_mode') === '1');
     analytics.storyRevisited(tripId);
   }, [tripId]);
-
-  const toggleLight = () =>
-    setLightMode(prev => {
-      const next = !prev;
-      localStorage.setItem('archive_light_mode', next ? '1' : '0');
-      return next;
-    });
 
   // Realtime subscription — replaces setInterval polling
   const loreStatus = (tripData as any)?.trip?.lore_status;
@@ -150,8 +141,8 @@ export default function TripRoomPage() {
         {showWrapped && isReady && <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />}
       </AnimatePresence>
 
-      {!lightMode && <FilmGrain />}
-      <ArchiveNavbar trip={trip} lightMode={lightMode} onToggleLight={toggleLight} />
+      <FilmGrain />
+      <ArchiveNavbar trip={trip} />
 
       {/* Full-width hero outside the grid */}
       <div className="max-w-[1600px] mx-auto px-6 pt-12">

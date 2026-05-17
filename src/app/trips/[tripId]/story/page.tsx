@@ -8,6 +8,7 @@ import ReactionBar from '@/components/experience/ReactionBar';
 import { SlidePhotoBackground } from '@/components/experience/SlidePhotoBackground';
 import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
 import { ScratchReveal } from '@/components/experience/ScratchReveal';
+import { formatName } from '@/lib/utils';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }
@@ -444,8 +445,9 @@ function SlideRenderer({
             .slice()
             .sort((a: any, b: any) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0))[0];
 
-      const displayName =
+      const rawDisplayName =
         villainName || villainMember?.display_name || villainMember?.role_title || 'Unknown';
+      const displayName = formatName(rawDisplayName);
       const chaosRating = villainMember?.role_chaos_rating ?? null;
       // Approximate: chaos_rating/10 * cooked_level gives an emotional "percent"
       const chaosPercent =
