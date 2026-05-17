@@ -132,11 +132,7 @@ export default function TripRoomPage() {
   const isFailed = trip.lore_status === 'failed';
 
   return (
-    <div
-      className={`min-h-screen selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden transition-colors duration-300 ${
-        lightMode ? 'bg-[#FAF1E4] text-[#2A1A0A]' : 'bg-[#060604] text-[#F5F0E8]'
-      }`}
-    >
+    <div className="min-h-screen selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden transition-colors duration-300 bg-[#060604] text-[#F5F0E8]">
       <AnimatePresence>
         {showWrapped && isReady && <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />}
       </AnimatePresence>
