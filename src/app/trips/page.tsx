@@ -146,22 +146,27 @@ export default function TripsPage() {
           href="/trips/new"
           className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
           style={{
-            background: '#F5F0E8',
-            color: '#060604',
+            background: 'rgba(245,240,232,0.06)',
+            border: '1px solid rgba(245,240,232,0.18)',
+            color: '#F5F0E8',
             opacity: revealed ? 1 : 0,
             transition:
-              'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s',
+              'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s, background 0.3s, border-color 0.3s',
             willChange: 'transform',
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLAnchorElement;
             el.style.transform = 'translate3d(0,-2px,0)';
-            el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.2)';
+            el.style.boxShadow = '0 8px 32px rgba(245,240,232,0.05)';
+            el.style.background = 'rgba(245,240,232,0.1)';
+            el.style.borderColor = 'rgba(245,240,232,0.3)';
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLAnchorElement;
             el.style.transform = 'translate3d(0,0,0)';
             el.style.boxShadow = 'none';
+            el.style.background = 'rgba(245,240,232,0.06)';
+            el.style.borderColor = 'rgba(245,240,232,0.18)';
           }}
         >
           <Plus size={14} /> NEW SEASON
@@ -259,7 +264,7 @@ export default function TripsPage() {
                     : '● ACTIVE';
               const statusColor =
                 loreStatus === 'ready'
-                  ? '#2D9E8B'
+                  ? accent
                   : loreStatus === 'processing'
                     ? '#D49E2D'
                     : '#FF4D4D';
@@ -319,7 +324,7 @@ export default function TripsPage() {
 
                     {/* Trip name */}
                     <h3
-                      className="font-display font-black text-2xl leading-tight"
+                      className="font-display font-black text-2xl leading-tight uppercase"
                       style={{ color: '#F5F0E8' }}
                     >
                       {trip.name}
