@@ -164,16 +164,17 @@ export default function CinematicLanding() {
   const bg = D ? '#060604' : 'oklch(97% 0.008 70)';
   const textMain = D ? 'rgba(245,240,232,0.92)' : 'oklch(16% 0.015 60)';
   const textMuted = D ? 'rgba(245,240,232,0.45)' : 'oklch(52% 0.015 60)';
-  const textFaint = D ? 'rgba(245,240,232,0.25)' : 'oklch(72% 0.015 60)';
+  const textFaint = D ? 'rgba(245,240,232,0.25)' : 'oklch(44% 0.015 60)';
   const borderColor = D ? 'rgba(245,240,232,0.07)' : 'oklch(87% 0.015 72)';
-  const tickerText = D ? 'rgba(245,240,232,0.35)' : 'oklch(68% 0.015 60)';
+  const tickerText = D ? 'rgba(245,240,232,0.35)' : 'oklch(46% 0.015 60)';
   const ctaBg = D ? 'rgba(245,240,232,0.92)' : 'oklch(16% 0.015 60)';
   const ctaText = D ? '#060604' : 'oklch(97% 0.008 70)';
-  const ghostBorder = D ? 'rgba(245,240,232,0.18)' : 'oklch(82% 0.015 72)';
-  const ghostText = D ? 'rgba(245,240,232,0.45)' : 'oklch(52% 0.015 60)';
-  const panelRadial = D
+  const ghostBorder = D ? 'rgba(245,240,232,0.18)' : 'oklch(68% 0.015 72)';
+  const ghostText = D ? 'rgba(245,240,232,0.45)' : 'oklch(38% 0.015 60)';
+  const panelRadial = D ? 'none' : 'oklch(93.5% 0.012 72)';
+  const panelDots = D
     ? 'none'
-    : 'radial-gradient(ellipse 70% 70% at 70% 50%, oklch(93.5% 0.012 72) 0%, transparent 70%)';
+    : 'radial-gradient(circle, oklch(80% 0.018 72) 1.2px, transparent 1.2px)';
 
   return (
     <div
@@ -355,10 +356,15 @@ export default function CinematicLanding() {
           className="hidden lg:block relative lg:w-1/2"
           style={{ borderLeft: `1px solid ${borderColor}`, transition: 'border-color 0.55s' }}
         >
-          {/* Warm radial bg — hidden in dark mode, particles fill it */}
+          {/* Panel bg — dot grid in light, empty in dark (particles fill it) */}
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: panelRadial, transition: 'opacity 0.55s' }}
+            style={{
+              background: panelRadial,
+              backgroundImage: panelDots,
+              backgroundSize: '22px 22px',
+              transition: 'opacity 0.55s',
+            }}
           />
 
           {ARCHETYPES.map((a, i) => (
