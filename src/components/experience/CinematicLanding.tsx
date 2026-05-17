@@ -86,6 +86,7 @@ export default function CinematicLanding() {
   const [revealed, setRevealed] = useState(false);
   const [titleChars, setTitleChars] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   // Animation refs — never trigger React re-renders
@@ -336,6 +337,31 @@ export default function CinematicLanding() {
             >
               JOIN A SEASON
             </a>
+            <button
+              onClick={() => setShowFeatures(true)}
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em]"
+              style={{
+                background: 'transparent',
+                border: `1.5px solid ${ghostBorder}`,
+                color: ghostText,
+                transition:
+                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.transform = 'translate3d(0,-2px,0)';
+                el.style.borderColor = 'oklch(60% 0.22 25)';
+                el.style.color = 'oklch(60% 0.22 25)';
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.transform = 'translate3d(0,0,0)';
+                el.style.borderColor = ghostBorder;
+                el.style.color = ghostText;
+              }}
+            >
+              FEATURES
+            </button>
           </div>
 
           {/* Meta line */}
@@ -432,6 +458,101 @@ export default function CinematicLanding() {
             >
               ARCHETYPES DETECTED IN YOUR GROUP
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Overlay */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12 pointer-events-none"
+        style={{
+          opacity: showFeatures ? 1 : 0,
+          pointerEvents: showFeatures ? 'auto' : 'none',
+          backdropFilter: 'blur(16px)',
+          background: D ? 'rgba(6,6,4,0.85)' : 'rgba(245,240,232,0.85)',
+          transition: 'opacity 0.4s cubic-bezier(0.16,1,0.3,1)',
+        }}
+      >
+        <div
+          className="relative max-w-4xl w-full p-10 md:p-14 rounded-[2rem]"
+          style={{
+            background: D ? '#0E0E0C' : '#fff',
+            border: `1px solid ${borderColor}`,
+            transform: showFeatures ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.98)',
+            transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+            boxShadow: D ? '0 24px 64px rgba(0,0,0,0.5)' : '0 24px 64px rgba(0,0,0,0.1)',
+          }}
+        >
+          <button
+            onClick={() => setShowFeatures(false)}
+            className="absolute top-8 right-8 p-2 text-[10px] font-mono uppercase tracking-widest hover:opacity-60 transition-opacity"
+            style={{ color: textMuted }}
+          >
+            ✕ CLOSE
+          </button>
+
+          <p
+            className="font-mono text-[9px] uppercase tracking-[0.5em]"
+            style={{ color: 'oklch(60% 0.22 25)' }}
+          >
+            ● CORE CAPABILITIES
+          </p>
+          <h2
+            className="font-display font-black text-3xl md:text-5xl uppercase mt-4 mb-10"
+            style={{ color: textMain }}
+          >
+            System Features
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+            <div className="space-y-3">
+              <h3
+                className="font-display font-black text-lg md:text-xl uppercase"
+                style={{ color: textMain }}
+              >
+                Identity Extraction
+              </h3>
+              <p className="font-data text-sm leading-relaxed" style={{ color: textMuted }}>
+                AI-driven analysis of your photo dumps to automatically assign cinematic archetypes,
+                character roles, and a definitive "Villain" of the trip.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <h3
+                className="font-display font-black text-lg md:text-xl uppercase"
+                style={{ color: textMain }}
+              >
+                Emotional Compression
+              </h3>
+              <p className="font-data text-sm leading-relaxed" style={{ color: textMuted }}>
+                Transform raw metadata into a high-fidelity documentary narrative. Your chaotic
+                weekend is repackaged into A24-style aesthetic storytelling.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <h3
+                className="font-display font-black text-lg md:text-xl uppercase"
+                style={{ color: textMain }}
+              >
+                Cooked Indexing
+              </h3>
+              <p className="font-data text-sm leading-relaxed" style={{ color: textMuted }}>
+                Every trip is rigorously scored on our proprietary 0-100 "Cooked" scale, measuring
+                the exact level of unhinged energy present in the uploaded evidence.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <h3
+                className="font-display font-black text-lg md:text-xl uppercase"
+                style={{ color: textMain }}
+              >
+                Dark Room Archives
+              </h3>
+              <p className="font-data text-sm leading-relaxed" style={{ color: textMuted }}>
+                All generated lore is permanently etched into the Yaarlore visual dossier, featuring
+                interactive widgets, metadata receipts, and legacy memory collages.
+              </p>
+            </div>
           </div>
         </div>
       </div>
