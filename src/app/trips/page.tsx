@@ -32,10 +32,10 @@ function NostalgiaStrip() {
   if (isLoading || !moments || moments.length === 0) return null;
 
   return (
-    <div className="px-8 py-5" style={{ borderBottom: '1px solid oklch(87% 0.015 72)' }}>
+    <div className="px-8 py-5" style={{ borderBottom: '1px solid rgba(245,240,232,0.12)' }}>
       <p
         className="font-mono text-[8px] uppercase tracking-[0.55em] mb-4"
-        style={{ color: 'oklch(60% 0.22 25)' }}
+        style={{ color: '#FF4D4D' }}
       >
         ● THIS DAY IN HISTORY
       </p>
@@ -48,8 +48,8 @@ function NostalgiaStrip() {
             style={{
               width: 80,
               height: 80,
-              background: 'oklch(93.5% 0.012 72)',
-              border: '1px solid oklch(87% 0.015 72)',
+              background: 'rgba(245,240,232,0.03)',
+              border: '1px solid rgba(245,240,232,0.12)',
               transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
             }}
             onMouseEnter={e => {
@@ -66,7 +66,9 @@ function NostalgiaStrip() {
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <div style={{ width: '100%', height: '100%', background: 'oklch(90% 0.015 72)' }} />
+              <div
+                style={{ width: '100%', height: '100%', background: 'rgba(245,240,232,0.08)' }}
+              />
             )}
             <div
               className="absolute inset-0 flex flex-col justify-end p-1.5"
@@ -74,7 +76,7 @@ function NostalgiaStrip() {
             >
               <p
                 className="font-mono text-[7px] font-bold leading-none"
-                style={{ color: 'oklch(60% 0.22 25)' }}
+                style={{ color: '#FF4D4D' }}
               >
                 {m.years_ago}Y AGO
               </p>
@@ -97,22 +99,19 @@ export default function TripsPage() {
   }, []);
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: 'oklch(97% 0.008 70)', color: 'oklch(16% 0.015 60)' }}
-    >
-      <div className="light-grain" />
+    <div className="min-h-screen" style={{ background: '#060604', color: '#F5F0E8' }}>
+      <div className="film-grain" />
 
       {/* Header */}
       <header
         className="relative z-10 flex items-end justify-between px-8 pt-12 pb-8"
-        style={{ borderBottom: '1px solid oklch(87% 0.015 72)' }}
+        style={{ borderBottom: '1px solid rgba(245,240,232,0.12)' }}
       >
         <div className="space-y-1">
           <p
             className="font-mono text-[8px] uppercase tracking-[0.6em]"
             style={{
-              color: 'oklch(60% 0.22 25)',
+              color: '#FF4D4D',
               opacity: revealed ? 1 : 0,
               transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
               filter: revealed ? 'blur(0px)' : 'blur(6px)',
@@ -127,7 +126,7 @@ export default function TripsPage() {
             className="font-display font-black uppercase tracking-tighter leading-[0.85]"
             style={{
               fontSize: 'clamp(36px, 6vw, 72px)',
-              color: 'oklch(16% 0.015 60)',
+              color: '#F5F0E8',
               opacity: revealed ? 1 : 0,
               transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
               filter: revealed ? 'blur(0px)' : 'blur(6px)',
@@ -137,7 +136,7 @@ export default function TripsPage() {
             }}
           >
             THE{' '}
-            <em className="italic" style={{ color: 'oklch(60% 0.22 25)' }}>
+            <em className="italic" style={{ color: '#FF4D4D' }}>
               SEASONS
             </em>
           </h1>
@@ -147,8 +146,8 @@ export default function TripsPage() {
           href="/trips/new"
           className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
           style={{
-            background: 'oklch(16% 0.015 60)',
-            color: 'oklch(97% 0.008 70)',
+            background: '#F5F0E8',
+            color: '#060604',
             opacity: revealed ? 1 : 0,
             transition:
               'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s',
@@ -178,14 +177,14 @@ export default function TripsPage() {
             <div
               className="w-8 h-8 rounded-full"
               style={{
-                border: '2px solid oklch(87% 0.015 72)',
-                borderTopColor: 'oklch(60% 0.22 25)',
+                border: '2px solid rgba(245,240,232,0.12)',
+                borderTopColor: '#FF4D4D',
                 animation: 'trips-spin 0.9s linear infinite',
               }}
             />
             <p
               className="font-mono text-[8px] uppercase tracking-[0.6em]"
-              style={{ color: 'oklch(70% 0.015 60)' }}
+              style={{ color: 'rgba(245,240,232,0.30)' }}
             >
               LOADING ARCHIVES...
             </p>
@@ -196,23 +195,26 @@ export default function TripsPage() {
               className="w-px h-16 mx-auto"
               style={{
                 background:
-                  'linear-gradient(to bottom, transparent, oklch(60% 0.22 25 / 0.4), transparent)',
+                  'linear-gradient(to bottom, transparent, rgba(255,77,77,0.4), transparent)',
               }}
             />
             <div className="space-y-3">
               <p
                 className="font-mono text-[8px] uppercase tracking-[0.6em]"
-                style={{ color: 'oklch(60% 0.22 25)' }}
+                style={{ color: '#FF4D4D' }}
               >
                 NO LORE YET
               </p>
               <h2
                 className="font-display font-black text-3xl uppercase"
-                style={{ color: 'oklch(16% 0.015 60)' }}
+                style={{ color: '#F5F0E8' }}
               >
                 ARCHIVE EMPTY
               </h2>
-              <p className="font-display italic text-sm" style={{ color: 'oklch(52% 0.015 60)' }}>
+              <p
+                className="font-display italic text-sm"
+                style={{ color: 'rgba(245,240,232,0.45)' }}
+              >
                 "No friendship has been documented yet."
               </p>
             </div>
@@ -220,8 +222,8 @@ export default function TripsPage() {
               href="/trips/new"
               className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest"
               style={{
-                background: 'oklch(16% 0.015 60)',
-                color: 'oklch(97% 0.008 70)',
+                background: '#F5F0E8',
+                color: '#060604',
                 transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s',
               }}
               onMouseEnter={e => {
@@ -257,10 +259,10 @@ export default function TripsPage() {
                     : '● ACTIVE';
               const statusColor =
                 loreStatus === 'ready'
-                  ? 'oklch(45% 0.12 180)'
+                  ? '#2D9E8B'
                   : loreStatus === 'processing'
-                    ? 'oklch(55% 0.12 85)'
-                    : 'oklch(60% 0.22 25)';
+                    ? '#D49E2D'
+                    : '#FF4D4D';
 
               return (
                 <Link
@@ -268,8 +270,8 @@ export default function TripsPage() {
                   href={`/trips/${trip.id}`}
                   className="group relative block rounded-2xl overflow-hidden focus:outline-none"
                   style={{
-                    background: 'oklch(93.5% 0.012 72)',
-                    border: '1.5px solid oklch(87% 0.015 72)',
+                    background: 'rgba(245,240,232,0.03)',
+                    border: '1.5px solid rgba(245,240,232,0.12)',
                     opacity: revealed ? 1 : 0,
                     transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
                     filter: revealed ? 'blur(0px)' : 'blur(6px)',
@@ -286,7 +288,7 @@ export default function TripsPage() {
                     const el = e.currentTarget as HTMLAnchorElement;
                     el.style.transform = 'translate3d(0,0,0)';
                     el.style.boxShadow = 'none';
-                    el.style.borderColor = 'oklch(87% 0.015 72)';
+                    el.style.borderColor = 'rgba(245,240,232,0.12)';
                   }}
                 >
                   {/* Poster strip — the colored gradient "poster" */}
@@ -318,7 +320,7 @@ export default function TripsPage() {
                     {/* Trip name */}
                     <h3
                       className="font-display font-black text-2xl leading-tight"
-                      style={{ color: 'oklch(16% 0.015 60)' }}
+                      style={{ color: '#F5F0E8' }}
                     >
                       {trip.name}
                     </h3>
@@ -328,7 +330,7 @@ export default function TripsPage() {
                       {trip.destination && (
                         <p
                           className="font-mono text-[10px]"
-                          style={{ color: 'oklch(52% 0.015 60)' }}
+                          style={{ color: 'rgba(245,240,232,0.45)' }}
                         >
                           ◎ {trip.destination}
                         </p>
@@ -336,7 +338,7 @@ export default function TripsPage() {
                       {trip.trip_start_date && (
                         <p
                           className="font-mono text-[9px]"
-                          style={{ color: 'oklch(65% 0.015 60)' }}
+                          style={{ color: 'rgba(245,240,232,0.35)' }}
                         >
                           {new Date(trip.trip_start_date).toLocaleDateString('en', {
                             month: 'long',
@@ -362,11 +364,11 @@ export default function TripsPage() {
                     {/* Enter cue */}
                     <div
                       className="flex items-center justify-between pt-3"
-                      style={{ borderTop: '1px solid oklch(87% 0.015 72)' }}
+                      style={{ borderTop: '1px solid rgba(245,240,232,0.12)' }}
                     >
                       <p
                         className="font-mono text-[9px] uppercase tracking-[0.35em]"
-                        style={{ color: 'oklch(65% 0.015 60)' }}
+                        style={{ color: 'rgba(245,240,232,0.35)' }}
                       >
                         OPEN ARCHIVE
                       </p>
@@ -391,7 +393,7 @@ export default function TripsPage() {
               className="group flex flex-col items-center justify-center rounded-2xl"
               style={{
                 minHeight: 200,
-                border: '1.5px dashed oklch(82% 0.015 72)',
+                border: '1.5px dashed rgba(245,240,232,0.18)',
                 background: 'transparent',
                 opacity: revealed ? 1 : 0,
                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
@@ -400,7 +402,7 @@ export default function TripsPage() {
                 willChange: 'transform, opacity',
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'oklch(93.5% 0.012 72)';
+                (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(245,240,232,0.03)';
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
@@ -410,16 +412,16 @@ export default function TripsPage() {
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center mx-auto"
                   style={{
-                    border: '1.5px solid oklch(82% 0.015 72)',
-                    background: 'oklch(93.5% 0.012 72)',
+                    border: '1.5px solid rgba(245,240,232,0.18)',
+                    background: 'rgba(245,240,232,0.03)',
                     transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
                   }}
                 >
-                  <Plus size={18} style={{ color: 'oklch(52% 0.015 60)' }} />
+                  <Plus size={18} style={{ color: 'rgba(245,240,232,0.45)' }} />
                 </div>
                 <p
                   className="font-mono text-[8px] uppercase tracking-[0.4em]"
-                  style={{ color: 'oklch(65% 0.015 60)' }}
+                  style={{ color: 'rgba(245,240,232,0.35)' }}
                 >
                   NEW SEASON
                 </p>
@@ -433,20 +435,20 @@ export default function TripsPage() {
       <footer
         className="fixed bottom-0 left-0 right-0 flex items-center justify-between px-8 py-3 z-20"
         style={{
-          borderTop: '1px solid oklch(87% 0.015 72)',
-          background: 'oklch(97% 0.008 70 / 0.9)',
+          borderTop: '1px solid rgba(245,240,232,0.12)',
+          background: 'rgba(6, 6, 4, 0.9)',
           backdropFilter: 'blur(12px)',
         }}
       >
         <p
           className="font-mono text-[7.5px] uppercase tracking-[0.5em]"
-          style={{ color: 'oklch(65% 0.015 60)' }}
+          style={{ color: 'rgba(245,240,232,0.35)' }}
         >
           YAARLORE
         </p>
         <p
           className="font-mono text-[7.5px] uppercase tracking-[0.5em]"
-          style={{ color: 'oklch(75% 0.015 60)' }}
+          style={{ color: 'rgba(245,240,232,0.25)' }}
         >
           LORE PIPELINE V2 · ACTIVE
         </p>

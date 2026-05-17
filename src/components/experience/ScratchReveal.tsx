@@ -24,6 +24,7 @@ export function ScratchReveal({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const revealed = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
   const [done, setDone] = useState(false);
   const checkThrottle = useRef(0);
 
@@ -126,9 +127,22 @@ export function ScratchReveal({
       const ctx = canvas.getContext('2d');
       if (!ctx || revealed.current) return;
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(x, y, brushSize, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.lineWidth = brushSize * 2.5; // Slightly thicker to connect circles
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (lastPos.current) {
+        ctx.beginPath();
+        ctx.moveTo(lastPos.current.x, lastPos.current.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      lastPos.current = { x, y };
     },
     [brushSize]
   );
@@ -188,6 +202,7 @@ export function ScratchReveal({
   const onMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.stopPropagation();
     drawing.current = false;
+    lastPos.current = null;
     checkReveal();
   };
 
@@ -212,6 +227,7 @@ export function ScratchReveal({
   const onTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.stopPropagation();
     drawing.current = false;
+    lastPos.current = null;
     checkReveal();
   };
 
