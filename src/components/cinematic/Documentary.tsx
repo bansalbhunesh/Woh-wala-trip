@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn, formatName } from '@/lib/utils';
 import { trpc } from '@/lib/trpc/client';
 import type { TripWithLore, TripMember, TripEra, LoreJson } from '@/types/domain';
 
@@ -189,7 +189,7 @@ export function FriendshipExpose({ members }: { members: TripMember[] }) {
             Primary Chaos Source
           </div>
           <h3 className="text-[56px] font-cinematic font-black tracking-tighter text-[#F5F0E8] leading-none">
-            {top.display_name}
+            {formatName(top.display_name)}
           </h3>
           <p className="text-[10px] uppercase tracking-widest text-white/25 font-vibe font-black">
             {top.role_title || 'The Menace'}
@@ -240,7 +240,7 @@ export function FriendshipExpose({ members }: { members: TripMember[] }) {
               <div className="flex-1 min-w-0 space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="text-[13px] font-vibe font-black text-[#F5F0E8] truncate">
-                    {m.display_name}
+                    {formatName(m.display_name)}
                   </span>
                   <span className="text-[10px] font-mono text-white/35 ml-3 flex-shrink-0 tabular-nums">
                     {m.role_chaos_rating}/10
@@ -589,13 +589,13 @@ export function EvidenceBoard({
                 Unlikely Hero
               </div>
               <h4 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none">
-                {mvp.display_name}
+                {formatName(mvp.display_name)}
               </h4>
-              <p className="text-[9px] font-vibe font-black text-white/25 uppercase tracking-wider">
+              <p className="text-[9px] font-vibe font-black text-white/40 uppercase tracking-wider">
                 {mvp.role_title || 'The Anchor'}
               </p>
               {mvp.role_description && (
-                <p className="text-[10px] text-white/30 font-data italic leading-relaxed line-clamp-2">
+                <p className="text-[10px] text-white/50 font-data italic leading-relaxed line-clamp-2">
                   {mvp.role_description}
                 </p>
               )}
@@ -621,13 +621,13 @@ export function EvidenceBoard({
                 Primary Suspect
               </div>
               <h4 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none">
-                {villain.display_name}
+                {formatName(villain.display_name)}
               </h4>
-              <p className="text-[9px] font-vibe font-black text-white/25 uppercase tracking-wider">
+              <p className="text-[9px] font-vibe font-black text-white/40 uppercase tracking-wider">
                 {villain.role_title || 'The Source'}
               </p>
               {villain.role_description && (
-                <p className="text-[10px] text-white/30 font-data italic leading-relaxed line-clamp-2">
+                <p className="text-[10px] text-white/50 font-data italic leading-relaxed line-clamp-2">
                   {villain.role_description}
                 </p>
               )}
@@ -787,7 +787,7 @@ export function RecoveredArtifact({
         className={cn(
           'relative overflow-hidden rounded-2xl p-6 space-y-3 border shadow-3xl',
           isReceipt
-            ? 'bg-[#FAF1E4] border-[#E8E0D0] text-lore-ink'
+            ? 'bg-[#11110F] border-white/10 text-[#F5F0E8]'
             : 'bg-[#0E0E0C] border-white/[0.07] text-[#F5F0E8]'
         )}
       >
@@ -799,7 +799,7 @@ export function RecoveredArtifact({
           <div
             className={cn(
               'text-[7px] font-mono uppercase tracking-[0.45em]',
-              isReceipt ? 'text-black/30' : 'text-white/20'
+              isReceipt ? 'text-white/40' : 'text-white/30'
             )}
           >
             {label}
@@ -811,15 +811,15 @@ export function RecoveredArtifact({
           className={cn(
             'leading-relaxed',
             isReceipt
-              ? 'font-mono text-[11px] text-black/60'
-              : 'font-cinematic italic text-sm text-white/60'
+              ? 'font-mono text-[11px] text-white/70'
+              : 'font-cinematic italic text-sm text-white/70'
           )}
         >
           {content}
         </p>
 
         {subtext && (
-          <p className={cn('text-[10px]', isReceipt ? 'text-black/30' : 'text-white/25')}>
+          <p className={cn('text-[10px]', isReceipt ? 'text-white/40' : 'text-white/40')}>
             {subtext}
           </p>
         )}
@@ -827,7 +827,7 @@ export function RecoveredArtifact({
         {/* Stamp */}
         <div
           className={cn(
-            'absolute bottom-3 right-4 text-[7px] font-mono uppercase tracking-[0.3em] border px-2 py-0.5 rounded rotate-12 opacity-40',
+            'absolute bottom-3 right-4 text-[7px] font-mono uppercase tracking-[0.3em] border px-2 py-0.5 rounded rotate-12 opacity-60',
             isReceipt ? 'text-cooked-accent border-cooked-accent' : 'text-white/40 border-white/20'
           )}
         >
@@ -912,14 +912,14 @@ export function MemoryCollage({
   }, [activeIdx, closePhoto]);
 
   const ROTATIONS = [-3, 1.5, -1, 2.5, -2, 1];
-  const OPACITIES = [0.55, 0.4, 0.5, 0.35, 0.45, 0.4];
+  const OPACITIES = [1, 0.95, 0.98, 0.9, 0.95, 0.92];
   const POSITIONS = [
-    { top: '10%', left: '5%' },
-    { top: '5%', left: '40%' },
-    { top: '12%', right: '8%' },
-    { bottom: '15%', left: '15%' },
-    { bottom: '10%', left: '50%' },
-    { bottom: '18%', right: '6%' },
+    { top: '8%', left: '2%' },
+    { top: '4%', left: '35%' },
+    { top: '10%', right: '4%' },
+    { bottom: '12%', left: '10%' },
+    { bottom: '8%', left: '45%' },
+    { bottom: '15%', right: '5%' },
   ];
 
   const slots = Math.min(photos.length > 0 ? photos.length : count, 6);
@@ -932,7 +932,7 @@ export function MemoryCollage({
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="relative h-48 overflow-hidden rounded-[2rem] border border-white/[0.04] bg-[#0A0A08]"
+        className="relative h-[22rem] overflow-hidden rounded-[2rem] border border-white/[0.04] bg-[#0A0A08]"
       >
         {/* Atmospheric glow */}
         <div
@@ -954,10 +954,10 @@ export function MemoryCollage({
               whileInView={{ opacity: OPACITIES[i], scale: 1, rotate: ROTATIONS[i] }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08, duration: 0.5, type: 'spring' }}
-              whileHover={isClickable ? { opacity: 0.9, scale: 1.06, zIndex: 10 } : undefined}
+              whileHover={isClickable ? { opacity: 1, scale: 1.06, zIndex: 10 } : undefined}
               onClick={isClickable ? () => openPhoto(i) : undefined}
               className={cn(
-                'absolute w-20 h-24 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden',
+                'absolute w-32 h-40 bg-white/5 border border-white/10 rounded-sm flex flex-col overflow-hidden shadow-2xl',
                 isClickable && 'cursor-pointer'
               )}
               style={POSITIONS[i] as React.CSSProperties}
@@ -968,7 +968,7 @@ export function MemoryCollage({
                     src={imgUrl}
                     alt=""
                     className="w-full h-full object-cover"
-                    style={{ filter: 'blur(2px) grayscale(0.3)', transform: 'scale(1.08)' }}
+                    style={{ filter: 'grayscale(0.15) contrast(1.1)', transform: 'scale(1.02)' }}
                   />
                 ) : (
                   <div

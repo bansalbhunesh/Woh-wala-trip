@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { CinematicText, AtmosphericBlob } from '@/components/ui/atoms';
-import { cn } from '@/lib/utils';
+import { cn, formatName } from '@/lib/utils';
 import { Play, Plus, X, ChevronRight, Share2 } from 'lucide-react';
 import type { TripWithLore, TripMember, LoreJson, TripEra, ReceiptStat } from '@/types/domain';
 
@@ -284,7 +284,7 @@ export function ArchiveHero({ trip }: { trip: TripWithLore }) {
       {/* ── Main content ── */}
       <div className="relative z-10 p-10 space-y-8">
         {/* Season label */}
-        <div className="text-[9px] font-mono text-white/20 uppercase tracking-[0.5em]">
+        <div className="text-[9px] font-mono text-white/40 uppercase tracking-[0.5em]">
           Season {new Date().getFullYear()} · {memberCount} cast · {photoCount} photos documented
         </div>
 
@@ -296,14 +296,14 @@ export function ArchiveHero({ trip }: { trip: TripWithLore }) {
           >
             {name}
           </h1>
-          <p className="text-xl text-white/35 font-cinematic italic max-w-xl leading-relaxed">
+          <p className="text-xl text-white/60 font-cinematic italic max-w-xl leading-relaxed">
             &ldquo;{tagline}&rdquo;
           </p>
         </div>
 
         {/* Narrative excerpt */}
         {lore?.season_recap?.full_narrative && (
-          <p className="text-sm text-white/20 font-data font-light leading-relaxed line-clamp-2 max-w-lg border-l border-white/[0.06] pl-4">
+          <p className="text-sm text-white/50 font-data font-light leading-relaxed line-clamp-2 max-w-lg border-l border-white/[0.06] pl-4">
             {lore.season_recap.full_narrative}
           </p>
         )}
@@ -480,9 +480,9 @@ export function ProducerWidget({ trip }: { trip: TripWithLore }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-vibe font-black text-white/80 truncate">
-                {m.display_name}
+                {formatName(m.display_name)}
               </p>
-              <p className="text-[9px] text-white/25 font-data uppercase tracking-wider truncate">
+              <p className="text-[9px] text-white/40 font-data uppercase tracking-wider truncate">
                 {m.role_title || 'Role pending...'}
               </p>
             </div>
@@ -904,15 +904,15 @@ export function BadFeelingsChart({ trip }: { trip: TripWithLore }) {
         ];
 
   return (
-    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
+    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+      <span className="text-[9px] uppercase tracking-[0.35em] text-white/40 font-vibe font-black block">
         Top Bad Feelings
       </span>
       <div className="space-y-5">
         {feelings.map((f, i) => (
           <div key={i} className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-vibe font-black uppercase tracking-wider text-lore-soft">
+              <span className="text-[10px] font-vibe font-black uppercase tracking-wider text-white/60">
                 {f.label}
               </span>
               <span
@@ -922,7 +922,7 @@ export function BadFeelingsChart({ trip }: { trip: TripWithLore }) {
                 {Math.round(f.value)}%
               </span>
             </div>
-            <div className="h-1 bg-black/[0.07] rounded-full overflow-hidden">
+            <div className="h-1 bg-white/[0.07] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -1043,7 +1043,7 @@ export function LightCastWidget({ trip }: { trip: TripWithLore }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-vibe font-black text-lore-ink truncate leading-none mb-0.5">
-                {m.display_name}
+                {formatName(m.display_name)}
               </p>
               <p className="text-[9px] uppercase tracking-wider text-lore-muted font-vibe font-black truncate">
                 {m.role_title || 'Role pending...'}

@@ -163,8 +163,8 @@ export default function CinematicLanding() {
   const D = darkMode;
   const bg = D ? '#060604' : 'oklch(97% 0.008 70)';
   const textMain = D ? 'rgba(245,240,232,0.92)' : 'oklch(16% 0.015 60)';
-  const textMuted = D ? 'rgba(245,240,232,0.45)' : 'oklch(52% 0.015 60)';
-  const textFaint = D ? 'rgba(245,240,232,0.25)' : 'oklch(44% 0.015 60)';
+  const textMuted = D ? 'rgba(245,240,232,0.60)' : 'oklch(52% 0.015 60)';
+  const textFaint = D ? 'rgba(245,240,232,0.40)' : 'oklch(44% 0.015 60)';
   const borderColor = D ? 'rgba(245,240,232,0.07)' : 'oklch(87% 0.015 72)';
   const tickerText = D ? 'rgba(245,240,232,0.35)' : 'oklch(46% 0.015 60)';
   const ctaBg = D ? 'rgba(245,240,232,0.92)' : 'oklch(16% 0.015 60)';
