@@ -16,32 +16,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # chromatic:
-  #   name: Chromatic Visual Regression
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #         cache: npm
-  #     - run: npm ci
-  #     - name: Build Storybook
-  #       run: npx storybook build --output-dir storybook-static
-  #       env:
-  #         NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-  #         NEXT_PUBLIC_SUPABASE_ANON_KEY: test-key
-  #     - name: Run Chromatic
-  #       uses: chromaui/action@latest
-  #       with:
-  #         projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-  #         storybookBuildDir: storybook-static
-  #         autoAcceptChanges: ${{ github.ref == 'refs/heads/main' }}
-  #         exitOnceUploaded: ${{ github.event_name == 'push' }}
-  #         onlyChanged: true
-  #         traceChanged: true
+  chromatic:
+    name: Chromatic Visual Regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build Storybook
+        run: npx storybook build --output-dir storybook-static
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-key
+      - name: Run Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          storybookBuildDir: storybook-static
+          autoAcceptChanges: ${{ github.ref == 'refs/heads/main' }}
+          exitOnceUploaded: ${{ github.event_name == 'push' }}
+          onlyChanged: true
+          traceChanged: true
 
   playwright-visual:
     name: Playwright Screenshot Regression
