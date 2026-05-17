@@ -61,15 +61,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Mark the otp_codes row as used (non-critical — fire and forget)
-    const admin = createSupabaseServiceClient();
-    const hashedToken = hashOtp(token.trim());
-    void (
-      admin
-        .from('otp_codes' as never)
-        .update({ used: true } as never)
-        .eq('email' as never, email.trim().toLowerCase())
-        .eq('code' as never, hashedToken) as unknown as Promise<unknown>
-    ).catch(() => {});
+    try {
+      if (process.env.OTP_HMAC_SECRET) {
+        const admin = createSupabaseServiceClient();
+        const hashedToken = hashOtp(token.trim());
+        void (
+          admin
+            .from('otp_codes' as never)
+            .update({ used: true } as never)
+            .eq('email' as never, email.trim().toLowerCase())
+            .eq('code' as never, hashedToken) as unknown as Promise<unknown>
+        ).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('[OTP verify] Failed to consume OTP securely, skipping...');
+    }
 
     return NextResponse.json({
       success: true,
