@@ -268,7 +268,7 @@ export default function TripsPage() {
                 <Link
                   key={trip.id}
                   href={`/trips/${trip.id}`}
-                  className="group relative block rounded-2xl overflow-hidden focus:outline-none"
+                  className="group relative flex flex-col rounded-2xl overflow-hidden focus:outline-none"
                   style={{
                     background: 'rgba(245,240,232,0.03)',
                     border: '1.5px solid rgba(245,240,232,0.12)',
@@ -293,11 +293,11 @@ export default function TripsPage() {
                 >
                   {/* Poster strip — the colored gradient "poster" */}
                   <div
-                    className="h-2 w-full"
+                    className="h-2 w-full flex-shrink-0"
                     style={{ background: `linear-gradient(90deg, ${accent}cc, ${accent}55)` }}
                   />
 
-                  <div className="p-6 space-y-4">
+                  <div className="p-6 flex flex-col flex-1 gap-4">
                     {/* Status + dot */}
                     <div className="flex items-center justify-between">
                       <p
@@ -326,19 +326,19 @@ export default function TripsPage() {
                     </h3>
 
                     {/* Meta */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {trip.destination && (
                         <p
-                          className="font-mono text-[10px]"
-                          style={{ color: 'rgba(245,240,232,0.45)' }}
+                          className="font-mono text-[10px] uppercase tracking-widest"
+                          style={{ color: 'rgba(245,240,232,0.70)' }}
                         >
                           ◎ {trip.destination}
                         </p>
                       )}
                       {trip.trip_start_date && (
                         <p
-                          className="font-mono text-[9px]"
-                          style={{ color: 'rgba(245,240,232,0.35)' }}
+                          className="font-vibe text-[10px] uppercase tracking-widest"
+                          style={{ color: 'rgba(245,240,232,0.50)' }}
                         >
                           {new Date(trip.trip_start_date).toLocaleDateString('en', {
                             month: 'long',
@@ -363,12 +363,12 @@ export default function TripsPage() {
 
                     {/* Enter cue */}
                     <div
-                      className="flex items-center justify-between pt-3"
+                      className="flex items-center justify-between pt-4 mt-auto"
                       style={{ borderTop: '1px solid rgba(245,240,232,0.12)' }}
                     >
                       <p
-                        className="font-mono text-[9px] uppercase tracking-[0.35em]"
-                        style={{ color: 'rgba(245,240,232,0.35)' }}
+                        className="font-mono text-[10px] uppercase tracking-[0.35em]"
+                        style={{ color: 'rgba(245,240,232,0.50)' }}
                       >
                         OPEN ARCHIVE
                       </p>
@@ -393,7 +393,7 @@ export default function TripsPage() {
               className="group flex flex-col items-center justify-center rounded-2xl"
               style={{
                 minHeight: 200,
-                border: '1.5px dashed rgba(245,240,232,0.18)',
+                border: '1.5px dashed rgba(245,240,232,0.25)',
                 background: 'transparent',
                 opacity: revealed ? 1 : 0,
                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
@@ -410,18 +410,18 @@ export default function TripsPage() {
             >
               <div className="space-y-3 text-center">
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center mx-auto"
+                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
                   style={{
-                    border: '1.5px solid rgba(245,240,232,0.18)',
-                    background: 'rgba(245,240,232,0.03)',
+                    border: '1.5px solid rgba(245,240,232,0.25)',
+                    background: 'rgba(245,240,232,0.06)',
                     transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
                   }}
                 >
-                  <Plus size={18} style={{ color: 'rgba(245,240,232,0.45)' }} />
+                  <Plus size={20} style={{ color: 'rgba(245,240,232,0.65)' }} />
                 </div>
                 <p
-                  className="font-mono text-[8px] uppercase tracking-[0.4em]"
-                  style={{ color: 'rgba(245,240,232,0.35)' }}
+                  className="font-mono text-[9px] uppercase tracking-[0.4em]"
+                  style={{ color: 'rgba(245,240,232,0.65)' }}
                 >
                   NEW SEASON
                 </p>
