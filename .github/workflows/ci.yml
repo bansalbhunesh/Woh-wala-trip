@@ -34,7 +34,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run test:unit
+      - run: npm run test:unit -- --coverage --coverage.thresholds.lines=60
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,3 +102,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test-key' }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'test-key' }}
           SKIP_ENV_VALIDATION: true
+
+  docker-ai-worker:
+    name: AI Worker Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build AI worker Docker image
+        run: docker build -t wwt-ai-worker:ci ./ai-worker

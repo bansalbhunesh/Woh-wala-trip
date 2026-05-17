@@ -4,9 +4,23 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { checkEmail, checkRateLimit, computeFraudScore } from '@/lib/anti-spam';
 import { traceSecurityEvent } from '@/lib/langfuse';
 
+// Fail-fast startup check: surface missing OTP_HMAC_SECRET immediately
+// rather than crashing on the first OTP request.
+if (!process.env.OTP_HMAC_SECRET && process.env.NODE_ENV === 'production') {
+  console.error(
+    '[FATAL] OTP_HMAC_SECRET is not set. Auth OTP flow will crash at runtime. ' +
+      'Set this environment variable before deploying.'
+  );
+}
+
 function hashOtp(otp: string): string {
   const secret = process.env.OTP_HMAC_SECRET;
-  if (!secret) throw new Error('OTP_HMAC_SECRET is required but not set');
+  if (!secret) {
+    throw new Error(
+      'OTP_HMAC_SECRET environment variable is required but not set. ' +
+        'Configure it in your .env.local or deployment environment.'
+    );
+  }
   return createHmac('sha256', secret).update(otp).digest('hex');
 }
 
@@ -32,7 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     // IP-level burst protection (in-memory, defense-in-depth)
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    if (!checkRateLimit(`otp:${ip}`, 10, 60_000)) {
+    if (!(await checkRateLimit(`otp:${ip}`, 10, 60_000))) {
       traceSecurityEvent('rate_limited', { ip, reason: 'ip_burst', requestId }, requestId);
       return NextResponse.json({ error: 'Too many requests. Slow down.' }, { status: 429 });
     }

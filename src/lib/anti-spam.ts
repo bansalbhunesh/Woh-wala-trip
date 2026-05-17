@@ -396,11 +396,51 @@ export async function computeFraudScore(email: string): Promise<FraudCheckResult
   };
 }
 
-// ── 6. Rate limiter ────────────────────────────────────────────────────────
+import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
+
+// Initialize Redis only if env vars are present
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
+
+// Cache the Upstash ratelimiters to avoid recreating them on every call
+const upstashLimiters = new Map<string, Ratelimit>();
 
 const ipBuckets = new Map<string, { count: number; resetAt: number }>();
 
-export function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
+/**
+ * Distributed rate limiting using Upstash Redis, falling back to in-memory burst protection.
+ */
+export async function checkRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number
+): Promise<boolean> {
+  if (redis) {
+    try {
+      // Create a cache key for the ratelimiter instance config
+      const limiterKey = `${maxRequests}:${windowMs}`;
+      let ratelimiter = upstashLimiters.get(limiterKey);
+
+      if (!ratelimiter) {
+        ratelimiter = new Ratelimit({
+          redis,
+          limiter: Ratelimit.slidingWindow(maxRequests, `${windowMs} ms` as any),
+          analytics: false,
+        });
+        upstashLimiters.set(limiterKey, ratelimiter);
+      }
+
+      const { success } = await ratelimiter.limit(key);
+      return success;
+    } catch (e) {
+      console.error('[anti-spam] Upstash Redis rate limit failed, falling back to memory:', e);
+      // Fall through to memory bucket on error
+    }
+  }
+
+  // Fallback: In-memory burst protection
   const now = Date.now();
   const bucket = ipBuckets.get(key);
   if (!bucket || now > bucket.resetAt) {

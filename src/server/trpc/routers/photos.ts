@@ -135,6 +135,16 @@ export const photosRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Security: validate storage_path matches expected prefix to prevent
+      // cross-trip photo injection via crafted paths through the service client.
+      const expectedPrefix = `${input.tripId}/${ctx.user.id}/`;
+      if (!input.storagePath.startsWith(expectedPrefix)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid storage path — must match the expected trip/user prefix.',
+        });
+      }
+
       // Verify membership before allowing photo creation
       const { data: member } = await ctx.supabase
         .from('trip_members')

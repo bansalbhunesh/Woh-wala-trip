@@ -45,6 +45,7 @@ export default function TripRoomPage() {
   const tripId = params.tripId as string;
   const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
   const [lightMode, setLightMode] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
   const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
@@ -180,7 +181,30 @@ export default function TripRoomPage() {
               {/* ① Delusion Index — giant emotional beat */}
               <CookedLevelReveal trip={trip} />
 
-              {/* ② Cinematic break */}
+              {/* ② Chaos rankings & Friendship Expose — elevated to the top! */}
+              {members.some((m: any) => m.role_chaos_rating != null) && (
+                <section className="py-8">
+                  <EmotionalTimestamp
+                    time="2:13 AM"
+                    text="The AI identified a primary chaos source. The data is not flattering."
+                    accent="#FF4D4D"
+                  />
+                  <StickyChapter
+                    number="Chapter 01"
+                    title="Who Caused The Collapse"
+                    accent="#FF4D4D"
+                  />
+                  <CinematicBreak
+                    text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
+                    sub="AI Findings · Cross-referenced · 0 appeals accepted"
+                    accent="#FF4D4D"
+                  />
+                  <EmotionalDamageScan members={members} />
+                  <FriendshipExpose members={members} />
+                </section>
+              )}
+
+              {/* ③ Cinematic break */}
               <CinematicBreak
                 text="The following is a reconstruction of documented events. Some memories have been enhanced for dramatic effect."
                 sub="Archive Reconstruction · AI Narration Active"
@@ -188,15 +212,15 @@ export default function TripRoomPage() {
                 timestamp={`Archive No. ${trip?.id?.slice(0, 6)?.toUpperCase() || '——'} · Classified`}
               />
 
-              {/* ③ Evidence board — investigation wall replaces equal-weight cards */}
+              {/* ④ Evidence board — investigation wall replaces equal-weight cards */}
               {(mvp || villain || insideJoke) && (
                 <section className="py-4">
-                  <StickyChapter number="Chapter 01" title="The Evidence" accent="#FF4D4D" />
+                  <StickyChapter number="Chapter 02" title="The Evidence" accent="#FF4D4D" />
                   <EvidenceBoard mvp={mvp} villain={villain} insideJoke={insideJoke} lore={lore} />
                 </section>
               )}
 
-              {/* ④ Emotional timestamp + memory collage */}
+              {/* ⑤ Emotional timestamp + memory collage */}
               <EmotionalTimestamp
                 day="Day 1"
                 text="Everyone was still behaving normally."
@@ -210,29 +234,6 @@ export default function TripRoomPage() {
                 photos={(photoList?.photos ?? []).slice(0, 6)}
                 tripId={tripId}
               />
-
-              {/* ⑤ Chaos rankings */}
-              {members.some((m: any) => m.role_chaos_rating != null) && (
-                <section className="py-4">
-                  <EmotionalTimestamp
-                    time="2:13 AM"
-                    text="The AI identified a primary chaos source. The data is not flattering."
-                    accent="#FF4D4D"
-                  />
-                  <StickyChapter
-                    number="Chapter 02"
-                    title="Who Caused The Collapse"
-                    accent="#FF4D4D"
-                  />
-                  <CinematicBreak
-                    text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
-                    sub="AI Findings · Cross-referenced · 0 appeals accepted"
-                    accent="#FF4D4D"
-                  />
-                  <EmotionalDamageScan members={members} />
-                  <FriendshipExpose members={members} />
-                </section>
-              )}
 
               {/* ⑦ Recovered evidence artifacts */}
               {(lore?.season_recap?.act_1 || lore?.cooked_explanation) && (
@@ -353,12 +354,36 @@ export default function TripRoomPage() {
                 </div>
               </div>
 
-              <CookedScoreLight trip={trip} />
-              <BadFeelingsChart trip={trip} />
-              <DonutChart trip={trip} />
-              <LightCastWidget trip={trip} />
-              <RecurringIdentityWidget tripId={tripId} />
               <ConfessionInput tripId={tripId} />
+
+              {!showRawData ? (
+                <button
+                  onClick={() => setShowRawData(true)}
+                  className="w-full py-4 mt-6 rounded-[1.5rem] border border-dashed border-black/20 text-black/40 text-[10px] font-mono uppercase tracking-[0.3em] hover:bg-black/5 hover:text-black/60 hover:border-black/30 transition-all active:scale-95"
+                >
+                  [ DECLASSIFY RAW DATA ]
+                </button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  transition={{ duration: 0.5 }}
+                  className="space-y-3 mt-4"
+                >
+                  <CookedScoreLight trip={trip} />
+                  <BadFeelingsChart trip={trip} />
+                  <DonutChart trip={trip} />
+                  <LightCastWidget trip={trip} />
+                  <RecurringIdentityWidget tripId={tripId} />
+
+                  <button
+                    onClick={() => setShowRawData(false)}
+                    className="w-full py-3 mt-4 text-[9px] font-mono text-black/30 hover:text-black/60 uppercase tracking-[0.2em] transition-colors"
+                  >
+                    Hide Raw Data
+                  </button>
+                </motion.div>
+              )}
             </div>
           </div>
 

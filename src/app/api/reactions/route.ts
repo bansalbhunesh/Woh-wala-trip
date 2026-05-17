@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous';
-    if (!checkRateLimit(`reactions:${ip}`, 30, 60_000)) {
+    if (!(await checkRateLimit(`reactions:${ip}`, 30, 60_000))) {
       return NextResponse.json({ error: 'Too many reactions' }, { status: 429 });
     }
 

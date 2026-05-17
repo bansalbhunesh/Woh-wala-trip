@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
+import Image from 'next/image';
 import { CinematicText, AtmosphericBlob } from '@/components/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Play, Plus, X, ChevronRight, Share2 } from 'lucide-react';
+import type { TripWithLore, TripMember, LoreJson, TripEra, ReceiptStat } from '@/types/domain';
 
 // Shared easing constant
 const EXPO_OUT = 'cubic-bezier(0.16,1,0.3,1)';
@@ -20,7 +22,7 @@ export function ArchiveNavbar({
   lightMode,
   onToggleLight,
 }: {
-  trip: any;
+  trip: TripWithLore;
   lightMode?: boolean;
   onToggleLight?: () => void;
 }) {
@@ -28,33 +30,60 @@ export function ArchiveNavbar({
   const verdict = trip?.lore_json?.cooked_verdict ?? 'Processing...';
 
   return (
-    <nav className={`sticky top-0 z-[100] w-full px-6 py-4 backdrop-blur-2xl flex items-center justify-between transition-colors duration-300 ${
-      lightMode
-        ? 'bg-[#FAF1E4]/90 border-b border-black/[0.06]'
-        : 'bg-[#060604]/90 border-b border-white/[0.06]'
-    }`}>
+    <nav
+      className={`sticky top-0 z-[100] w-full px-6 py-4 backdrop-blur-2xl flex items-center justify-between transition-colors duration-300 ${
+        lightMode
+          ? 'bg-[#FAF1E4]/90 border-b border-black/[0.06]'
+          : 'bg-[#060604]/90 border-b border-white/[0.06]'
+      }`}
+    >
       <div className="flex items-center gap-4">
-        <Link href="/trips" className="w-8 h-8 bg-cooked-accent rounded-lg flex items-center justify-center font-vibe font-black text-xs text-white hover:scale-110 transition-transform">
+        <Link
+          href="/trips"
+          className="w-8 h-8 bg-cooked-accent rounded-lg flex items-center justify-center font-vibe font-black text-xs text-white hover:scale-110 transition-transform"
+        >
           W
         </Link>
         <div className={`hidden md:block h-6 w-px ${lightMode ? 'bg-black/10' : 'bg-white/10'}`} />
         <div className="hidden md:flex flex-col">
-          <span className={`text-[8px] uppercase tracking-[0.3em] font-vibe font-black ${lightMode ? 'text-black/35' : 'text-white/25'}`}>Current Archive</span>
-          <span className={`text-sm font-cinematic font-black tracking-tight leading-none mt-0.5 ${lightMode ? 'text-[#2A1A0A]' : 'text-[#F5F0E8]'}`}>
+          <span
+            className={`text-[8px] uppercase tracking-[0.3em] font-vibe font-black ${lightMode ? 'text-black/35' : 'text-white/25'}`}
+          >
+            Current Archive
+          </span>
+          <span
+            className={`text-sm font-cinematic font-black tracking-tight leading-none mt-0.5 ${lightMode ? 'text-[#2A1A0A]' : 'text-[#F5F0E8]'}`}
+          >
             {trip?.name || 'Loading...'}
           </span>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <div className={`hidden lg:flex items-center gap-6 mr-4 pr-6 ${lightMode ? 'border-r border-black/[0.06]' : 'border-r border-white/[0.06]'}`}>
+        <div
+          className={`hidden lg:flex items-center gap-6 mr-4 pr-6 ${lightMode ? 'border-r border-black/[0.06]' : 'border-r border-white/[0.06]'}`}
+        >
           <div className="flex flex-col items-end">
-            <span className={`text-[8px] uppercase tracking-widest font-black ${lightMode ? 'text-black/30' : 'text-white/20'}`}>Cooked</span>
-            <span className="text-sm font-vibe font-black text-cooked-accent">{cookedLevel}/100</span>
+            <span
+              className={`text-[8px] uppercase tracking-widest font-black ${lightMode ? 'text-black/30' : 'text-white/20'}`}
+            >
+              Cooked
+            </span>
+            <span className="text-sm font-vibe font-black text-cooked-accent">
+              {cookedLevel}/100
+            </span>
           </div>
           <div className="flex flex-col items-end">
-            <span className={`text-[8px] uppercase tracking-widest font-black ${lightMode ? 'text-black/30' : 'text-white/20'}`}>Verdict</span>
-            <span className={`text-[10px] font-vibe font-black uppercase tracking-wider ${lightMode ? 'text-black/50' : 'text-white/60'}`}>{verdict}</span>
+            <span
+              className={`text-[8px] uppercase tracking-widest font-black ${lightMode ? 'text-black/30' : 'text-white/20'}`}
+            >
+              Verdict
+            </span>
+            <span
+              className={`text-[10px] font-vibe font-black uppercase tracking-wider ${lightMode ? 'text-black/50' : 'text-white/60'}`}
+            >
+              {verdict}
+            </span>
           </div>
         </div>
 
@@ -72,20 +101,28 @@ export function ArchiveNavbar({
             {lightMode ? (
               // Moon icon
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             ) : (
               // Sun icon
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <circle cx="12" cy="12" r="5"/>
-                <line x1="12" y1="1" x2="12" y2="3"/>
-                <line x1="12" y1="21" x2="12" y2="23"/>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                <line x1="1" y1="12" x2="3" y2="12"/>
-                <line x1="21" y1="12" x2="23" y2="12"/>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
             )}
           </button>
@@ -115,7 +152,7 @@ export function ArchiveNavbar({
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE HERO — emotionally overwhelming full-height documentary opening
 // ─────────────────────────────────────────────────────────────────────────────
-export function ArchiveHero({ trip }: { trip: any }) {
+export function ArchiveHero({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   const tagline = lore?.tagline || 'The lore is still being written...';
   const name = trip?.name || 'Untitled Season';
@@ -136,10 +173,12 @@ export function ArchiveHero({ trip }: { trip: any }) {
       {/* ── Layer 1: blurred photo or deep gradient ── */}
       <div className="absolute inset-0">
         {trip?.cover_photo ? (
-          <img
+          <Image
             src={trip.cover_photo}
             alt=""
-            className="w-full h-full object-cover opacity-20 grayscale scale-[1.05]"
+            fill
+            priority
+            className="object-cover opacity-20 grayscale scale-[1.05]"
             style={{ filter: 'grayscale(100%) contrast(1.3) blur(2px)' }}
           />
         ) : (
@@ -159,7 +198,10 @@ export function ArchiveHero({ trip }: { trip: any }) {
       />
       <div
         className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[150px] pointer-events-none"
-        style={{ background: 'rgba(45,158,139,0.06)', animation: 'floatB 18s ease-in-out infinite' }}
+        style={{
+          background: 'rgba(45,158,139,0.06)',
+          animation: 'floatB 18s ease-in-out infinite',
+        }}
       />
 
       {/* ── Layer 3: cinematic gradient ── */}
@@ -169,8 +211,11 @@ export function ArchiveHero({ trip }: { trip: any }) {
       <div className="absolute inset-0 opacity-[0.04] pointer-events-none animate-grain bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%270%200%20256%20256%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url(%23n)%27/%3E%3C/svg%3E')] bg-[length:180px_180px]" />
 
       {/* ── Layer 5: VHS scanline ── */}
-      <div className="absolute left-0 right-0 h-12 pointer-events-none opacity-[0.04] animate-scan"
-        style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.4), transparent)' }}
+      <div
+        className="absolute left-0 right-0 h-12 pointer-events-none opacity-[0.04] animate-scan"
+        style={{
+          background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.4), transparent)',
+        }}
       />
 
       {/* ── Layer 6: floating polaroid fragments ── */}
@@ -182,7 +227,13 @@ export function ArchiveHero({ trip }: { trip: any }) {
         <div
           key={i}
           className="absolute w-14 h-16 bg-white/[0.03] border border-white/[0.06] rounded-sm flex flex-col overflow-hidden"
-          style={{ top: pos.top, right: pos.right, transform: `rotate(${pos.rotate})`, animation: `float-up ${5 + i}s ease-in-out infinite`, animationDelay: pos.delay }}
+          style={{
+            top: pos.top,
+            right: pos.right,
+            transform: `rotate(${pos.rotate})`,
+            animation: `float-up ${5 + i}s ease-in-out infinite`,
+            animationDelay: pos.delay,
+          }}
         >
           <div className="flex-1" style={{ background: `${accentColor}08`, filter: 'blur(4px)' }} />
           <div className="h-3 bg-white/[0.02]" />
@@ -207,8 +258,10 @@ export function ArchiveHero({ trip }: { trip: any }) {
       <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-10">
         <div className="flex gap-2 flex-wrap">
           {verdict && (
-            <span className="px-3 py-1.5 rounded-full text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]"
-              style={{ background: accentColor }}>
+            <span
+              className="px-3 py-1.5 rounded-full text-white text-[8px] font-vibe font-black uppercase tracking-[0.2em]"
+              style={{ background: accentColor }}
+            >
               {verdict}
             </span>
           )}
@@ -219,7 +272,9 @@ export function ArchiveHero({ trip }: { trip: any }) {
           )}
         </div>
         <div className="text-right space-y-0.5">
-          <div className="text-[7px] font-mono text-white/12 uppercase tracking-[0.35em]">Archive</div>
+          <div className="text-[7px] font-mono text-white/12 uppercase tracking-[0.35em]">
+            Archive
+          </div>
           <div className="font-mono text-[11px] text-white/25 animate-flicker">
             {trip?.id?.slice(0, 8)?.toUpperCase() || '——'}
           </div>
@@ -282,9 +337,24 @@ export function ArchiveHero({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE REVEAL — MVP / Villain / Inside Joke cards
 // ─────────────────────────────────────────────────────────────────────────────
-export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCta, color = '#FF4D4D', imageUrl }: {
-  category: string; name: string; subtitle?: string; desc?: string;
-  cta?: string; challengeCta?: string; color?: string; imageUrl?: string;
+export function ArchiveReveal({
+  category,
+  name,
+  subtitle,
+  desc,
+  cta,
+  challengeCta,
+  color = '#FF4D4D',
+  imageUrl,
+}: {
+  category: string;
+  name: string;
+  subtitle?: string;
+  desc?: string;
+  cta?: string;
+  challengeCta?: string;
+  color?: string;
+  imageUrl?: string;
 }) {
   const initial = name.replace(/[^a-zA-Z]/g, '')[0]?.toUpperCase() || '?';
 
@@ -344,7 +414,10 @@ export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCt
 
       {/* Content */}
       <div className="flex-1 py-8 pr-8 pl-4 space-y-3 flex flex-col justify-center">
-        <span className="text-[9px] uppercase tracking-[0.35em] font-vibe font-black" style={{ color: `${color}70` }}>
+        <span
+          className="text-[9px] uppercase tracking-[0.35em] font-vibe font-black"
+          style={{ color: `${color}70` }}
+        >
           {category}
         </span>
         <h3 className="text-[28px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-[1.1]">
@@ -353,7 +426,11 @@ export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCt
         {subtitle && (
           <span
             className="inline-block px-3 py-1 rounded-full text-[8px] font-vibe font-black uppercase tracking-widest w-fit"
-            style={{ background: `${color}12`, color: `${color}90`, border: `1px solid ${color}20` }}
+            style={{
+              background: `${color}12`,
+              color: `${color}90`,
+              border: `1px solid ${color}20`,
+            }}
           >
             {subtitle}
           </span>
@@ -386,13 +463,15 @@ export function ArchiveReveal({ category, name, subtitle, desc, cta, challengeCt
 // ─────────────────────────────────────────────────────────────────────────────
 // SIDEBAR WIDGETS
 // ─────────────────────────────────────────────────────────────────────────────
-export function ProducerWidget({ trip }: { trip: any }) {
+export function ProducerWidget({ trip }: { trip: TripWithLore }) {
   const members = trip?.members || [];
   return (
     <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">The Cast</span>
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">
+        The Cast
+      </span>
       <div className="space-y-4">
-        {members.slice(0, 4).map((m: any, i: number) => (
+        {members.slice(0, 4).map((m: TripMember, i: number) => (
           <div key={m.user_id || i} className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-cooked-accent/10 border border-cooked-accent/20 flex items-center justify-center flex-shrink-0">
               <span className="text-sm font-vibe font-black text-cooked-accent">
@@ -400,7 +479,9 @@ export function ProducerWidget({ trip }: { trip: any }) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-vibe font-black text-white/80 truncate">{m.display_name}</p>
+              <p className="text-sm font-vibe font-black text-white/80 truncate">
+                {m.display_name}
+              </p>
               <p className="text-[9px] text-white/25 font-data uppercase tracking-wider truncate">
                 {m.role_title || 'Role pending...'}
               </p>
@@ -420,16 +501,23 @@ export function ProducerWidget({ trip }: { trip: any }) {
   );
 }
 
-export function ChaosChartWidget({ trip }: { trip: any }) {
+export function ChaosChartWidget({ trip }: { trip: TripWithLore }) {
   const stats = trip?.stats || [];
   return (
     <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">Data Receipts</span>
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">
+        Data Receipts
+      </span>
       <div className="space-y-4">
-        {stats.slice(0, 4).map((s: any, i: number) => (
-          <div key={s.id || i} className="flex justify-between items-end border-b border-white/[0.04] pb-3">
+        {stats.slice(0, 4).map((s: ReceiptStat, i: number) => (
+          <div
+            key={s.id || i}
+            className="flex justify-between items-end border-b border-white/[0.04] pb-3"
+          >
             <div>
-              <p className="text-[9px] uppercase tracking-wider text-white/20 font-vibe font-black mb-1">{s.label}</p>
+              <p className="text-[9px] uppercase tracking-wider text-white/20 font-vibe font-black mb-1">
+                {s.label}
+              </p>
               <p className="text-xl font-vibe font-black text-[#F5F0E8]">{s.value}</p>
             </div>
             {s.unit && <span className="text-[9px] text-white/20 font-mono">{s.unit}</span>}
@@ -443,20 +531,27 @@ export function ChaosChartWidget({ trip }: { trip: any }) {
   );
 }
 
-export function SchematicWidget({ trip }: { trip: any }) {
+export function SchematicWidget({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   return (
     <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">Inside Jokes Detected</span>
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">
+        Inside Jokes Detected
+      </span>
       <div className="relative h-[160px] flex items-center justify-center">
         {lore ? (
           <div className="space-y-3 w-full">
             <div className="flex gap-2 flex-wrap">
-              {['Peak Delusion', 'The 3AM Phase', 'Blame Kev', 'Food Evidence', 'Group Lore'].map((tag, i) => (
-                <span key={i} className="px-3 py-1.5 rounded-full border border-white/10 text-[9px] font-vibe font-black text-white/30 uppercase tracking-wider hover:border-white/20 hover:text-white/50 transition-all cursor-default">
-                  {tag}
-                </span>
-              ))}
+              {['Peak Delusion', 'The 3AM Phase', 'Blame Kev', 'Food Evidence', 'Group Lore'].map(
+                (tag, i) => (
+                  <span
+                    key={i}
+                    className="px-3 py-1.5 rounded-full border border-white/10 text-[9px] font-vibe font-black text-white/30 uppercase tracking-wider hover:border-white/20 hover:text-white/50 transition-all cursor-default"
+                  >
+                    {tag}
+                  </span>
+                )
+              )}
             </div>
             <p className="text-[10px] text-white/15 font-data italic">
               Archive No. {trip?.id?.slice(0, 6) || '???'} – AI annotation active.
@@ -475,28 +570,43 @@ export function SchematicWidget({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GALLERY CARD (Trips list)
 // ─────────────────────────────────────────────────────────────────────────────
-export function CinematicGalleryCard({ trip }: { trip: any }) {
+export function CinematicGalleryCard({ trip }: { trip: TripWithLore }) {
   const cookedLevel = trip?.lore_json?.cooked_level ?? trip?.chaos_score ?? 0;
   const isCooked = cookedLevel >= 80;
   const isUnstable = cookedLevel >= 50 && cookedLevel < 80;
-  const statusLabel = isCooked ? 'Historically Cooked' : isUnstable ? 'Peak Delusion' : 'Stable Archive';
-  const statusColor = isCooked ? 'text-cooked-accent' : isUnstable ? 'text-unstable-accent' : 'text-chill-accent';
-  const borderColor = isCooked ? 'border-cooked-accent/15' : isUnstable ? 'border-unstable-accent/15' : 'border-white/[0.06]';
+  const statusLabel = isCooked
+    ? 'Historically Cooked'
+    : isUnstable
+      ? 'Peak Delusion'
+      : 'Stable Archive';
+  const statusColor = isCooked
+    ? 'text-cooked-accent'
+    : isUnstable
+      ? 'text-unstable-accent'
+      : 'text-chill-accent';
+  const borderColor = isCooked
+    ? 'border-cooked-accent/15'
+    : isUnstable
+      ? 'border-unstable-accent/15'
+      : 'border-white/[0.06]';
 
   return (
     <Link
       href={`/trips/${trip.id}`}
       className={cn(
-        "group relative block aspect-[3/4] rounded-[2.5rem] bg-[#0E0E0C] border overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl",
+        'group relative block aspect-[3/4] rounded-[2.5rem] bg-[#0E0E0C] border overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl',
         borderColor
       )}
     >
       {/* Background */}
       <div className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-700">
         {trip?.lore_json?.cooked_level ? (
-          <div className="w-full h-full" style={{
-            background: `radial-gradient(ellipse at top, ${isCooked ? '#FF4D4D15' : isUnstable ? '#D49E2D10' : '#2D9E8B10'}, transparent 70%)`
-          }} />
+          <div
+            className="w-full h-full"
+            style={{
+              background: `radial-gradient(ellipse at top, ${isCooked ? '#FF4D4D15' : isUnstable ? '#D49E2D10' : '#2D9E8B10'}, transparent 70%)`,
+            }}
+          />
         ) : (
           <div className="w-full h-full bg-gradient-to-b from-white/[0.02] to-transparent" />
         )}
@@ -505,9 +615,23 @@ export function CinematicGalleryCard({ trip }: { trip: any }) {
 
       <div className="absolute inset-x-6 bottom-8 space-y-4">
         <div className="flex items-center gap-2">
-          <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isCooked ? 'bg-cooked-accent' : 'bg-white/30')} />
-          <span className={cn("text-[8px] font-vibe font-black uppercase tracking-[0.3em]", statusColor)}>
-            {trip.lore_status === 'ready' ? statusLabel : trip.lore_status === 'processing' ? 'Generating Lore...' : 'No Lore Yet'}
+          <div
+            className={cn(
+              'w-1.5 h-1.5 rounded-full animate-pulse',
+              isCooked ? 'bg-cooked-accent' : 'bg-white/30'
+            )}
+          />
+          <span
+            className={cn(
+              'text-[8px] font-vibe font-black uppercase tracking-[0.3em]',
+              statusColor
+            )}
+          >
+            {trip.lore_status === 'ready'
+              ? statusLabel
+              : trip.lore_status === 'processing'
+                ? 'Generating Lore...'
+                : 'No Lore Yet'}
           </span>
         </div>
 
@@ -526,10 +650,12 @@ export function CinematicGalleryCard({ trip }: { trip: any }) {
 
         <div className="flex justify-between items-end pt-3 border-t border-white/[0.06]">
           <div className="flex items-baseline gap-2">
-            <span className={cn("text-4xl font-vibe font-black", statusColor)}>
+            <span className={cn('text-4xl font-vibe font-black', statusColor)}>
               {cookedLevel || '—'}
             </span>
-            <span className="text-[8px] uppercase tracking-wider text-white/20 font-vibe font-black">Cooked</span>
+            <span className="text-[8px] uppercase tracking-wider text-white/20 font-vibe font-black">
+              Cooked
+            </span>
           </div>
           <div className="w-10 h-10 rounded-full border border-white/[0.08] flex items-center justify-center text-white/20 group-hover:border-white/30 group-hover:text-white transition-all">
             <Play size={14} fill="currentColor" className="ml-0.5" />
@@ -549,7 +675,7 @@ export function CinematicGalleryCard({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // LORE WRAPPED — Spotify-wrapped style reveal
 // ─────────────────────────────────────────────────────────────────────────────
-export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => void }) {
+export function LoreWrapped({ trip, onFinish }: { trip: TripWithLore; onFinish: () => void }) {
   const [step, setStep] = React.useState(0);
   const lore = trip?.lore_json;
 
@@ -593,7 +719,9 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
       {/* Ambient */}
       <div
         className="absolute inset-0 opacity-15 blur-[200px] transition-colors duration-1000 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at center, ${current.accent}, transparent 70%)` }}
+        style={{
+          background: `radial-gradient(ellipse at center, ${current.accent}, transparent 70%)`,
+        }}
       />
 
       {/* Film grain */}
@@ -622,7 +750,10 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
             <h2 className="text-6xl md:text-8xl font-cinematic font-black tracking-tighter leading-none text-[#F5F0E8] uppercase italic">
               {current.title}
             </h2>
-            <div className="text-[18vw] md:text-[12vw] font-vibe font-black tracking-tighter leading-none" style={{ color: current.accent }}>
+            <div
+              className="text-[18vw] md:text-[12vw] font-vibe font-black tracking-tighter leading-none"
+              style={{ color: current.accent }}
+            >
               {current.stat}
             </div>
             <p className="text-xl text-white/35 font-cinematic italic max-w-md mx-auto leading-relaxed">
@@ -636,15 +767,18 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
       <div className="absolute bottom-12 inset-x-8 flex items-center justify-between max-w-2xl mx-auto left-1/2 -translate-x-1/2 w-full px-8">
         <div className="flex gap-2">
           {slides.map((_, i) => (
-            <div key={i} className={cn(
-              "h-1 rounded-full transition-all duration-500",
-              i === step ? "w-12 bg-white" : i < step ? "w-4 bg-white/40" : "w-4 bg-white/10"
-            )} />
+            <div
+              key={i}
+              className={cn(
+                'h-1 rounded-full transition-all duration-500',
+                i === step ? 'w-12 bg-white' : i < step ? 'w-4 bg-white/40' : 'w-4 bg-white/10'
+              )}
+            />
           ))}
         </div>
 
         <button
-          onClick={() => step < slides.length - 1 ? setStep(step + 1) : onFinish()}
+          onClick={() => (step < slides.length - 1 ? setStep(step + 1) : onFinish())}
           className="flex items-center gap-3 px-10 py-5 bg-[#F5F0E8] text-black rounded-full text-[11px] font-vibe font-black uppercase tracking-widest group hover:scale-105 transition-all"
         >
           {step < slides.length - 1 ? 'Next File' : 'Enter Archive'}
@@ -659,7 +793,7 @@ export function LoreWrapped({ trip, onFinish }: { trip: any; onFinish: () => voi
 // LIGHT SIDEBAR — Letterboxd-style cream panel widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function CookedScoreLight({ trip }: { trip: any }) {
+export function CookedScoreLight({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   const level = lore?.cooked_level ?? trip?.chaos_score ?? 0;
   const tenScore = (level / 10).toFixed(1);
@@ -667,28 +801,44 @@ export function CookedScoreLight({ trip }: { trip: any }) {
   const explanation = lore?.cooked_explanation;
   const accentColor = level >= 76 ? '#FF4D4D' : level >= 51 ? '#D49E2D' : '#2D9E8B';
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 300); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 300);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-5">
-      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">Delusion Index</span>
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
+        Delusion Index
+      </span>
 
       <div className="flex items-baseline gap-4">
-        <span className="font-vibe font-black leading-none text-lore-ink" style={{ fontSize: '88px', fontVariantNumeric: 'tabular-nums' }}>
+        <span
+          className="font-vibe font-black leading-none text-lore-ink"
+          style={{ fontSize: '88px', fontVariantNumeric: 'tabular-nums' }}
+        >
           {level}
         </span>
         <div className="space-y-0.5 pb-2">
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-vibe font-black" style={{ color: accentColor }}>{tenScore}</span>
+            <span className="text-3xl font-vibe font-black" style={{ color: accentColor }}>
+              {tenScore}
+            </span>
             <span className="text-xs text-black/25 font-vibe font-black">/10</span>
           </div>
-          <span className="block text-[8px] uppercase tracking-[0.3em] text-black/25 font-vibe font-black">Chaos</span>
+          <span className="block text-[8px] uppercase tracking-[0.3em] text-black/25 font-vibe font-black">
+            Chaos
+          </span>
         </div>
       </div>
 
       <span
         className="inline-block px-4 py-2 rounded-full text-[9px] font-vibe font-black uppercase tracking-wider"
-        style={{ backgroundColor: `${accentColor}15`, color: accentColor, border: `1px solid ${accentColor}25` }}
+        style={{
+          backgroundColor: `${accentColor}15`,
+          color: accentColor,
+          border: `1px solid ${accentColor}25`,
+        }}
       >
         {verdict}
       </span>
@@ -722,38 +872,55 @@ export function CookedScoreLight({ trip }: { trip: any }) {
   );
 }
 
-export function BadFeelingsChart({ trip }: { trip: any }) {
+export function BadFeelingsChart({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   const level = lore?.cooked_level ?? 60;
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 300); return () => clearTimeout(t); }, []);
-  const stats = (lore?.receipt_stats || []).filter((s: any) => s.label && s.value);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+  const stats = (lore?.receipt_stats || []).filter((s: ReceiptStat) => s.label && s.value);
 
-  const feelings: { label: string; value: number; color: string }[] = stats.length >= 3
-    ? stats.slice(0, 4).map((s: any, i: number) => {
-        const raw = parseFloat(s.value);
-        return {
-          label: s.label,
-          value: isNaN(raw) ? Math.max(20, level - i * 10) : Math.min(99, Math.max(5, raw)),
-          color: ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF'][i % 4],
-        };
-      })
-    : [
-        { label: 'Chaos Energy',     value: level,                          color: '#FF4D4D' },
-        { label: 'Emotional Damage', value: Math.round(level * 0.82),       color: '#D49E2D' },
-        { label: 'Group Stability',  value: Math.round((100 - level) * 0.7 + 18), color: '#2D9E8B' },
-        { label: 'Delusion Level',   value: Math.round(level * 0.65 + 10),  color: '#7C6AFF' },
-      ];
+  const feelings: { label: string; value: number; color: string }[] =
+    stats.length >= 3
+      ? stats.slice(0, 4).map((s: ReceiptStat, i: number) => {
+          const raw = parseFloat(s.value);
+          return {
+            label: s.label,
+            value: isNaN(raw) ? Math.max(20, level - i * 10) : Math.min(99, Math.max(5, raw)),
+            color: ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF'][i % 4],
+          };
+        })
+      : [
+          { label: 'Chaos Energy', value: level, color: '#FF4D4D' },
+          { label: 'Emotional Damage', value: Math.round(level * 0.82), color: '#D49E2D' },
+          {
+            label: 'Group Stability',
+            value: Math.round((100 - level) * 0.7 + 18),
+            color: '#2D9E8B',
+          },
+          { label: 'Delusion Level', value: Math.round(level * 0.65 + 10), color: '#7C6AFF' },
+        ];
 
   return (
     <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">Top Bad Feelings</span>
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
+        Top Bad Feelings
+      </span>
       <div className="space-y-5">
         {feelings.map((f, i) => (
           <div key={i} className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-vibe font-black uppercase tracking-wider text-lore-soft">{f.label}</span>
-              <span className="text-[10px] font-vibe font-black tabular-nums" style={{ color: f.color }}>{Math.round(f.value)}%</span>
+              <span className="text-[10px] font-vibe font-black uppercase tracking-wider text-lore-soft">
+                {f.label}
+              </span>
+              <span
+                className="text-[10px] font-vibe font-black tabular-nums"
+                style={{ color: f.color }}
+              >
+                {Math.round(f.value)}%
+              </span>
             </div>
             <div className="h-1 bg-black/[0.07] rounded-full overflow-hidden">
               <div
@@ -774,7 +941,7 @@ export function BadFeelingsChart({ trip }: { trip: any }) {
   );
 }
 
-export function DonutChart({ trip }: { trip: any }) {
+export function DonutChart({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   const level = lore?.cooked_level ?? trip?.chaos_score ?? 60;
   const eras = lore?.trip_eras || [];
@@ -783,14 +950,14 @@ export function DonutChart({ trip }: { trip: any }) {
 
   const segments: { label: string; pct: number; color: string }[] =
     eras.length >= 2
-      ? eras.slice(0, 4).map((era: any, i: number) => ({
+      ? eras.slice(0, 4).map((era: TripEra, i: number) => ({
           label: era.era_name,
           pct: Math.round(100 / Math.min(eras.length, 4)),
           color: PALETTE[i % 4],
         }))
       : [
-          { label: 'Peak Chaos',      pct: level,           color: '#FF4D4D' },
-          { label: 'Stable Moments',  pct: 100 - level,     color: '#2D9E8B' },
+          { label: 'Peak Chaos', pct: level, color: '#FF4D4D' },
+          { label: 'Stable Moments', pct: 100 - level, color: '#2D9E8B' },
         ];
 
   const r = 38;
@@ -805,7 +972,9 @@ export function DonutChart({ trip }: { trip: any }) {
 
   return (
     <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">Season Breakdown</span>
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
+        Season Breakdown
+      </span>
       <div className="flex items-center gap-6">
         <div className="flex-shrink-0">
           <svg width="90" height="90" viewBox="0 0 100 100" className="-rotate-90">
@@ -814,7 +983,9 @@ export function DonutChart({ trip }: { trip: any }) {
             {arcs.map((a, i) => (
               <circle
                 key={i}
-                cx="50" cy="50" r={r}
+                cx="50"
+                cy="50"
+                r={r}
                 fill="none"
                 stroke={a.color}
                 strokeWidth="10"
@@ -829,9 +1000,16 @@ export function DonutChart({ trip }: { trip: any }) {
         <div className="flex-1 space-y-2.5">
           {segments.map((s, i) => (
             <div key={i} className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-              <span className="text-[10px] font-vibe font-black text-lore-soft uppercase tracking-wider truncate flex-1">{s.label}</span>
-              <span className="text-[10px] font-vibe font-black text-black/35 tabular-nums">{s.pct}%</span>
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: s.color }}
+              />
+              <span className="text-[10px] font-vibe font-black text-lore-soft uppercase tracking-wider truncate flex-1">
+                {s.label}
+              </span>
+              <span className="text-[10px] font-vibe font-black text-black/35 tabular-nums">
+                {s.pct}%
+              </span>
             </div>
           ))}
         </div>
@@ -840,18 +1018,22 @@ export function DonutChart({ trip }: { trip: any }) {
   );
 }
 
-export function LightCastWidget({ trip }: { trip: any }) {
+export function LightCastWidget({ trip }: { trip: TripWithLore }) {
   const members = trip?.members || [];
   const COLORS = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF', '#FF6B35'];
 
   return (
     <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
-      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">The Cast</span>
+      <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
+        The Cast
+      </span>
       <div className="space-y-4">
         {members.length === 0 && (
-          <p className="text-[11px] text-lore-muted italic font-cinematic">Cast list processing...</p>
+          <p className="text-[11px] text-lore-muted italic font-cinematic">
+            Cast list processing...
+          </p>
         )}
-        {members.slice(0, 5).map((m: any, i: number) => (
+        {members.slice(0, 5).map((m: TripMember, i: number) => (
           <div key={m.user_id || i} className="flex items-center gap-3.5">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-vibe font-black text-white shadow-sm"
@@ -882,12 +1064,20 @@ export function LightCastWidget({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVE FOOTER
 // ─────────────────────────────────────────────────────────────────────────────
-export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; posterUrl?: string }) {
+export function ArchiveFooter({
+  publicUrl,
+  posterUrl,
+}: {
+  publicUrl?: string;
+  posterUrl?: string;
+}) {
   const [copied, setCopied] = React.useState(false);
 
   const handleCopyLink = () => {
     const url = publicUrl
-      ? (publicUrl.startsWith('http') ? publicUrl : `${window.location.origin}${publicUrl}`)
+      ? publicUrl.startsWith('http')
+        ? publicUrl
+        : `${window.location.origin}${publicUrl}`
       : window.location.href;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
@@ -897,7 +1087,9 @@ export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; po
 
   const handleSharePoster = () => {
     const url = posterUrl
-      ? (posterUrl.startsWith('http') ? posterUrl : `${window.location.origin}${posterUrl}`)
+      ? posterUrl.startsWith('http')
+        ? posterUrl
+        : `${window.location.origin}${posterUrl}`
       : window.location.href;
     if (navigator.share) {
       navigator.share({ url, title: 'Yaarlore — Archive' }).catch(() => {});
@@ -913,14 +1105,19 @@ export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; po
     <footer className="mt-40 border-t border-white/[0.04] pt-24 pb-48 px-6">
       <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-16">
         <div className="col-span-1 md:col-span-2 space-y-6">
-          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Theatrical Credits</span>
+          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">
+            Theatrical Credits
+          </span>
           <p className="text-sm text-white/15 leading-relaxed font-cinematic max-w-md italic">
-            Rendered by Lore Pipeline v2.0 · AI vision model active · All inside joke detection armed.
+            Rendered by Lore Pipeline v2.0 · AI vision model active · All inside joke detection
+            armed.
           </p>
         </div>
 
         <div className="space-y-6">
-          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Share the Season</span>
+          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">
+            Share the Season
+          </span>
           <div className="flex flex-col gap-3">
             <button
               onClick={handleSharePoster}
@@ -938,10 +1135,22 @@ export function ArchiveFooter({ publicUrl, posterUrl }: { publicUrl?: string; po
         </div>
 
         <div className="space-y-6 md:text-right">
-          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">Micro-Lore Links</span>
+          <span className="text-[10px] uppercase tracking-[0.5em] text-white/20 font-vibe font-black block">
+            Micro-Lore Links
+          </span>
           <div className="flex flex-col gap-3">
-            <Link href="/privacy" className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data">Privacy Policy</Link>
-            <Link href="/terms" className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data">Terms of Archive</Link>
+            <Link
+              href="/privacy"
+              className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data"
+            >
+              Terms of Archive
+            </Link>
             <a
               href="mailto:bhuneshbansal20039888@gmail.com?subject=Report a Trip"
               className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data"

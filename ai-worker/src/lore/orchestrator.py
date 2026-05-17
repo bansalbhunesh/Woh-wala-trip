@@ -465,8 +465,20 @@ class LoreOrchestrator:
         tasks   = [self._analyze_one_batch(trip, batch, i + 1, len(batches)) for i, batch in enumerate(batches)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         valid   = [r for r in results if not isinstance(r, Exception)]
+        failed  = len(batches) - len(valid)
         log.info(f"[{trip['id']}] {len(valid)}/{len(batches)} batches succeeded")
-        return valid or [{"raw_cooked_score": 60, "recurring_behaviors": [], "emotional_arc": {}}]
+        if not valid:
+            log.warning(
+                f"[{trip['id']}] ALL vision batches failed — using fabricated defaults. "
+                f"Lore quality will be degraded."
+            )
+            return [{"raw_cooked_score": 60, "recurring_behaviors": [], "emotional_arc": {}, "_partial_vision": True, "_failed_batches": len(batches)}]
+        if failed > 0:
+            log.warning(f"[{trip['id']}] {failed}/{len(batches)} vision batches failed — lore generated with partial data")
+            for v in valid:
+                v["_partial_vision"] = True
+                v["_failed_batches"] = failed
+        return valid
 
     async def _analyze_one_batch(self, trip: dict, batch: list[dict], bn: int, total: int) -> dict:
         import httpx, base64 as _base64

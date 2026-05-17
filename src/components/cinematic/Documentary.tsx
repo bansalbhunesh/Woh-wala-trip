@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc/client';
+import type { TripWithLore, TripMember, TripEra, LoreJson } from '@/types/domain';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CINEMATIC BREAK — chapter card / documentary interstitial
@@ -59,7 +60,7 @@ export function CinematicBreak({
 // ─────────────────────────────────────────────────────────────────────────────
 // COOKED LEVEL REVEAL — giant fullscreen emotional beat
 // ─────────────────────────────────────────────────────────────────────────────
-export function CookedLevelReveal({ trip }: { trip: any }) {
+export function CookedLevelReveal({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   const level = lore?.cooked_level ?? trip?.chaos_score ?? 0;
   const verdict = lore?.cooked_verdict ?? '—';
@@ -146,7 +147,7 @@ export function CookedLevelReveal({ trip }: { trip: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FRIENDSHIP EXPOSE — chaos rankings / investigation board
 // ─────────────────────────────────────────────────────────────────────────────
-export function FriendshipExpose({ members }: { members: any[] }) {
+export function FriendshipExpose({ members }: { members: TripMember[] }) {
   const sorted = [...(members || [])]
     .filter(m => m.role_chaos_rating != null)
     .sort((a, b) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0));
@@ -267,7 +268,15 @@ export function FriendshipExpose({ members }: { members: any[] }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // DOCUMENTARY ERA — individual era as a recovered scene
 // ─────────────────────────────────────────────────────────────────────────────
-export function DocumentaryEra({ era, index, total }: { era: any; index: number; total: number }) {
+export function DocumentaryEra({
+  era,
+  index,
+  total,
+}: {
+  era: TripEra;
+  index: number;
+  total: number;
+}) {
   const colors = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF'];
   const color = colors[index % colors.length];
   const isLast = index === total - 1;
@@ -327,7 +336,7 @@ export function DocumentaryEra({ era, index, total }: { era: any; index: number;
 // ─────────────────────────────────────────────────────────────────────────────
 // PLOT TWIST MOMENT — emotional shock / recovered evidence card
 // ─────────────────────────────────────────────────────────────────────────────
-export function PlotTwistMoment({ lore }: { lore: any }) {
+export function PlotTwistMoment({ lore }: { lore: LoreJson }) {
   const plotTwist = lore?.season_recap?.act_2 || lore?.what_this_trip_was_really_about;
   if (!plotTwist) return null;
 
@@ -373,7 +382,7 @@ export function PlotTwistMoment({ lore }: { lore: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FRIENDSHIP VERDICT — AI psychological profile
 // ─────────────────────────────────────────────────────────────────────────────
-export function FriendshipVerdict({ lore }: { lore: any }) {
+export function FriendshipVerdict({ lore }: { lore: LoreJson }) {
   const dynamics = lore?.friendship_dynamics;
   const awards = lore?.trip_lore_awards;
   if (!dynamics && !awards) return null;
@@ -1180,7 +1189,7 @@ export function SuperlativeCard({
 // ─────────────────────────────────────────────────────────────────────────────
 // CLOSING VERDICT — the final documentary card before the credits
 // ─────────────────────────────────────────────────────────────────────────────
-export function ClosingVerdict({ lore }: { lore: any }) {
+export function ClosingVerdict({ lore }: { lore: LoreJson }) {
   if (!lore?.closing_line) return null;
 
   return (

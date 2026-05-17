@@ -144,7 +144,16 @@ async def lifespan(app: FastAPI):
     log.info("WWT AI Worker shutting down.")
 
 
-app = FastAPI(lifespan=lifespan, title="WWT AI Worker v2")
+# Disable auto-docs in production to hide debug/internal endpoint metadata.
+# Only expose Swagger UI + ReDoc when DEBUG_ENABLED is set.
+_is_debug = settings.DEBUG_ENABLED == "true"
+app = FastAPI(
+    lifespan=lifespan,
+    title="WWT AI Worker v2",
+    docs_url="/docs" if _is_debug else None,
+    redoc_url="/redoc" if _is_debug else None,
+    openapi_url="/openapi.json" if _is_debug else None,
+)
 
 # In-memory per-trip cooldown — prevents hammering a single trip through the HTTP trigger.
 # 5-minute window; resets on successful completion via mark_job_done.
