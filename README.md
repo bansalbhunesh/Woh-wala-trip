@@ -67,36 +67,41 @@ Every trip becomes a **cinematic tap-through experience** — like Instagram Sto
 
 ---
 
-### Public Story — No Login Required
+### 🌐 Public Gateways & Interactive Routing
 
-Every trip gets a permanently shareable link that works for anyone:
+Every trip archive, teaser, and profile is generated with unique, permanently shareable routing paths that require **no login** for visitors.
 
-```
-/t/83A6AB6           →  Public teaser (title, score, tagline, stats)
-/t/83A6AB6/story     →  Full tap-through story (no auth, full animations)
-```
-
----
-
-### Chaos Clash — Battle Mode
-
-Two trips fight for supremacy. The community votes. The cooked score is the arena.
-
-- Trips go head-to-head with live vote percentages
-- AI judges the battle and delivers a verdict
-- Vote bar animates in real time
-- Anyone can vote — no account needed
+| Experience Endpoint | Visual Format | Deep-Link Experience |
+| :------------------ | :------------ | :------------------ |
+| <kbd>**`/t/:inviteCode`**</kbd> | **The Dossier Teaser** | High-fidelity briefing dashboard featuring the title, cooked score, group tagline, and core stats. |
+| <kbd>**`/t/:inviteCode/story`**</kbd> | **The Cinematic Reel** | Immersive, full-screen tap-through narrative utilizing directional slide physics and Web Audio track syncing. |
+| <kbd>**`/wrap/:year`**</kbd> | **The Retrospective** | Spotify Wrapped-style annual group overview showcasing cumulative stats and year-wide behaviors. |
+| <kbd>**`/u/:username`**</kbd> | **The Lore Profile** | A sleek, high-contrast digital portfolio showing a user's complete trip index and chaos sparklines. |
 
 ---
 
-### Year Wrap — `/wrap/[year]`
+### ⚔️ Chaos Clash (Battle Mode)
 
-A Spotify Wrapped-style annual review of your entire year of trips.
+Two trips enter. One leaves. The ultimate arena for friendship bragging rights.
 
-- Chaos bar per trip with animated fill
-- Highest cooked trip of the year
-- Cross-trip behavioral patterns surfaced by the AI
-- Shareable cinematic summary slide
+> [!TIP]
+> **Who is truly the most cooked?** Trips can be submitted to head-to-head public battles where the community decides the winner in real time.
+> * **🗳️ Zero-Friction Voting** — Open voting bars that animate dynamically with instantaneous client-side updates.
+> * **⚖️ The AI Arbitrator** — Claude acts as the arena judge, analyzing the photos and stories from both trips to deliver a hilarious, definitive verdict.
+> * **⚡ Live Stat Modulators** — Dynamic, real-time vote percentage sweeps that respond instantly to database changes.
+
+---
+
+### 🎬 Year Wrap Retrospective — `/wrap/[year]`
+
+An epic, cinematic retrospection that compiles an entire year of trips, chaos, and collective delusions into a single immersive walk down memory lane.
+
+> [!IMPORTANT]
+> **Your year in friendship mythology, analyzed.** The Wrap page runs aggregate models across all your trips for the year to build a premium interactive slide deck:
+> * **📊 Chaos Trajectory** — Interactive bar charts detailing the cooked rating over time, rendered with smooth SVG progress indicators.
+> * **👑 The Summit of Chaos** — Crown the single highest cooked trip of the year with visual trophy animations.
+> * **🧠 Long-Term Behavior Analysis** — Surfaces recurring behavioral patterns, chronic photo-dump offenders, and evolving group dynamics.
+> * **🎞️ Shareable Film Strip** — A mobile-responsive summary slide styled like an analogue film-negative frame, perfect for social sharing.
 
 ---
 
