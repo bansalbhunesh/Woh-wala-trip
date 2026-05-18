@@ -22,6 +22,7 @@ export function ScratchReveal({
   label = 'CLASSIFIED',
 }: ScratchRevealProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
   const revealed = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
@@ -29,89 +30,251 @@ export function ScratchReveal({
   const checkThrottle = useRef(0);
   const lastSoundTime = useRef(0);
 
-  // Build the overlay on mount
+  // Dynamic particle sparks emitter system
+  const particlesRef = useRef<
+    Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      alpha: number;
+      maxLife: number;
+      life: number;
+      color: string;
+    }>
+  >([]);
+
+  // Main 60fps high-performance render loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Base fill — dark corrupted background
-    ctx.fillStyle = '#0c0c0a';
-    ctx.fillRect(0, 0, width, height);
-
-    // Film grain noise
-    for (let i = 0; i < 4000; i++) {
-      const x = Math.random() * width;
-      const y = Math.random() * height;
-      const r = Math.random() * 1.2;
-      const alpha = Math.random() * 0.18;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,77,77,${alpha})`;
-      ctx.fill();
+    // Create the offscreen mask canvas if not yet present
+    if (!offscreenCanvasRef.current) {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = width;
+      offscreen.height = height;
+      offscreenCanvasRef.current = offscreen;
     }
 
-    // Horizontal scan-line texture
-    for (let y = 0; y < height; y += 3) {
-      ctx.fillStyle = 'rgba(0,0,0,0.12)';
-      ctx.fillRect(0, y, width, 1);
+    let animationFrameId: number;
+    let scannerY = 0;
+    let scannerDir = 1;
+
+    // Generate static visual film grain coordinates to prevent epilepsy while staying organic
+    const noisePoints: Array<{ x: number; y: number; r: number; alpha: number }> = [];
+    for (let i = 0; i < 350; i++) {
+      noisePoints.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: 0.5 + Math.random() * 0.8,
+        alpha: 0.04 + Math.random() * 0.12,
+      });
     }
 
-    // Vignette gradient
-    const vg = ctx.createRadialGradient(
-      width / 2,
-      height / 2,
-      height * 0.1,
-      width / 2,
-      height / 2,
-      width * 0.8
-    );
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.5)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0, 0, width, height);
+    // Hexadecimal matrix scrolling data streams
+    const hexStreams: Array<{
+      x: number;
+      y: number;
+      chars: string[];
+      speed: number;
+      opacity: number;
+    }> = [];
+    const streamCount = Math.floor(width / 36);
+    for (let i = 0; i < streamCount; i++) {
+      const chars: string[] = [];
+      const len = 3 + Math.floor(Math.random() * 5);
+      for (let j = 0; j < len; j++) {
+        chars.push(
+          Math.floor(Math.random() * 256)
+            .toString(16)
+            .toUpperCase()
+            .padStart(2, '0')
+        );
+      }
+      hexStreams.push({
+        x: i * 36 + 18,
+        y: Math.random() * height,
+        chars,
+        speed: 0.4 + Math.random() * 0.5,
+        opacity: 0.02 + Math.random() * 0.05,
+      });
+    }
 
-    // Label text — CLASSIFIED / REDACTED
-    ctx.save();
-    ctx.globalAlpha = 0.08;
-    ctx.font = `bold ${Math.round(width * 0.13)}px monospace`;
-    ctx.fillStyle = '#FF4D4D';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, width / 2, height / 2);
-    ctx.restore();
+    const render = () => {
+      if (revealed.current && done) return;
 
-    // "SCRATCH TO REVEAL" hint
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    ctx.font = `500 11px monospace`;
-    ctx.fillStyle = 'rgba(245,240,232,0.6)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('SCRATCH TO REVEAL', width / 2, height - 12);
-    ctx.restore();
+      // 1. Clear visible surface
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'source-over';
 
-    // Red corner brackets
-    const b = 18,
-      lw = 1.5;
-    ctx.strokeStyle = 'rgba(255,77,77,0.4)';
-    ctx.lineWidth = lw;
-    [
-      [8, 8],
-      [width - 8, 8],
-      [8, height - 8],
-      [width - 8, height - 8],
-    ].forEach(([cx, cy]) => {
-      const sx = cx === 8 ? 1 : -1;
-      const sy = cy === 8 ? 1 : -1;
-      ctx.beginPath();
-      ctx.moveTo(cx + sx * b, cy);
-      ctx.lineTo(cx, cy);
-      ctx.lineTo(cx, cy + sy * b);
-      ctx.stroke();
-    });
-  }, [width, height, label]);
+      // --- 2. Draw Premium Brushed Cybernetic Design ---
+      ctx.fillStyle = '#0c0c0a';
+      ctx.fillRect(0, 0, width, height);
+
+      // Micro cybernetic dotted grid mesh
+      ctx.fillStyle = 'rgba(255, 77, 77, 0.02)';
+      const dotSpacing = 12;
+      for (let x = 6; x < width; x += dotSpacing) {
+        for (let y = 6; y < height; y += dotSpacing) {
+          ctx.beginPath();
+          ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Flickering matrix decryption codes
+      ctx.font = '7px monospace';
+      hexStreams.forEach(stream => {
+        stream.y += stream.speed;
+        if (stream.y - stream.chars.length * 8 > height) {
+          stream.y = -10;
+        }
+
+        stream.chars.forEach((char, idx) => {
+          if (Math.random() > 0.985) {
+            stream.chars[idx] = Math.floor(Math.random() * 256)
+              .toString(16)
+              .toUpperCase()
+              .padStart(2, '0');
+          }
+          const charY = stream.y - idx * 9;
+          if (charY >= 0 && charY <= height) {
+            ctx.fillStyle = `rgba(255, 77, 77, ${stream.opacity * (1 - idx / stream.chars.length)})`;
+            ctx.fillText(char, stream.x, charY);
+          }
+        });
+      });
+
+      // Analog cathode-ray scan-line stripes
+      for (let y = 0; y < height; y += 3) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.fillRect(0, y, width, 1);
+      }
+
+      // Natural cinematic film grain noise
+      noisePoints.forEach(p => {
+        const flicker = Math.random() * 0.04 - 0.02;
+        ctx.fillStyle = `rgba(255, 77, 77, ${Math.max(0.01, p.alpha + flicker)})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Deep radial vignette shadow
+      const vg = ctx.createRadialGradient(
+        width / 2,
+        height / 2,
+        height * 0.05,
+        width / 2,
+        height / 2,
+        width * 0.75
+      );
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.65)');
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Core CLASSIFIED / REDACTED visual label
+      ctx.save();
+      ctx.globalAlpha = 0.07;
+      ctx.font = `bold ${Math.round(width * 0.12)}px monospace`;
+      ctx.fillStyle = '#FF4D4D';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, width / 2, height / 2);
+      ctx.restore();
+
+      // Dynamic guide text hint (sinusoidal pulse)
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(Date.now() / 250) * 0.1;
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = 'rgba(255, 77, 77, 0.8)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('SCRATCH TO DECRYPT ARCHIVE', width / 2, height - 12);
+      ctx.restore();
+
+      // Animated high-tech laser scanline sweep
+      scannerY += scannerDir * 1.2;
+      if (scannerY >= height - 4 || scannerY <= 4) {
+        scannerDir *= -1;
+      }
+
+      const scanGrad = ctx.createLinearGradient(0, scannerY - 12 * scannerDir, 0, scannerY);
+      scanGrad.addColorStop(0, 'rgba(255, 77, 77, 0)');
+      scanGrad.addColorStop(0.5, 'rgba(255, 77, 77, 0.06)');
+      scanGrad.addColorStop(1, 'rgba(255, 77, 77, 0.28)');
+      ctx.fillStyle = scanGrad;
+      ctx.fillRect(0, scannerY - 12 * scannerDir, width, 12 * scannerDir);
+
+      ctx.fillStyle = 'rgba(255, 110, 110, 0.65)';
+      ctx.fillRect(0, scannerY, width, 1);
+
+      // --- 3. Composite and Subtracted Scratched Areas ---
+      ctx.globalCompositeOperation = 'destination-out';
+      if (offscreenCanvasRef.current) {
+        ctx.drawImage(offscreenCanvasRef.current, 0, 0);
+      }
+
+      // --- 4. Draw Static HUD Outlines & Interactive Shard Particles ---
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Cybernetic corner brackets
+      const b = 15;
+      ctx.strokeStyle = 'rgba(255, 77, 77, 0.4)';
+      ctx.lineWidth = 1.5;
+      [
+        [8, 8],
+        [width - 8, 8],
+        [8, height - 8],
+        [width - 8, height - 8],
+      ].forEach(([cx, cy]) => {
+        const sx = cx === 8 ? 1 : -1;
+        const sy = cy === 8 ? 1 : -1;
+        ctx.beginPath();
+        ctx.moveTo(cx + sx * b, cy);
+        ctx.lineTo(cx, cy);
+        ctx.lineTo(cx, cy + sy * b);
+        ctx.stroke();
+      });
+
+      // Emitted particle embers update & rendering
+      const particles = particlesRef.current;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life++;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.alpha = 1 - p.life / p.maxLife;
+
+        if (p.life >= p.maxLife) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (1 - p.life / p.maxLife), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [width, height, label, done]);
 
   const getXY = (clientX: number, clientY: number, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
@@ -123,35 +286,53 @@ export function ScratchReveal({
 
   const erase = useCallback(
     (x: number, y: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx || revealed.current) return;
+      const offscreen = offscreenCanvasRef.current;
+      if (!offscreen) return;
+      const oCtx = offscreen.getContext('2d');
+      if (!oCtx || revealed.current) return;
 
-      // Play soft, magical ambient crystal chimes as they scratch
+      // Play cinematic magical crystal audio synths during physical scratching
       const now = Date.now();
-      if (now - lastSoundTime.current > 150) {
+      if (now - lastSoundTime.current > 120) {
         lastSoundTime.current = now;
         if (typeof window !== 'undefined' && (window as any).playCinematicChime) {
-          // Play a slightly randomized high chime
-          (window as any).playCinematicChime(1.2 + Math.random() * 0.5);
+          (window as any).playCinematicChime(1.1 + Math.random() * 0.45);
         }
       }
 
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = brushSize * 2.5; // Slightly thicker to connect circles
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      oCtx.globalCompositeOperation = 'source-over';
+      oCtx.fillStyle = '#ffffff';
+      oCtx.strokeStyle = '#ffffff';
+      oCtx.lineWidth = brushSize * 2.3;
+      oCtx.lineCap = 'round';
+      oCtx.lineJoin = 'round';
 
       if (lastPos.current) {
-        ctx.beginPath();
-        ctx.moveTo(lastPos.current.x, lastPos.current.y);
-        ctx.lineTo(x, y);
-        ctx.stroke();
+        oCtx.beginPath();
+        oCtx.moveTo(lastPos.current.x, lastPos.current.y);
+        oCtx.lineTo(x, y);
+        oCtx.stroke();
       } else {
-        ctx.beginPath();
-        ctx.arc(x, y, brushSize, 0, Math.PI * 2);
-        ctx.fill();
+        oCtx.beginPath();
+        oCtx.arc(x, y, brushSize, 0, Math.PI * 2);
+        oCtx.fill();
+      }
+
+      // Emit beautiful cybermatic red and orange plasma sparks
+      for (let i = 0; i < 5; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.8 + Math.random() * 2.8;
+        particlesRef.current.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 0.4,
+          size: 1.8 + Math.random() * 3.2,
+          alpha: 1.0,
+          maxLife: 20 + Math.floor(Math.random() * 15),
+          life: 0,
+          color: Math.random() > 0.4 ? '#FF4D4D' : '#FFAA33',
+        });
       }
 
       lastPos.current = { x, y };
@@ -162,19 +343,18 @@ export function ScratchReveal({
   const checkReveal = useCallback(() => {
     if (revealed.current) return;
     const now = Date.now();
-    if (now - checkThrottle.current < 120) return; // throttle to ~8fps
+    if (now - checkThrottle.current < 120) return;
     checkThrottle.current = now;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const offscreen = offscreenCanvasRef.current;
+    if (!offscreen) return;
+    const oCtx = offscreen.getContext('2d');
+    if (!oCtx) return;
 
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const data = oCtx.getImageData(0, 0, offscreen.width, offscreen.height).data;
     let cleared = 0;
-    // Sample every 16th pixel (every 4th RGBA block) for speed
     for (let i = 3; i < data.length; i += 64) {
-      if (data[i] < 64) cleared++;
+      if (data[i] > 200) cleared++;
     }
     const sampled = Math.floor(data.length / 64);
     if (cleared / sampled >= threshold) {
