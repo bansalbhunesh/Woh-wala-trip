@@ -360,6 +360,70 @@ Claude doesn't caption photos. It reads the room.
 
 ---
 
+## Dynamic Sensory Soundtrack Engine & AI Similarity Framework
+
+Yaarlore features an immersive, state-of-the-art **Spotify Feature Simulator & Dynamic Synthesizer Console** integrated inside [MoodSoundtrack.tsx](file:///c:/Users/bhune/Woh-wala-trip/src/components/experience/MoodSoundtrack.tsx) to deliver real-time visual-emotion-to-soundtrack mapping.
+
+This system is built using a **Hybrid Procedural + Streamed Audio Engine** that routes client-side synth oscillators and professional MP3 streams from the YouTube Free Audio Library through the same high-fidelity Web Audio effects graph and canvas equalizer.
+
+### 🔊 Hybrid Audio Routing Architecture
+
+When a synthesized procedural track is active, the engine triggers custom Web Audio oscillators, LFO modulators, and arpeggios. When a streamed track is active, it spins up an HTML5 `Audio` tag, handles cross-origin policies for direct streaming, and routes the stream through the identical lowpass filters, delays, and frequency analyzers:
+
+```mermaid
+graph TD
+    subgraph Engine Input Sources
+        A[YouTube Free MP3 Stream] -->|MediaElementAudioSourceNode| C[BiquadFilterNode Lowpass]
+        B[Procedural Synth Oscillators] -->|Direct Web Audio Connections| C
+    end
+
+    subgraph Web Audio Effects Pipeline
+        C -->|Lowpass Filtered| D[DelayNode Spatial Feedback]
+        D -->|Feedback Loop| E[GainNode Feedback Level]
+        E --> D
+        C -->|Dry Mix| F[AnalyserNode Live Equalizer]
+        D -->|Wet Mix| F
+    end
+
+    subgraph Output Output
+        F -->|Real-time Frequency Data| G[HTML5 Canvas Visualizer]
+        F -->|Stereo Mix| H[Master Gain Volume Control]
+        H -->|Audio Output| I[AudioContext Destination]
+    end
+
+    style A fill:#38bdf8,stroke:#0369a1,stroke-width:2px,color:#fff
+    style B fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
+    style C fill:#a855f7,stroke:#6b21a8,stroke-width:2px,color:#fff
+    style G fill:#22c55e,stroke:#15803d,stroke-width:2px,color:#fff
+```
+
+---
+
+### 🎛️ Real-Time Spotify Audio Features Modulator
+
+Users can toggle the **Spotify Features** console to simulate standard Spotify API metrics, which are mathematically mapped to direct physical parameters inside our Web Audio graph:
+
+| Spotify Feature     | Target Parameter               | Effect Range & Mapping Mechanism                                                                                                                            |
+| :------------------ | :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🎭 Valence**      | Chord Harmonies & Pitch Scales | High Valence ($\ge 50\%$) maps to warm Lydian / bright major frequencies. Low Valence ($< 50\%$) triggers darker minor / pentatonic keys.                   |
+| **⚡ Energy**       | Biquad Filter Cutoff Frequency | Modulates a lowpass filter sweep between $180\text{Hz}$ (deep, underwater ambiance) and $1,980\text{Hz}$ (bright, cutting highs) via `setTargetAtTime`.     |
+| **💃 Danceability** | Arpeggiator Clock Tempo        | Intersects with Energy to sweep arpeggiator clock tick rate timings down from $320\text{ms}$ (gentle pulses) to a driving $50\text{ms}$ (rave tempo).       |
+| **🎤 Liveness**     | Spatial Delay Feedback Level   | Adjusts the feedback gain multiplier node between $15\%$ and $80\%$, expanding the acoustic space from dry room acoustics to monumental cave echo feedback. |
+
+---
+
+### 🧠 CLAP Zero-Shot Similarity Sensing Heuristic
+
+To match user mood queries, Yaarlore uses a client-side emulation of the **Contrastive Language-Audio Pretraining (CLAP)** zero-shot classification system:
+
+$$\text{Sim}(A, T) = \frac{E_A \cdot E_T}{\|E_A\| \|E_T\|}$$
+
+1. **Natural Language Input**: The user inputs free text (e.g., _"A fast dramatic synth beat for racing moments"_).
+2. **NLP Feature Extraction**: The prompt is processed across multi-keyword token mappings corresponding to semantic concepts like speed, brightness, density, and emotional weight.
+3. **Cosine Similarity Matrix**: A similarity matrix is computed across all 8 hybrid tracks. The winner is marked with a `★ MATCH` badge in the UI and automatically triggered with a cinematic triumph chime.
+
+---
+
 ## Database Schema
 
 ```sql

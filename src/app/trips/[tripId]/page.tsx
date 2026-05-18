@@ -45,6 +45,9 @@ export default function TripRoomPage() {
   const tripId = params.tripId as string;
   const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
   const [showRawData, setShowRawData] = useState(false);
+  const [activeTab, setActiveTab] = useState<'hub' | 'chaos' | 'evidence' | 'timeline' | 'verdict'>(
+    'hub'
+  );
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
   const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
@@ -163,156 +166,410 @@ export default function TripRoomPage() {
 
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
-            {/* ── LEFT: documentary scroll column ──────────────────────── */}
-            <div className="space-y-0">
-              {/* ① Delusion Index — giant emotional beat */}
-              <CookedLevelReveal trip={trip} />
+            {/* ── LEFT: documentary interactive visual deck ──────────────── */}
+            <div className="space-y-6">
+              {activeTab === 'hub' && (
+                <div className="space-y-8">
+                  {/* ① Delusion Index — giant emotional beat acts as hook */}
+                  <CookedLevelReveal trip={trip} />
 
-              {/* ② Chaos rankings & Friendship Expose — elevated to the top! */}
-              {members.some((m: any) => m.role_chaos_rating != null) && (
-                <section className="py-8">
-                  <EmotionalTimestamp
-                    time="2:13 AM"
-                    text="The AI identified a primary chaos source. The data is not flattering."
-                    accent="#FF4D4D"
-                  />
-                  <StickyChapter
-                    number="Chapter 01"
-                    title="Who Caused The Collapse"
-                    accent="#FF4D4D"
-                  />
-                  <CinematicBreak
-                    text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
-                    sub="AI Findings · Cross-referenced · 0 appeals accepted"
-                    accent="#FF4D4D"
-                  />
-                  <EmotionalDamageScan members={members} />
-                  <FriendshipExpose members={members} />
-                </section>
+                  {/* Visual Scene Selection Shelf */}
+                  <div className="space-y-4 pt-4 border-t border-white/5">
+                    <div className="flex justify-between items-end">
+                      <div className="space-y-1">
+                        <div className="text-[9px] uppercase tracking-[0.45em] text-[#FF4D4D] font-vibe font-black">
+                          ● CHAPTER DECK
+                        </div>
+                        <h2 className="text-3xl font-cinematic font-black italic tracking-tight text-[#F5F0E8] uppercase leading-none">
+                          Select a Scene
+                        </h2>
+                      </div>
+                      <span className="font-mono text-[9px] text-white/35 uppercase tracking-wider">
+                        {photoList?.photos?.length || 0} Assets Available
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        {
+                          id: 'chaos',
+                          num: '01',
+                          title: 'THE CRACKDOWN',
+                          desc: 'Unmasking primary chaos scapegoats, culprits, and unhinged energy ratings.',
+                          accent: '#FF4D4D',
+                          photoIndex: 0,
+                        },
+                        {
+                          id: 'evidence',
+                          num: '02',
+                          title: 'THE CLUES',
+                          desc: 'Physical evidence: Polaroid memory collage, inside jokes, and witness statements.',
+                          accent: '#D49E2D',
+                          photoIndex: 1,
+                        },
+                        {
+                          id: 'timeline',
+                          num: '03',
+                          title: 'CHRONOLOGY',
+                          desc: 'Chronological timeline reconstruction of the day-by-day collapse.',
+                          accent: '#7C6AFF',
+                          photoIndex: 2,
+                        },
+                        {
+                          id: 'verdict',
+                          num: '04',
+                          title: 'FINAL DECREE',
+                          desc: 'AI psychological profiles, yearbook superlatives, and closing verdicts.',
+                          accent: '#2D9E8B',
+                          photoIndex: 3,
+                        },
+                      ].map(ch => {
+                        const photo = photoList?.photos?.[ch.photoIndex];
+                        return (
+                          <button
+                            key={ch.id}
+                            onClick={() => {
+                              setActiveTab(ch.id as any);
+                              window.scrollTo({ top: 400, behavior: 'smooth' });
+                            }}
+                            className="group relative h-48 rounded-[2rem] overflow-hidden text-left border border-white/[0.08] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] active:scale-98 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+                          >
+                            {/* Background photo with gradient overlay */}
+                            {photo ? (
+                              <img
+                                src={photo.thumbnailUrl || photo.url || ''}
+                                alt={ch.title}
+                                className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-35 group-hover:scale-105 transition-all duration-700"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 opacity-15"
+                                style={{
+                                  background: `radial-gradient(circle at 80% 20%, ${ch.accent}40, transparent 60%)`,
+                                }}
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#060604] via-[#060604]/70 to-transparent" />
+
+                            {/* Hover accent bar */}
+                            <div
+                              className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ backgroundColor: ch.accent }}
+                            />
+
+                            {/* Content */}
+                            <div className="relative h-full flex flex-col justify-end p-6 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="text-[8px] font-mono uppercase tracking-[0.3em] font-bold"
+                                  style={{ color: ch.accent }}
+                                >
+                                  SCENE {ch.num}
+                                </span>
+                                <span className="w-1 h-1 rounded-full bg-white/20" />
+                                <span className="text-[7px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                                  Documentary Recurrent
+                                </span>
+                              </div>
+                              <h4 className="text-xl font-cinematic font-black tracking-tight text-[#F5F0E8] group-hover:text-white transition-colors">
+                                {ch.title}
+                              </h4>
+                              <p className="text-[10px] text-white/45 font-data leading-snug line-clamp-2">
+                                {ch.desc}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               )}
 
-              {/* ③ Cinematic break */}
-              <CinematicBreak
-                text="The following is a reconstruction of documented events. Some memories have been enhanced for dramatic effect."
-                sub="Archive Reconstruction · AI Narration Active"
-                accent="#FF4D4D"
-                timestamp={`Archive No. ${trip?.id?.slice(0, 6)?.toUpperCase() || '——'} · Classified`}
-              />
+              {activeTab === 'chaos' && (
+                <div className="space-y-6">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                    <button
+                      onClick={() => setActiveTab('hub')}
+                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
+                    >
+                      ← Return to Scene Hub
+                    </button>
+                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                      Scene 01 · The Culprits
+                    </div>
+                  </div>
 
-              {/* ④ Evidence board — investigation wall replaces equal-weight cards */}
-              {(mvp || villain || insideJoke) && (
-                <section className="py-4">
-                  <StickyChapter number="Chapter 02" title="The Evidence" accent="#FF4D4D" />
-                  <EvidenceBoard mvp={mvp} villain={villain} insideJoke={insideJoke} lore={lore} />
-                </section>
+                  {/* Chaos rankings & Friendship Expose */}
+                  {members.some((m: any) => m.role_chaos_rating != null) && (
+                    <section className="py-2 space-y-4">
+                      <EmotionalTimestamp
+                        time="2:13 AM"
+                        text="The AI identified a primary chaos source. The data is not flattering."
+                        accent="#FF4D4D"
+                      />
+                      <CinematicBreak
+                        text="Nobody could agree on who started it. The algorithm, however, has a very clear opinion."
+                        sub="AI Findings · Cross-referenced · 0 appeals accepted"
+                        accent="#FF4D4D"
+                      />
+                      <EmotionalDamageScan members={members} />
+                      <FriendshipExpose members={members} />
+                    </section>
+                  )}
+
+                  {/* Navigation footer */}
+                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                    <button
+                      onClick={() => setActiveTab('hub')}
+                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
+                    >
+                      Exit Scene
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('evidence');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
+                    >
+                      Next Scene →
+                    </button>
+                  </div>
+                </div>
               )}
 
-              {/* ⑤ Emotional timestamp + memory collage */}
-              <EmotionalTimestamp
-                day="Day 1"
-                text="Everyone was still behaving normally."
-                accent="#2D9E8B"
-              />
+              {activeTab === 'evidence' && (
+                <div className="space-y-6">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                    <button
+                      onClick={() => setActiveTab('hub')}
+                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
+                    >
+                      ← Return to Scene Hub
+                    </button>
+                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                      Scene 02 · Clues & Artifacts
+                    </div>
+                  </div>
 
-              <MemoryCollage
-                label="Photos Recovered From Device Storage"
-                count={6}
-                accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
-                photos={(photoList?.photos ?? []).slice(0, 6)}
-                tripId={tripId}
-              />
+                  {/* Evidence Board */}
+                  {(mvp || villain || insideJoke) && (
+                    <section className="py-2">
+                      <EvidenceBoard
+                        mvp={mvp}
+                        villain={villain}
+                        insideJoke={insideJoke}
+                        lore={lore}
+                      />
+                    </section>
+                  )}
 
-              {/* ⑦ Recovered evidence artifacts */}
-              {(lore?.season_recap?.act_1 || lore?.cooked_explanation) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  {lore?.season_recap?.act_1 && (
-                    <RecoveredArtifact
-                      label="Witness Statement · Act I"
-                      content={
-                        lore.season_recap.act_1.slice(0, 160) +
-                        (lore.season_recap.act_1.length > 160 ? '...' : '')
+                  {/* Memory Collage */}
+                  <section className="py-2">
+                    <EmotionalTimestamp
+                      day="Day 1"
+                      text="Everyone was still behaving normally."
+                      accent="#2D9E8B"
+                    />
+                    <MemoryCollage
+                      label="Photos Recovered From Device Storage"
+                      count={6}
+                      accent={lore?.cooked_level >= 76 ? '#FF4D4D' : '#D49E2D'}
+                      photos={(photoList?.photos ?? []).slice(0, 6)}
+                      tripId={tripId}
+                    />
+                  </section>
+
+                  {/* Recovered evidence artifacts */}
+                  {(lore?.season_recap?.act_1 || lore?.cooked_explanation) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                      {lore?.season_recap?.act_1 && (
+                        <RecoveredArtifact
+                          label="Witness Statement · Act I"
+                          content={
+                            lore.season_recap.act_1.slice(0, 160) +
+                            (lore.season_recap.act_1.length > 160 ? '...' : '')
+                          }
+                          type="note"
+                          rotation={-1.5}
+                        />
+                      )}
+                      {lore?.cooked_level && (
+                        <RecoveredArtifact
+                          label="Yaarlore Chaos Receipt · Official"
+                          content={`Trip: ${trip?.name || '—'}\nChaos Score: ${lore.cooked_level}/100\nVerdict: ${lore.cooked_verdict || '—'}\nPhotos Analyzed: ${trip?.total_photos || 0}\nCast Members: ${members.length}`}
+                          subtext={`Archive ID: ${trip?.id?.slice(0, 8)?.toUpperCase() || '——'}`}
+                          type="receipt"
+                          rotation={1}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Plot Twist moment */}
+                  {lore && (
+                    <div className="py-2">
+                      <PlotTwistMoment lore={lore} />
+                    </div>
+                  )}
+
+                  {/* Navigation footer */}
+                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                    <button
+                      onClick={() => {
+                        setActiveTab('chaos');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
+                    >
+                      ← Previous Scene
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('timeline');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
+                    >
+                      Next Scene →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'timeline' && (
+                <div className="space-y-6">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                    <button
+                      onClick={() => setActiveTab('hub')}
+                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
+                    >
+                      ← Return to Scene Hub
+                    </button>
+                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                      Scene 03 · Timeline Reconstructed
+                    </div>
+                  </div>
+
+                  {/* Timeline */}
+                  {lore?.trip_eras?.length > 0 && (
+                    <section className="py-2 space-y-4">
+                      <EmotionalTimestamp
+                        text="The timeline of events, reconstructed."
+                        accent="#7C6AFF"
+                      />
+                      <div className="pt-2">
+                        {lore.trip_eras.map((era: any, i: number) => (
+                          <DocumentaryEra
+                            key={i}
+                            era={era}
+                            index={i}
+                            total={lore.trip_eras.length}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Navigation footer */}
+                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                    <button
+                      onClick={() => {
+                        setActiveTab('evidence');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
+                    >
+                      ← Previous Scene
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('verdict');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
+                    >
+                      Next Scene →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'verdict' && (
+                <div className="space-y-6">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                    <button
+                      onClick={() => setActiveTab('hub')}
+                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
+                    >
+                      ← Return to Scene Hub
+                    </button>
+                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                      Scene 04 · Verdict Decree
+                    </div>
+                  </div>
+
+                  {/* AI Psychological Profile */}
+                  {lore && (
+                    <section className="py-2">
+                      <FriendshipVerdict lore={lore} />
+                    </section>
+                  )}
+
+                  {/* Superlatives — yearbook awards */}
+                  {lore?.superlatives?.length > 0 && (
+                    <section className="py-2 space-y-4">
+                      <div className="space-y-4">
+                        {lore.superlatives.slice(0, 4).map((sup: any, i: number) => (
+                          <SuperlativeCard key={i} sup={sup} index={i} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Closing cinematic break */}
+                  {lore && (
+                    <CinematicBreak
+                      text={
+                        lore.what_this_trip_was_really_about ||
+                        `${trip?.name} happened. The rest is mythology.`
                       }
-                      type="note"
-                      rotation={-1.5}
+                      sub="What this trip was really about"
+                      accent="#2D9E8B"
                     />
                   )}
-                  {lore?.cooked_level && (
-                    <RecoveredArtifact
-                      label="Yaarlore Chaos Receipt · Official"
-                      content={`Trip: ${trip?.name || '—'}\nChaos Score: ${lore.cooked_level}/100\nVerdict: ${lore.cooked_verdict || '—'}\nPhotos Analyzed: ${trip?.total_photos || 0}\nCast Members: ${members.length}`}
-                      subtext={`Archive ID: ${trip?.id?.slice(0, 8)?.toUpperCase() || '——'}`}
-                      type="receipt"
-                      rotation={1}
-                    />
-                  )}
+
+                  {/* Final verdict */}
+                  {lore && <ClosingVerdict lore={lore} />}
+
+                  {/* Navigation footer */}
+                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                    <button
+                      onClick={() => {
+                        setActiveTab('timeline');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
+                    >
+                      ← Previous Scene
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('hub');
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
+                    >
+                      Exit to Scene Hub 🎬
+                    </button>
+                  </div>
                 </div>
               )}
-
-              {/* ⑧ Plot Twist moment */}
-              {lore && (
-                <div className="py-2">
-                  <PlotTwistMoment lore={lore} />
-                </div>
-              )}
-
-              {/* ⑨ Season Timeline as documentary scenes */}
-              {lore?.trip_eras?.length > 0 && (
-                <section className="py-4 space-y-0">
-                  <EmotionalTimestamp
-                    text="The timeline of events, reconstructed."
-                    accent="#7C6AFF"
-                  />
-                  <StickyChapter number="Chapter 03" title="How It Unfolded" accent="#7C6AFF" />
-                  <div className="pt-4">
-                    {lore.trip_eras.map((era: any, i: number) => (
-                      <DocumentaryEra key={i} era={era} index={i} total={lore.trip_eras.length} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* ⑩ AI Psychological Profile */}
-              {lore && (
-                <section className="py-4">
-                  <StickyChapter
-                    number="Chapter 04"
-                    title="AI Psychological Profile"
-                    accent="#2D9E8B"
-                  />
-                  <FriendshipVerdict lore={lore} />
-                </section>
-              )}
-
-              {/* ⑪ Superlatives — yearbook awards */}
-              {lore?.superlatives?.length > 0 && (
-                <section className="py-4 space-y-6">
-                  <StickyChapter
-                    number="Chapter 05"
-                    title="The Official Superlatives"
-                    accent="#D49E2D"
-                  />
-                  <div className="space-y-4">
-                    {lore.superlatives.slice(0, 4).map((sup: any, i: number) => (
-                      <SuperlativeCard key={i} sup={sup} index={i} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* ⑫ Closing cinematic break */}
-              {lore && (
-                <CinematicBreak
-                  text={
-                    lore.what_this_trip_was_really_about ||
-                    `${trip?.name} happened. The rest is mythology.`
-                  }
-                  sub="What this trip was really about"
-                  accent="#2D9E8B"
-                />
-              )}
-
-              {/* ⑬ Final verdict */}
-              {lore && <ClosingVerdict lore={lore} />}
             </div>
 
             {/* ── RIGHT: case dossier panel ─────────────────────────────── */}

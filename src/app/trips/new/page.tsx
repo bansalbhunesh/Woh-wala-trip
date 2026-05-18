@@ -1,177 +1,622 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { analytics } from '@/lib/analytics';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function NewTripPage() {
   const router = useRouter();
+
+  // Onboarding wizard steps:
+  // 0: Welcome / Preparation
+  // 1: Season Title (name)
+  // 2: Filming Location (destination)
+  // 3: Premiere Date (startDate)
+  // 4: Finale Date (endDate)
+  // 5: Summary / Launch Portal
+  const [step, setStep] = useState(0);
   const [fields, setFields] = useState({ name: '', destination: '', startDate: '', endDate: '' });
-  const [active, setActive] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [activeHintIndex, setActiveHintIndex] = useState(0);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input automatically on step changes
+  useEffect(() => {
+    if (step >= 1 && step <= 4) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 350);
+    }
+  }, [step]);
+
+  // Audio feedback helper
+  const triggerChime = (pitchMultiplier = 1.0) => {
+    if (typeof window !== 'undefined' && (window as any).playCinematicChime) {
+      try {
+        (window as any).playCinematicChime(pitchMultiplier);
+      } catch (_) {}
+    }
+  };
+
+  // Rotating hints for title/destination
+  const HINT_PRESETS: Record<string, string[]> = {
+    name: [
+      '"The Bus That Betrayed Us"',
+      '"A Series of Poor Decisions"',
+      '"Coimbatore Lockdown"',
+      '"Three Nights of Absolute Chaos"',
+    ],
+    destination: [
+      '"Midnight Gokarna Shack"',
+      '"High Altitude Himalayan Ridge"',
+      '"The Alleys of Pondicherry"',
+      '"Platform 4, Bangalore Station"',
+    ],
+  };
 
   useEffect(() => {
-    const t = setTimeout(() => setRevealed(true), 80);
-    return () => clearTimeout(t);
+    const interval = setInterval(() => {
+      setActiveHintIndex(idx => (idx + 1) % 4);
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const createTrip = trpc.trips.create.useMutation({
-    onSuccess: (trip) => {
+    onSuccess: trip => {
       analytics.tripCreated(trip.id, trip.name);
+      triggerChime(1.5);
       router.push(`/trips/${trip.id}/invite`);
     },
   });
 
-  const isReady = fields.name.trim() && fields.startDate && fields.endDate && !createTrip.isPending;
+  const handleNext = () => {
+    // Validation checks per step
+    if (step === 1 && !fields.name.trim()) return;
+    if (step === 3 && !fields.startDate) return;
+    if (step === 4 && !fields.endDate) return;
 
-  const LABELS: Record<string, string> = {
-    name: 'SEASON TITLE', destination: 'FILMING LOCATION',
-    startDate: 'PREMIERE DATE', endDate: 'FINALE DATE',
+    triggerChime(1.0 + step * 0.08);
+    setStep(s => s + 1);
   };
-  const HINTS: Record<string, string> = {
-    name: '"The Bus That Betrayed Us"', destination: '"Midnight Coimbatore"',
-    startDate: '', endDate: '',
+
+  const handlePrev = () => {
+    if (step === 0) {
+      router.back();
+      return;
+    }
+    triggerChime(0.85);
+    setStep(s => s - 1);
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNext();
+    }
+  };
+
+  const isStepValid = () => {
+    if (step === 1) return fields.name.trim().length > 0;
+    if (step === 3) return !!fields.startDate;
+    if (step === 4) return !!fields.endDate;
+    return true;
+  };
+
+  const isFormFullyReady =
+    fields.name.trim() && fields.startDate && fields.endDate && !createTrip.isPending;
 
   return (
-    /* Light cream — intentional contrast with dark cinematic pages */
-    <div className="min-h-screen flex flex-col" style={{ background: 'oklch(97% 0.008 70)', color: 'oklch(16% 0.015 60)' }}>
-      <div className="light-grain" />
+    <div
+      className="min-h-screen flex flex-col relative overflow-hidden select-none"
+      style={{ background: 'oklch(97% 0.008 70)', color: 'oklch(16% 0.015 60)' }}
+    >
+      {/* Dynamic atmospheric light textures */}
+      <div className="absolute inset-0 pointer-events-none opacity-40">
+        <div
+          className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[140px]"
+          style={{ background: 'radial-gradient(circle, oklch(90% 0.12 30) 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px]"
+          style={{ background: 'radial-gradient(circle, oklch(92% 0.08 75) 0%, transparent 70%)' }}
+        />
+      </div>
 
-      {/* Thin nav */}
-      <nav className="relative z-10 flex items-center justify-between px-8 py-4"
-           style={{ borderBottom: '1px solid oklch(87% 0.015 72)' }}>
-        <button onClick={() => router.back()}
-                className="font-mono text-[8px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
-                style={{ color: 'oklch(52% 0.015 60)' }}>
-          ← BACK
+      <div className="light-grain pointer-events-none" />
+
+      {/* Interactive Navbar */}
+      <nav
+        className="relative z-20 flex items-center justify-between px-8 py-5 transition-colors duration-300"
+        style={{ borderBottom: '1px solid oklch(88% 0.012 70)' }}
+      >
+        <button
+          onClick={handlePrev}
+          onMouseEnter={() => triggerChime(1.3)}
+          className="font-mono text-[9px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+          style={{ color: 'oklch(50% 0.01 60)' }}
+        >
+          ← {step === 0 ? 'BACK' : 'BACKTRACK'}
         </button>
-        <span className="font-display italic font-black text-base tracking-tight"
-              style={{ color: 'oklch(60% 0.22 25)' }}>
+        <span
+          className="font-display italic font-black text-lg tracking-tight select-none cursor-pointer"
+          style={{ color: 'oklch(60% 0.22 25)' }}
+          onClick={() => {
+            triggerChime(1.0);
+            setStep(0);
+          }}
+        >
           yaarlore
         </span>
-        <div className="w-12" />
+        <span className="font-mono text-[9px] uppercase tracking-widest opacity-40">
+          {step > 0 && step <= 5 ? `SECURE RECORD // 0${step}` : 'PORTAL ENTRY'}
+        </span>
       </nav>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="w-full max-w-lg space-y-10">
+      {/* Main Questionnaire Stage */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-full max-w-xl">
+          <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div
+                key="welcome"
+                initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -30, filter: 'blur(8px)' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-8 text-center"
+              >
+                <div className="space-y-3">
+                  <span
+                    className="px-3.5 py-1 rounded-full font-mono text-[8px] uppercase tracking-[0.3em] inline-block"
+                    style={{
+                      border: '1.5px solid oklch(85% 0.015 70)',
+                      background: 'oklch(95% 0.01 70)',
+                      color: 'oklch(60% 0.22 25)',
+                    }}
+                  >
+                    LORE SYSTEM INITIALIZATION
+                  </span>
+                  <h1
+                    className="font-display font-black uppercase tracking-tighter leading-[0.85] pt-1"
+                    style={{ fontSize: 'clamp(42px, 8vw, 78px)', color: 'oklch(16% 0.015 60)' }}
+                  >
+                    CATALOGUE A NEW <br />
+                    <em className="italic font-light" style={{ color: 'oklch(60% 0.22 25)' }}>
+                      DISASTER
+                    </em>
+                  </h1>
+                  <p
+                    className="font-display italic text-base max-w-md mx-auto"
+                    style={{ color: 'oklch(48% 0.012 60)' }}
+                  >
+                    "Every legendary saga starts with an unhinged plan, a budget spreadsheet, and a
+                    group chat."
+                  </p>
+                </div>
 
-          <div className="space-y-2">
-            <p className="font-mono text-[8px] uppercase tracking-[0.6em]"
-               style={{
-                 color: 'oklch(60% 0.22 25)',
-                 opacity: revealed ? 1 : 0,
-                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
-                 filter: revealed ? 'blur(0px)' : 'blur(6px)',
-                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s',
-                 willChange: 'transform, opacity',
-               }}>
-              NEW ARCHIVE
-            </p>
-            <h1 className="font-display font-black uppercase tracking-tighter leading-[0.85]"
-                style={{
-                  fontSize: 'clamp(40px, 7vw, 80px)', color: 'oklch(16% 0.015 60)',
-                  opacity: revealed ? 1 : 0,
-                  transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
-                  filter: revealed ? 'blur(0px)' : 'blur(6px)',
-                  transition: 'opacity 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, transform 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s, filter 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s',
-                  willChange: 'transform, opacity',
-                }}>
-              NEW <em className="italic" style={{ color: 'oklch(60% 0.22 25)' }}>SEASON</em>
-            </h1>
-            <p className="font-display italic text-sm"
-               style={{
-                 color: 'oklch(52% 0.015 60)',
-                 opacity: revealed ? 1 : 0,
-                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
-                 filter: revealed ? 'blur(0px)' : 'blur(6px)',
-                 transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s, filter 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s',
-                 willChange: 'transform, opacity',
-               }}>
-              "Every disaster starts with a date and a group chat."
-            </p>
-          </div>
+                <div className="pt-4">
+                  <button
+                    onClick={() => {
+                      triggerChime(1.1);
+                      setStep(1);
+                    }}
+                    onMouseEnter={() => triggerChime(1.3)}
+                    className="px-8 py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] transition-all hover:scale-[1.03] active:scale-95 shadow-md shadow-black/[0.04]"
+                    style={{
+                      background: 'oklch(16% 0.015 60)',
+                      color: 'oklch(97% 0.008 70)',
+                    }}
+                  >
+                    INITIATE ARCHIVE LOGS →
+                  </button>
+                </div>
+              </motion.div>
+            )}
 
-          {/* Editorial bottom-border fields */}
-          <div className="space-y-0 rounded-2xl overflow-hidden"
-               style={{
-                 border: '1.5px solid oklch(87% 0.015 72)', background: 'oklch(93.5% 0.012 72)',
-                 opacity: revealed ? 1 : 0,
-                 transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
-                 filter: revealed ? 'blur(0px)' : 'blur(6px)',
-                 transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1) 0.28s, transform 0.65s cubic-bezier(0.16,1,0.3,1) 0.28s, filter 0.65s cubic-bezier(0.16,1,0.3,1) 0.28s',
-                 willChange: 'transform, opacity',
-               }}>
-            {(Object.keys(fields) as Array<keyof typeof fields>).map((key, idx) => (
-              <div key={key} className="relative px-7 py-5"
-                   style={{
-                     borderBottom: idx < 3 ? '1px solid oklch(87% 0.015 72)' : 'none',
-                     background: active === key ? 'oklch(96% 0.012 25 / 0.4)' : 'transparent',
-                     opacity: revealed ? 1 : 0,
-                     transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(-16px,0,0)',
-                     transition: `opacity 0.5s cubic-bezier(0.16,1,0.3,1) ${0.32 + idx * 0.06}s, transform 0.5s cubic-bezier(0.16,1,0.3,1) ${0.32 + idx * 0.06}s, background 0.3s cubic-bezier(0.16,1,0.3,1)`,
-                     willChange: 'transform, opacity',
-                   }}>
-                <label className="block font-mono text-[7.5px] uppercase tracking-[0.5em] mb-2"
-                       style={{ color: active === key ? 'oklch(60% 0.22 25)' : 'oklch(52% 0.015 60)', transition: 'color 0.3s cubic-bezier(0.16,1,0.3,1)' }}>
-                  {LABELS[key]}
-                </label>
-                <input
-                  type={key.includes('Date') ? 'date' : 'text'}
-                  value={fields[key]}
-                  onChange={e => setFields(f => ({ ...f, [key]: e.target.value }))}
-                  onFocus={() => setActive(key)}
-                  onBlur={() => setActive(null)}
-                  placeholder={HINTS[key]}
-                  autoFocus={key === 'name'}
-                  max={key.includes('Date') ? new Date().toISOString().split('T')[0] : undefined}
-                  className="w-full bg-transparent outline-none font-ui font-semibold text-base"
-                  style={{ color: 'oklch(16% 0.015 60)', caretColor: 'oklch(60% 0.22 25)', colorScheme: 'light' }}
+            {step === 1 && (
+              <motion.div
+                key="name"
+                initial={{ opacity: 0, x: 50, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: -50, filter: 'blur(6px)' }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6"
+              >
+                <div className="space-y-1">
+                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                    SAGA IDENTITY // 01
+                  </span>
+                  <h2 className="font-display font-black text-4xl uppercase tracking-tight">
+                    What is the title of this season?
+                  </h2>
+                  <p className="font-display italic text-sm opacity-60">
+                    The official name of your trip's archive. Make it dramatic.
+                  </p>
+                </div>
+
+                <div className="relative pt-4">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={fields.name}
+                    onChange={e => setFields(f => ({ ...f, name: e.target.value }))}
+                    onKeyDown={handleKeyDown}
+                    placeholder={HINT_PRESETS.name[activeHintIndex]}
+                    className="w-full bg-transparent outline-none font-display italic font-black text-2xl py-3 border-b-2 transition-all duration-300"
+                    style={{
+                      borderColor: fields.name ? 'oklch(60% 0.22 25)' : 'oklch(80% 0.015 70)',
+                      color: 'oklch(16% 0.015 60)',
+                      caretColor: 'oklch(60% 0.22 25)',
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-6">
+                  <span className="font-mono text-[9px] text-black/30">
+                    Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
+                    proceed
+                  </span>
+                  <button
+                    onClick={handleNext}
+                    disabled={!isStepValid()}
+                    onMouseEnter={() => isStepValid() && triggerChime(1.3)}
+                    className="px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.25em] transition-all disabled:opacity-20 hover:translate-x-1"
+                    style={{
+                      background: 'oklch(16% 0.015 60)',
+                      color: 'oklch(97% 0.008 70)',
+                    }}
+                  >
+                    CONTINUE →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.div
+                key="destination"
+                initial={{ opacity: 0, x: 50, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: -50, filter: 'blur(6px)' }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6"
+              >
+                <div className="space-y-1">
+                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                    THEATER OF OPERATIONS // 02
+                  </span>
+                  <h2 className="font-display font-black text-4xl uppercase tracking-tight">
+                    Where did the events unfold?
+                  </h2>
+                  <p className="font-display italic text-sm opacity-60">
+                    Filming location or main base of conflict. Leave blank if top classified.
+                  </p>
+                </div>
+
+                <div className="relative pt-4">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={fields.destination}
+                    onChange={e => setFields(f => ({ ...f, destination: e.target.value }))}
+                    onKeyDown={handleKeyDown}
+                    placeholder={HINT_PRESETS.destination[activeHintIndex]}
+                    className="w-full bg-transparent outline-none font-display italic font-black text-2xl py-3 border-b-2 transition-all duration-300"
+                    style={{
+                      borderColor: fields.destination
+                        ? 'oklch(60% 0.22 25)'
+                        : 'oklch(80% 0.015 70)',
+                      color: 'oklch(16% 0.015 60)',
+                      caretColor: 'oklch(60% 0.22 25)',
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-6">
+                  <span className="font-mono text-[9px] text-black/30">
+                    Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
+                    skip or proceed
+                  </span>
+                  <button
+                    onClick={handleNext}
+                    onMouseEnter={() => triggerChime(1.3)}
+                    className="px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.25em] transition-all hover:translate-x-1"
+                    style={{
+                      background: 'oklch(16% 0.015 60)',
+                      color: 'oklch(97% 0.008 70)',
+                    }}
+                  >
+                    {fields.destination ? 'CONTINUE →' : 'SKIP FOR NOW →'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div
+                key="startDate"
+                initial={{ opacity: 0, x: 50, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: -50, filter: 'blur(6px)' }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6"
+              >
+                <div className="space-y-1">
+                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                    TIMELINE ENTRY // 03
+                  </span>
+                  <h2 className="font-display font-black text-4xl uppercase tracking-tight">
+                    When did the descent start?
+                  </h2>
+                  <p className="font-display italic text-sm opacity-60">
+                    The Premiere Date. The day the first records began.
+                  </p>
+                </div>
+
+                <div className="relative pt-4">
+                  <input
+                    ref={inputRef}
+                    type="date"
+                    value={fields.startDate}
+                    onChange={e => setFields(f => ({ ...f, startDate: e.target.value }))}
+                    onKeyDown={handleKeyDown}
+                    className="w-full bg-transparent outline-none font-display font-black text-2xl py-3 border-b-2 transition-all duration-300"
+                    style={{
+                      borderColor: fields.startDate ? 'oklch(60% 0.22 25)' : 'oklch(80% 0.015 70)',
+                      color: 'oklch(16% 0.015 60)',
+                      colorScheme: 'light',
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-6">
+                  <span className="font-mono text-[9px] text-black/30">
+                    Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
+                    proceed
+                  </span>
+                  <button
+                    onClick={handleNext}
+                    disabled={!isStepValid()}
+                    onMouseEnter={() => isStepValid() && triggerChime(1.3)}
+                    className="px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.25em] transition-all disabled:opacity-20 hover:translate-x-1"
+                    style={{
+                      background: 'oklch(16% 0.015 60)',
+                      color: 'oklch(97% 0.008 70)',
+                    }}
+                  >
+                    CONTINUE →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div
+                key="endDate"
+                initial={{ opacity: 0, x: 50, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: -50, filter: 'blur(6px)' }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6"
+              >
+                <div className="space-y-1">
+                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                    TIMELINE EXIT // 04
+                  </span>
+                  <h2 className="font-display font-black text-4xl uppercase tracking-tight">
+                    When did the curtain fall?
+                  </h2>
+                  <p className="font-display italic text-sm opacity-60">
+                    The Finale Date. The day the saga concluded.
+                  </p>
+                </div>
+
+                <div className="relative pt-4">
+                  <input
+                    ref={inputRef}
+                    type="date"
+                    min={fields.startDate}
+                    value={fields.endDate}
+                    onChange={e => setFields(f => ({ ...f, endDate: e.target.value }))}
+                    onKeyDown={handleKeyDown}
+                    className="w-full bg-transparent outline-none font-display font-black text-2xl py-3 border-b-2 transition-all duration-300"
+                    style={{
+                      borderColor: fields.endDate ? 'oklch(60% 0.22 25)' : 'oklch(80% 0.015 70)',
+                      color: 'oklch(16% 0.015 60)',
+                      colorScheme: 'light',
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-6">
+                  <span className="font-mono text-[9px] text-black/30">
+                    Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
+                    review
+                  </span>
+                  <button
+                    onClick={handleNext}
+                    disabled={!isStepValid()}
+                    onMouseEnter={() => isStepValid() && triggerChime(1.3)}
+                    className="px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.25em] transition-all disabled:opacity-20 hover:translate-x-1"
+                    style={{
+                      background: 'oklch(16% 0.015 60)',
+                      color: 'oklch(97% 0.008 70)',
+                    }}
+                  >
+                    REVIEW DETAILS →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 5 && (
+              <motion.div
+                key="summary"
+                initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -30, filter: 'blur(8px)' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-8"
+              >
+                <div className="space-y-1 text-center">
+                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                    READY FOR LAUNCH // 05
+                  </span>
+                  <h2 className="font-display font-black text-4xl uppercase tracking-tight">
+                    Confirm Dossier Details
+                  </h2>
+                  <p className="font-display italic text-sm opacity-60">
+                    Confirm your season's record details before writing them to the ledger.
+                  </p>
+                </div>
+
+                {/* Styled review grid */}
+                <div
+                  className="rounded-2xl border-2 p-6 space-y-4"
+                  style={{
+                    borderColor: 'oklch(88% 0.012 70)',
+                    background: 'oklch(94% 0.012 70 / 0.5)',
+                  }}
+                >
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                    <div>
+                      <p className="font-mono text-[8px] tracking-widest opacity-40">
+                        SEASON TITLE
+                      </p>
+                      <p className="font-display italic font-black text-lg truncate leading-tight">
+                        {fields.name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[8px] tracking-widest opacity-40">LOCATION</p>
+                      <p className="font-display italic font-black text-lg truncate leading-tight">
+                        {fields.destination || 'Top Classified'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[8px] tracking-widest opacity-40">
+                        PREMIERE DATE
+                      </p>
+                      <p className="font-mono font-bold text-sm leading-tight">
+                        {fields.startDate}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[8px] tracking-widest opacity-40">FINALE DATE</p>
+                      <p className="font-mono font-bold text-sm leading-tight">{fields.endDate}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <button
+                    onClick={() =>
+                      createTrip.mutate({
+                        name: fields.name,
+                        destination: fields.destination || undefined,
+                        startDate: fields.startDate,
+                        endDate: fields.endDate,
+                      })
+                    }
+                    disabled={!isFormFullyReady || createTrip.isPending}
+                    onMouseEnter={() => isFormFullyReady && triggerChime(1.4)}
+                    className="w-full py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30 transition-all hover:scale-[1.01] active:scale-95 shadow-md shadow-black/[0.04]"
+                    style={{
+                      background: 'oklch(16% 0.015 60)',
+                      color: 'oklch(97% 0.008 70)',
+                    }}
+                  >
+                    {createTrip.isPending ? (
+                      <>
+                        <div
+                          style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            border: '1.5px solid currentColor',
+                            borderTopColor: 'transparent',
+                            animation: 'nt-spin 0.8s linear infinite',
+                          }}
+                        />{' '}
+                        CREATING PORTAL...
+                      </>
+                    ) : (
+                      'LAUNCH THE SAGA →'
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      triggerChime(0.9);
+                      setStep(1);
+                    }}
+                    onMouseEnter={() => triggerChime(1.2)}
+                    className="w-full py-3.5 rounded-full font-mono text-[9px] uppercase tracking-[0.3em] flex items-center justify-center border hover:bg-black/[0.03] transition-colors"
+                    style={{
+                      borderColor: 'oklch(80% 0.015 70)',
+                      color: 'oklch(40% 0.015 60)',
+                    }}
+                  >
+                    RE-EDIT FIELDS
+                  </button>
+                </div>
+
+                {createTrip.error && (
+                  <p
+                    className="text-center text-xs font-mono font-bold tracking-tight uppercase"
+                    style={{
+                      color: 'oklch(60% 0.22 25)',
+                      animation: 'nt-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
+                    }}
+                  >
+                    ⚠️ {createTrip.error.message}
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Stepper Dots Indicator */}
+          {step > 0 && step <= 4 && (
+            <div className="flex justify-center items-center gap-2 pt-12">
+              {[1, 2, 3, 4].map(s => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    triggerChime(0.9 + s * 0.08);
+                    setStep(s);
+                  }}
+                  className="w-1.5 h-1.5 rounded-full transition-all duration-300"
+                  style={{
+                    background: s === step ? 'oklch(60% 0.22 25)' : 'oklch(80% 0.015 70)',
+                    transform: s === step ? 'scale(1.5)' : 'scale(1)',
+                  }}
                 />
-                <div className="absolute bottom-0 left-7 right-7 h-px"
-                     style={{ background: 'oklch(60% 0.22 25)', opacity: active === key ? 0.5 : 0, transition: 'opacity 0.4s cubic-bezier(0.16,1,0.3,1)' }} />
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => createTrip.mutate({ name: fields.name, destination: fields.destination || undefined, startDate: fields.startDate, endDate: fields.endDate })}
-            disabled={!isReady}
-            className="w-full py-4 rounded-2xl font-ui font-black text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30"
-            style={{
-              background: isReady ? 'oklch(16% 0.015 60)' : 'oklch(93.5% 0.012 72)',
-              color: isReady ? 'oklch(97% 0.008 70)' : 'oklch(52% 0.015 60)',
-              border: `1.5px solid ${isReady ? 'transparent' : 'oklch(87% 0.015 72)'}`,
-              opacity: revealed ? 1 : 0,
-              transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,24px,0)',
-              filter: revealed ? 'blur(0px)' : 'blur(6px)',
-              transition: `opacity 0.55s cubic-bezier(0.16,1,0.3,1) ${0.32 + 4 * 0.06}s, transform 0.55s cubic-bezier(0.16,1,0.3,1) ${0.32 + 4 * 0.06}s, filter 0.55s cubic-bezier(0.16,1,0.3,1) ${0.32 + 4 * 0.06}s, background 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)`,
-              willChange: 'transform, opacity',
-            }}
-            onMouseEnter={e => { if (!isReady) return; const el = e.currentTarget as HTMLButtonElement; el.style.transform = 'translate3d(0,-2px,0)'; el.style.boxShadow = '0 8px 30px rgba(0,0,0,0.2)'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.transform = 'translate3d(0,0,0)'; el.style.boxShadow = 'none'; }}>
-            {createTrip.isPending ? (
-              <><div style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid currentColor', borderTopColor: 'transparent', animation: 'nt-spin 0.8s linear infinite' }} /> CREATING...</>
-            ) : 'LAUNCH THE SEASON →'}
-          </button>
-
-          {createTrip.error && (
-            <p className="text-center text-sm font-ui"
-               style={{
-                 color: 'oklch(60% 0.22 25)',
-                 animation: 'nt-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
-               }}>
-              {createTrip.error.message}
-            </p>
+              ))}
+            </div>
           )}
         </div>
       </div>
 
       <style jsx>{`
-        @keyframes nt-spin { to{transform:rotate(360deg)} }
+        @keyframes nt-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
         @keyframes nt-error-enter {
-          from { opacity: 0; transform: translate3d(0,16px,0); filter: blur(6px); }
-          to   { opacity: 1; transform: translate3d(0,0,0);   filter: blur(0px); }
+          from {
+            opacity: 0;
+            transform: translate3d(0, 16px, 0);
+            filter: blur(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+            filter: blur(0px);
+          }
         }
       `}</style>
     </div>

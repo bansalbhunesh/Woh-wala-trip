@@ -185,6 +185,8 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
           cookedScore={cookedScore}
           active={soundOn}
           onToggle={() => setSoundOn(p => !p)}
+          activeSlideType={current?.type}
+          slideIndex={idx}
         />
       </div>
 

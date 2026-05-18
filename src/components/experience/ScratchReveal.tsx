@@ -16,7 +16,7 @@ export function ScratchReveal({
   width,
   height,
   brushSize = 38,
-  threshold = 0.55,
+  threshold = 0.3, // 30% of pixels cleared is the sweet spot for satisfying scratching
   onReveal,
   children,
   label = 'CLASSIFIED',
@@ -27,6 +27,7 @@ export function ScratchReveal({
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const [done, setDone] = useState(false);
   const checkThrottle = useRef(0);
+  const lastSoundTime = useRef(0);
 
   // Build the overlay on mount
   useEffect(() => {
@@ -126,6 +127,17 @@ export function ScratchReveal({
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx || revealed.current) return;
+
+      // Play soft, magical ambient crystal chimes as they scratch
+      const now = Date.now();
+      if (now - lastSoundTime.current > 150) {
+        lastSoundTime.current = now;
+        if (typeof window !== 'undefined' && (window as any).playCinematicChime) {
+          // Play a slightly randomized high chime
+          (window as any).playCinematicChime(1.2 + Math.random() * 0.5);
+        }
+      }
+
       ctx.globalCompositeOperation = 'destination-out';
       ctx.lineWidth = brushSize * 2.5; // Slightly thicker to connect circles
       ctx.lineCap = 'round';

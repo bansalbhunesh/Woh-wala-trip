@@ -16,6 +16,40 @@ function seasonAccent(name: string) {
   return SEASON_ACCENTS[hashName(name) % SEASON_ACCENTS.length];
 }
 
+// Global lightweight browser chime synthesizer for premium interaction feedback
+function playHomeChime(pitchMultiplier = 1.0, volume = 0.02) {
+  try {
+    if (typeof window === 'undefined') return;
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    const freqs = [523.25, 587.33, 659.25, 783.99, 880.0]; // Pentatonic Major
+    const baseFreq = freqs[Math.floor(Math.random() * freqs.length)];
+
+    osc.type = 'sine';
+    osc.frequency.value = baseFreq * pitchMultiplier;
+
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 1.1);
+
+    setTimeout(() => {
+      try {
+        ctx.close();
+      } catch (_) {}
+    }, 1200);
+  } catch (_) {}
+}
+
 function chaosPercentileLabel(
   score: number | null | undefined,
   dist: { p50: number; p75: number; p90: number } | null | undefined
@@ -54,6 +88,7 @@ function NostalgiaStrip() {
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.06)';
+              playHomeChime(1.2, 0.015);
             }}
             onMouseLeave={e => {
               (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)';
@@ -100,7 +135,7 @@ export default function TripsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#060604', color: '#F5F0E8' }}>
-      <div className="film-grain" />
+      <div className="film-grain pointer-events-none" />
 
       {/* Header */}
       <header
@@ -160,6 +195,7 @@ export default function TripsPage() {
             el.style.boxShadow = '0 8px 32px rgba(245,240,232,0.05)';
             el.style.background = 'rgba(245,240,232,0.1)';
             el.style.borderColor = 'rgba(245,240,232,0.3)';
+            playHomeChime(1.4, 0.02);
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLAnchorElement;
@@ -235,6 +271,7 @@ export default function TripsPage() {
                 const el = e.currentTarget as HTMLAnchorElement;
                 el.style.transform = 'translate3d(0,-2px,0)';
                 el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
+                playHomeChime(1.3, 0.02);
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLAnchorElement;
@@ -288,6 +325,7 @@ export default function TripsPage() {
                     el.style.transform = 'translate3d(0,-4px,0)';
                     el.style.boxShadow = `0 20px 48px rgba(0,0,0,0.12), 0 0 0 1px ${accent}30`;
                     el.style.borderColor = `${accent}50`;
+                    playHomeChime(0.85 + (idx % 4) * 0.08, 0.018);
                   }}
                   onMouseLeave={e => {
                     const el = e.currentTarget as HTMLAnchorElement;
@@ -408,6 +446,7 @@ export default function TripsPage() {
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(245,240,232,0.03)';
+                playHomeChime(1.5, 0.02);
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';

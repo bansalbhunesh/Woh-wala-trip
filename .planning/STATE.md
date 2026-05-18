@@ -1,7 +1,7 @@
 # Project State: Yaarlore Production Hardening
 
 **Last updated:** 2026-05-18
-**Current phase:** Not started — ready to begin Phase 1
+**Current phase:** Phase 2 — Reliability Engineering
 
 ---
 
@@ -10,7 +10,7 @@
 See: `.planning/PROJECT.md` (updated 2026-05-18)
 
 **Core value:** The AI storytelling pipeline — turning raw group trip photos into a cinematic documentary experience so emotionally resonant that users can't help but share it.
-**Current focus:** Phase 1 — Security Foundation
+**Current focus:** Phase 2 — Reliability Engineering
 
 ---
 

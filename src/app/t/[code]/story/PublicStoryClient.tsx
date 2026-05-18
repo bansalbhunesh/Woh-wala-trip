@@ -148,6 +148,8 @@ export default function PublicStoryClient({
           cookedScore={cookedScore}
           active={soundOn}
           onToggle={() => setSoundOn(p => !p)}
+          activeSlideType={current?.type}
+          slideIndex={idx}
         />
       </div>
 
