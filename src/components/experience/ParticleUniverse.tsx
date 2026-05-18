@@ -213,12 +213,34 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
         // Cinematic vortex physics (Orbital Gravity models)
         if (p >= 2) {
-          const speed = (0.004 + par.z * 0.004) * intensity;
-          par.angle += speed;
-          // Spiral slowly inwards based on phase depth
-          const spiralStrength = p === 4 ? 0.995 : 0.998;
+          // Keplerian Centripetal acceleration: speed increases dynamically as distance decreases
+          let speed = 0.002 + 0.001 * par.z;
+          if (p === 3) {
+            speed = 0.005 + 1.8 / (par.orbitRadius + 40);
+          } else if (p === 4) {
+            speed = 0.012 + 8.5 / (par.orbitRadius + 22);
+          }
+          par.angle += speed * intensity;
+
+          // Spiral aggressively inwards based on phase depth
+          let spiralStrength = 0.999; // Phase 2: very gentle drift
+          if (p === 3) {
+            spiralStrength = 0.995; // Phase 3: moderate drift forming spiral galaxy
+          } else if (p === 4) {
+            spiralStrength = 0.988; // Phase 4: aggressive black hole pull
+          }
           par.orbitRadius *= spiralStrength;
-          if (par.orbitRadius < 5) {
+
+          // Phase 4 Event Horizon recycling portal
+          if (p === 4 && par.orbitRadius < 14) {
+            const spawnAngle = Math.random() * Math.PI * 2;
+            par.orbitRadius = Math.max(W, H) * (0.6 + Math.random() * 0.4);
+            par.angle = spawnAngle;
+            par.x = cx + Math.cos(spawnAngle) * par.orbitRadius;
+            par.y = cy + Math.sin(spawnAngle) * par.orbitRadius;
+            par.vx = 0;
+            par.vy = 0;
+          } else if (par.orbitRadius < 4) {
             par.orbitRadius = Math.max(W, H) * (0.3 + Math.random() * 0.6);
           }
 
@@ -253,7 +275,17 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
       particles.forEach(par => {
         if (par.type !== 'dust') return;
         const scale = 0.5 + par.z * 0.5;
-        const pSize = par.size * scale;
+        let pSize = par.size * scale;
+
+        // Modulate dust sizes slightly to define spiral arms in galaxy phases
+        if (p === 3 || p === 4) {
+          const armOffset = 2.0 * par.angle - 3.0 * Math.log(par.orbitRadius + 10);
+          const wave = Math.cos(armOffset);
+          if (wave > 0.35) {
+            pSize *= 1.2;
+          }
+        }
+
         ctx.moveTo(par.x + pSize, par.y);
         ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
       });
@@ -264,14 +296,24 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         if (par.type !== 'fragment') return;
 
         const scale = 0.5 + par.z * 0.5;
-        const pSize = par.size * scale;
+        let pSize = par.size * scale;
         const lifeAlpha = Math.sin((par.life / par.maxLife) * Math.PI);
-        const alpha = lifeAlpha * intensity * scale;
+        let alpha = lifeAlpha * intensity * scale;
+
+        // Density wave spiral arm brightness modulation
+        if (p === 3 || p === 4) {
+          const armOffset = 2.0 * par.angle - 3.0 * Math.log(par.orbitRadius + 10);
+          const wave = Math.cos(armOffset);
+          if (wave > 0.35) {
+            alpha *= 1.45;
+            pSize *= 1.25;
+          }
+        }
 
         if (alpha < 0.02) return;
 
         ctx.save();
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = Math.min(1.0, alpha);
 
         // Glowing orbital aura
         const grd = ctx.createRadialGradient(par.x, par.y, 0, par.x, par.y, pSize * 4.5);
@@ -323,6 +365,36 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         }
       }
       ctx.restore();
+
+      // Phase 4 Singular Black Hole core & Accretion Disk visualization
+      if (p === 4) {
+        // Accretion disk radial gradient glow
+        ctx.save();
+        const accGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 55);
+        accGrd.addColorStop(0, 'rgba(255, 110, 50, 0.45)');
+        accGrd.addColorStop(0.3, 'rgba(255, 60, 20, 0.22)');
+        accGrd.addColorStop(1, 'rgba(6, 6, 4, 0)');
+        ctx.fillStyle = accGrd;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 55, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Accretion belt outer orbit outline
+        ctx.strokeStyle = 'rgba(255, 140, 60, 0.35)';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Event Horizon: physical pitch-black singular core that swallows particles
+        ctx.fillStyle = '#020202';
+        ctx.shadowColor = 'rgba(255, 77, 77, 0.9)';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
       // Pulsing electromagnetic scanning rings (Phase 1+)
       if (p >= 1) {
