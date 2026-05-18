@@ -1,3 +1,4 @@
+// Vercel build trigger stub
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
