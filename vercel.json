@@ -7,6 +7,14 @@
     {
       "path": "/api/cron/stuck-jobs",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/nostalgia-drops",
+      "schedule": "0 10 1 * *"
+    },
+    {
+      "path": "/api/cron/refresh-chaos",
+      "schedule": "0 * * * *"
     }
   ]
 }
