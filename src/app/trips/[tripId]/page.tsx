@@ -52,6 +52,18 @@ export default function TripRoomPage() {
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
   const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
 
+  // PROD-02: Track current user ID so we can gate creator-only controls.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data?.user?.id ?? null);
+    });
+  }, []);
+
   useEffect(() => {
     const hasSeen = localStorage.getItem(`wrapped_${tripId}`);
     if (!hasSeen) setShowWrapped(true);
@@ -110,6 +122,9 @@ export default function TripRoomPage() {
 
   const lore = trip.lore_json;
   const members = trip.members;
+
+  // PROD-02: Derived flag — true only when the signed-in user is the trip creator.
+  const isCreator = currentUserId !== null && trip.creator_id === currentUserId;
 
   // Find key cast members from lore or member roles
   const villain =
@@ -599,6 +614,15 @@ export default function TripRoomPage() {
               </div>
 
               <ConfessionInput tripId={tripId} />
+
+              {/* PROD-02: Story visibility toggle — only shown to the trip creator */}
+              {isCreator && (
+                <StoryVisibilityToggle
+                  tripId={tripId}
+                  initialVisible={trip.story_visible !== false}
+                  onToggled={() => refetch()}
+                />
+              )}
 
               {!showRawData ? (
                 <button
@@ -1602,6 +1626,71 @@ function NotFoundState() {
       >
         ← Return to Dossier
       </Link>
+    </div>
+  );
+}
+
+// PROD-02: Creator-only toggle that lets the trip owner show/hide the public story page.
+function StoryVisibilityToggle({
+  tripId,
+  initialVisible,
+  onToggled,
+}: {
+  tripId: string;
+  initialVisible: boolean;
+  onToggled?: () => void;
+}) {
+  const [visible, setVisible] = useState(initialVisible);
+  const update = trpc.trips.updateStoryVisibility.useMutation({
+    onSuccess: data => {
+      setVisible(data.visible);
+      onToggled?.();
+    },
+  });
+
+  const handleToggle = () => {
+    const next = !visible;
+    update.mutate({ tripId, visible: next });
+  };
+
+  return (
+    <div
+      className="px-4 py-3 rounded-[1.25rem] border border-black/10 bg-black/[0.04]"
+      style={{ marginTop: 4 }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[8px] font-mono text-black/35 uppercase tracking-[0.35em] mb-0.5">
+            Creator Control
+          </div>
+          <div className="text-[11px] font-cinematic font-black text-lore-ink tracking-tight">
+            Public Story
+          </div>
+          <div className="text-[7px] font-mono text-black/30 mt-0.5">
+            {visible ? 'Visible to anyone with the link' : 'Hidden from public view'}
+          </div>
+        </div>
+        <button
+          onClick={handleToggle}
+          disabled={update.isPending}
+          aria-label={visible ? 'Hide public story' : 'Show public story'}
+          className="relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+          style={{
+            background: visible ? 'rgba(45,158,139,0.7)' : 'rgba(0,0,0,0.15)',
+            opacity: update.isPending ? 0.6 : 1,
+          }}
+        >
+          <span
+            className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"
+            style={{ transform: visible ? 'translateX(20px)' : 'translateX(0)' }}
+          />
+        </button>
+      </div>
+      {update.isError && (
+        <p className="mt-1 text-[7px] font-mono text-red-500/60 uppercase tracking-wider">
+          {update.error?.message?.slice(0, 60)}
+        </p>
+      )}
     </div>
   );
 }

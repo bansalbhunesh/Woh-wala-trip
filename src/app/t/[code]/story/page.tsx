@@ -24,7 +24,9 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
 
   const { data: tripData } = await supabase
     .from('trips')
-    .select('id, name, invite_code, lore_status, lore_json, chaos_score, member_count, tier')
+    .select(
+      'id, name, invite_code, lore_status, lore_json, chaos_score, member_count, tier, story_visible'
+    )
     .eq('invite_code', code.toUpperCase())
     .single();
 
@@ -33,6 +35,43 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
   const trip = tripData as any;
   if (!trip.lore_json || trip.lore_status !== 'ready') {
     redirect(`/t/${code}`);
+  }
+
+  // PROD-02: Honour story_visible flag. Return a "Story Hidden" placeholder rather than
+  // a 404 — a 404 would confuse the creator who just toggled the setting.
+  if (trip.story_visible === false) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#060604',
+          color: '#F5F0E8',
+          fontFamily: 'monospace',
+          gap: '1rem',
+          textAlign: 'center',
+          padding: '2rem',
+        }}
+      >
+        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
+        <h1
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Story Hidden
+        </h1>
+        <p style={{ fontSize: '0.8rem', color: 'rgba(245,240,232,0.45)', maxWidth: 320 }}>
+          The creator of this trip has hidden the story from public view.
+        </p>
+      </div>
+    );
   }
 
   // Fetch members for character slides (public — display names only)

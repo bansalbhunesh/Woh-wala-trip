@@ -92,7 +92,11 @@ export async function POST(req: NextRequest) {
         { onConflict: 'trip_id,user_id,slide_type,slide_idx' } as never
       );
     } else {
-      // Anonymous: insert (existing logic unchanged)
+      // DESIGN DECISION (PROD-03): Anonymous reactions on public trips are accepted
+      // without deduplication. A single visitor can react multiple times.
+      // This is intentional — anonymous engagement drives virality for the creator.
+      // Authenticated user reactions ARE deduplicated via the unique index in the DB.
+      // See .planning/REQUIREMENTS.md PROD-03 for rationale.
       await admin.from('lore_reactions' as never).insert({
         trip_id: tripId,
         user_id: null,
