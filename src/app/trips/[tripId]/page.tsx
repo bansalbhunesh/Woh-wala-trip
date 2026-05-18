@@ -250,6 +250,7 @@ export default function TripRoomPage() {
                         return (
                           <button
                             key={ch.id}
+                            aria-label={`Open scene: ${ch.title} — ${ch.desc}`}
                             onClick={() => {
                               setActiveTab(ch.id as any);
                               window.scrollTo({ top: 400, behavior: 'smooth' });
@@ -634,6 +635,28 @@ export default function TripRoomPage() {
                   {trip?.destination && `${trip.destination} · `}
                   {trip?.total_photos || 0} photos · {members.length} subjects
                 </div>
+                {/* VIRAL-04: Director badge */}
+                {(() => {
+                  const creatorMember = members.find((m: any) => m.user_id === trip.creator_id);
+                  const creatorName = creatorMember?.display_name;
+                  return creatorName ? (
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <span className="text-[7px] font-mono text-black/25 uppercase tracking-[0.3em]">
+                        Directed by
+                      </span>
+                      <span
+                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[7px] font-mono uppercase tracking-wider"
+                        style={{
+                          background: 'rgba(212,158,45,0.12)',
+                          border: '1px solid rgba(212,158,45,0.25)',
+                          color: '#A07825',
+                        }}
+                      >
+                        &#127916; {creatorName}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               <ConfessionInput tripId={tripId} />
@@ -772,7 +795,11 @@ function EmotionalDamageScan({ members }: { members: any[] }) {
                 >
                   {name}
                 </p>
-                <p className="font-mono text-[9px] font-bold tabular-nums" style={{ color }}>
+                <p
+                  className="font-mono text-[9px] font-bold tabular-nums"
+                  aria-label={`Chaos rating: ${rating} out of 10`}
+                  style={{ color }}
+                >
                   {rating}/10
                 </p>
               </div>

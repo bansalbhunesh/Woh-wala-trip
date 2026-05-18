@@ -223,7 +223,35 @@ export function CookedLevelReveal({ trip }: { trip: TripWithLore }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FRIENDSHIP EXPOSE — chaos rankings / investigation board
 // ─────────────────────────────────────────────────────────────────────────────
-export function FriendshipExpose({ members }: { members: TripMember[] }) {
+// VIRAL-02: Download character card PNG for a trip member.
+async function downloadCharacterCard(tripId: string, userId: string, displayName: string) {
+  try {
+    const cardUrl = `/api/card/character/${tripId}/${userId}`;
+    const response = await fetch(cardUrl);
+    if (!response.ok) throw new Error('Card fetch failed');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(displayName || 'member').replace(/\s+/g, '-').toLowerCase()}-yaarlore-card.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch {
+    // Silent fail — card download is non-critical
+  }
+}
+
+export function FriendshipExpose({
+  members,
+  tripId,
+  creatorId,
+}: {
+  members: TripMember[];
+  tripId?: string;
+  creatorId?: string;
+}) {
   const sorted = [...(members || [])]
     .filter(m => m.role_chaos_rating != null)
     .sort((a, b) => (b.role_chaos_rating ?? 0) - (a.role_chaos_rating ?? 0));
@@ -314,11 +342,26 @@ export function FriendshipExpose({ members }: { members: TripMember[] }) {
                 {(m.display_name || '?')[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[13px] font-vibe font-black text-[#F5F0E8] truncate">
-                    {formatName(m.display_name)}
-                  </span>
-                  <span className="text-[10px] font-mono text-white/35 ml-3 flex-shrink-0 tabular-nums">
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[13px] font-vibe font-black text-[#F5F0E8] truncate">
+                      {formatName(m.display_name)}
+                    </span>
+                    {/* VIRAL-04: Director badge */}
+                    {creatorId && m.user_id === creatorId && (
+                      <span
+                        className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[6px] font-mono uppercase tracking-wider"
+                        style={{
+                          background: 'rgba(212,158,45,0.15)',
+                          border: '1px solid rgba(212,158,45,0.3)',
+                          color: '#D49E2D',
+                        }}
+                      >
+                        &#127916; Director
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-mono text-white/35 flex-shrink-0 tabular-nums">
                     {m.role_chaos_rating}/10
                   </span>
                 </div>
@@ -333,6 +376,25 @@ export function FriendshipExpose({ members }: { members: TripMember[] }) {
                   />
                 </div>
               </div>
+              {/* VIRAL-02: character card download */}
+              {tripId && m.user_id && (
+                <button
+                  title="Download character card"
+                  onClick={() =>
+                    downloadCharacterCard(tripId, m.user_id!, m.display_name || 'member')
+                  }
+                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:opacity-80 active:scale-95"
+                  style={{
+                    background: `${color}18`,
+                    border: `1px solid ${color}30`,
+                  }}
+                  aria-label={`Download ${m.display_name} character card`}
+                >
+                  <svg viewBox="0 0 16 16" style={{ width: 12, height: 12, fill: color }}>
+                    <path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-5 2h10v1.5H3V14z" />
+                  </svg>
+                </button>
+              )}
             </div>
           );
         })}
