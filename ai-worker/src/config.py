@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     MAX_LORE_RETRIES: int = 3
     MAX_CONCURRENT_ROLES: int = 3     # semaphore limit on parallel character role calls
 
+    # COST-03: LoreEvaluator sampling rate.
+    # Set to 1.0 in dev (evaluate every run).
+    # Set to 0.2 in production (evaluate 20% of runs — reduces Haiku call volume by ~80%).
+    # Override via LORE_EVAL_SAMPLE_RATE env var on Render.
+    LORE_EVAL_SAMPLE_RATE: float = 1.0
+
     # Set to "true" ONLY in dev/staging — disables /debug-pipeline and /test-claude in prod
     DEBUG_ENABLED: str = "false"
 

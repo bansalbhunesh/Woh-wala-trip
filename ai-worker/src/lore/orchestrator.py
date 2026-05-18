@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
@@ -376,7 +377,27 @@ class LoreOrchestrator:
         confessions: list[str],
         lore: dict,
     ) -> tuple[dict, dict]:
-        """Evaluate lore quality. If overall < 0.55, retry once with dimension feedback."""
+        """Evaluate lore quality. If overall < 0.55, retry once with dimension feedback.
+
+        COST-03: LoreEvaluator.evaluate() is only called on a sampled fraction of
+        pipeline runs (controlled by settings.LORE_EVAL_SAMPLE_RATE).  In production
+        this is set to 0.2, reducing Haiku evaluation cost by ~80% at scale.
+        Skipped runs return a neutral placeholder so downstream consumers always
+        receive a valid eval_result dict.
+        """
+        if random.random() >= settings.LORE_EVAL_SAMPLE_RATE:
+            log.debug(
+                f"[{trip['id']}] quality gate skipped by sampling "
+                f"(rate={settings.LORE_EVAL_SAMPLE_RATE})"
+            )
+            return lore, {
+                "scores": {},
+                "overall": 0.75,
+                "weakest_dimension": "sampled_out",
+                "feedback": "Evaluation skipped by LORE_EVAL_SAMPLE_RATE",
+                "sampled": False,
+            }
+
         evaluator   = LoreEvaluator()
         eval_result = await evaluator.evaluate(trip["id"], lore)
         overall     = eval_result.get("overall", 1.0)
