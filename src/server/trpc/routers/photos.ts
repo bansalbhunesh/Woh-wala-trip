@@ -38,6 +38,15 @@ interface TripTierRow {
   storage_used_bytes: number;
 }
 
+// TYPE-02/03: local type override for background_jobs inserts (columns added after last codegen).
+// Remove once supabase gen types is re-run (TYPE-01).
+type BackgroundJobInsert = {
+  trip_id: string;
+  job_type: string;
+  status: string;
+  payload?: Record<string, unknown>;
+};
+
 export const photosRouter = router({
   getUploadUrl: protectedProcedure
     .input(
@@ -204,6 +213,14 @@ export const photosRouter = router({
       // if the storage.objects lookup returned nothing (race condition on eventual consistency).
       const resolvedFileSize = actualSize ?? input.fileSize ?? null;
 
+      // TYPE-02: photos.Insert is stale — file_size and user_id added after last codegen.
+      // Cast to the minimal shape the DB needs; remove once TYPE-01 is done.
+      type PhotoInsert = {
+        trip_id: string;
+        user_id: string;
+        storage_path: string;
+        file_size?: number | null;
+      };
       const { data: insertedRaw, error } = await ctx.supabase
         .from('photos')
         .insert({
@@ -211,7 +228,7 @@ export const photosRouter = router({
           user_id: ctx.user.id,
           storage_path: input.storagePath,
           file_size: resolvedFileSize,
-        } as never)
+        } as unknown as PhotoInsert)
         .select()
         .single();
       const data = insertedRaw as PhotoRow | null;
@@ -226,11 +243,11 @@ export const photosRouter = router({
       // total_photos is now maintained atomically by a Postgres trigger (see
       // supabase/migrations/002_total_photos_trigger.sql) — no app-level increment needed.
 
-      // Fire-and-forget thumbnail + CLIP embedding — never block/fail the upload if worker is down
+      // Fire-and-forget thumbnail — stays as HTTP for fast UX (users see thumbnail quickly).
+      // Never block/fail the upload if worker is down.
       const workerUrl = process.env.AI_WORKER_URL;
       if (workerUrl && !workerUrl.includes('localhost')) {
         const photoBody = JSON.stringify({ photo_id: data.id });
-        // Sign once — same body used for both thumbnail and embed calls
         signWorkerRequest('POST', '/generate-thumbnail', photoBody)
           .then(({ signature: thumbSig, timestamp: thumbTs }) => {
             fetch(`${workerUrl}/generate-thumbnail`, {
@@ -246,23 +263,31 @@ export const photosRouter = router({
             }).catch(e => console.warn('[thumbnail] worker unreachable:', (e as Error).message));
           })
           .catch(e => console.warn('[thumbnail] HMAC signing failed:', (e as Error).message));
-
-        signWorkerRequest('POST', '/embed-photo', photoBody)
-          .then(({ signature: embedSig, timestamp: embedTs }) => {
-            fetch(`${workerUrl}/embed-photo`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-                'X-Timestamp': embedTs,
-                'X-Signature': embedSig,
-              },
-              body: photoBody,
-              signal: AbortSignal.timeout(6000),
-            }).catch(e => console.warn('[embed] worker unreachable:', (e as Error).message));
-          })
-          .catch(e => console.warn('[embed] HMAC signing failed:', (e as Error).message));
       }
+
+      // PERF-05: CLIP embedding moved from per-photo HTTP fire-and-forget to background_jobs queue.
+      // The worker's poll_background_jobs loop picks up 'embed_photo' jobs every 30s,
+      // preventing 40 rapid-fire HTTP requests during a 20-photo bulk upload.
+      const embedAdmin = createSupabaseServiceClient();
+      const embedJob: BackgroundJobInsert = {
+        trip_id: input.tripId,
+        job_type: 'embed_photo',
+        status: 'pending',
+        payload: { photo_id: data.id },
+      };
+      (
+        embedAdmin as unknown as {
+          from: (t: string) => {
+            insert: (d: BackgroundJobInsert) => Promise<{ error: { message: string } | null }>;
+          };
+        }
+      )
+        .from('background_jobs')
+        .insert(embedJob)
+        .then(({ error: jobErr }) => {
+          if (jobErr) console.warn('[embed] failed to enqueue background job:', jobErr.message);
+        })
+        .catch(e => console.warn('[embed] background job insert error:', (e as Error).message));
 
       return { photoId: data.id };
     }),
@@ -284,12 +309,25 @@ export const photosRouter = router({
         .single();
       if (!member) return { recorded: false };
 
-      await ctx.supabase.from('photo_views' as never).insert({
-        photo_id: input.photoId,
-        trip_id: input.tripId,
-        user_id: ctx.user.id,
-        view_duration_ms: input.viewDurationMs,
-      } as never);
+      // TYPE-02: photo_views not yet in generated types; typed locally.
+      type PhotoViewInsert = {
+        photo_id: string;
+        trip_id: string;
+        user_id: string;
+        view_duration_ms: number;
+      };
+      await (
+        ctx.supabase as unknown as {
+          from: (t: string) => { insert: (d: PhotoViewInsert) => Promise<unknown> };
+        }
+      )
+        .from('photo_views')
+        .insert({
+          photo_id: input.photoId,
+          trip_id: input.tripId,
+          user_id: ctx.user.id,
+          view_duration_ms: input.viewDurationMs,
+        });
       return { recorded: true };
     }),
 
@@ -301,13 +339,20 @@ export const photosRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc(
-        'find_similar_photos' as never,
+      // TYPE-02: find_similar_photos RPC not in generated types (added post-codegen).
+      type SupabaseWithRpc = {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data, error } = await (ctx.supabase as unknown as SupabaseWithRpc).rpc(
+        'find_similar_photos',
         {
           p_photo_id: input.photoId,
           p_user_id: ctx.user.id,
           p_limit: input.limit,
-        } as never
+        }
       );
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
       const rows = (data as unknown as SimilarPhotoRow[] | null) ?? [];
@@ -335,12 +380,13 @@ export const photosRouter = router({
   nostalgiaFeed: protectedProcedure
     .input(z.object({ limit: z.number().int().min(1).max(20).default(10) }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc(
-        'get_nostalgia_moments' as never,
+      // TYPE-02: get_nostalgia_moments RPC not in generated types (added post-codegen).
+      const { data, error } = await (ctx.supabase as unknown as SupabaseWithRpc).rpc(
+        'get_nostalgia_moments',
         {
           p_user_id: ctx.user.id,
           p_limit: input.limit,
-        } as never
+        }
       );
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
       const rows = (data as unknown as NostalgiaRow[] | null) ?? [];
@@ -374,17 +420,20 @@ export const photosRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      // PERF-02: explicit column list — excludes clip_embedding (~2KB/row of unused vector data)
+      const PHOTO_COLUMNS =
+        'id, trip_id, user_id, storage_path, thumbnail_path, signed_url, thumb_signed_url, url_expires_at, embedding_status, created_at, file_size';
       const { data: rawData, error } = input.cursor
         ? await ctx.supabase
             .from('photos')
-            .select('*')
+            .select(PHOTO_COLUMNS)
             .eq('trip_id', input.tripId)
             .lt('created_at', input.cursor)
             .order('created_at', { ascending: false })
             .limit(input.limit)
         : await ctx.supabase
             .from('photos')
-            .select('*')
+            .select(PHOTO_COLUMNS)
             .eq('trip_id', input.tripId)
             .order('created_at', { ascending: false })
             .limit(input.limit);
@@ -441,25 +490,20 @@ export const photosRouter = router({
           if (u.signedUrl && u.path) urlByPath.set(u.path, u.signedUrl);
         });
 
-        // Persist refreshed URLs back to the DB so the next call within the hour skips regeneration.
-        // Fire all updates in parallel; errors are non-fatal (stale cache is safe — next call regenerates).
+        // PERF-01: batch upsert — one DB write for all refreshed rows instead of N parallel UPDATEs.
+        // Errors are non-fatal (stale cache is safe — next call regenerates).
         const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
-        await Promise.all(
-          needsRefresh.map(p => {
-            const newUrl = urlByPath.get(p.storage_path);
-            if (!newUrl) return Promise.resolve();
-            return adminSupabase
-              .from('photos')
-              .update({
-                signed_url: newUrl,
-                thumb_signed_url: p.thumbnail_path
-                  ? (urlByPath.get(p.thumbnail_path) ?? null)
-                  : null,
-                url_expires_at: expiresAt,
-              } as never)
-              .eq('id', p.id);
-          })
-        );
+        const urlsToUpsert = needsRefresh
+          .filter(p => urlByPath.has(p.storage_path))
+          .map(p => ({
+            id: p.id,
+            signed_url: urlByPath.get(p.storage_path)!,
+            thumb_signed_url: p.thumbnail_path ? (urlByPath.get(p.thumbnail_path) ?? null) : null,
+            url_expires_at: expiresAt,
+          }));
+        if (urlsToUpsert.length > 0) {
+          await adminSupabase.from('photos').upsert(urlsToUpsert as never, { onConflict: 'id' });
+        }
       }
 
       return {
