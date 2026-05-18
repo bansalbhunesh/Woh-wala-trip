@@ -94,6 +94,7 @@ export default function CinematicLanding() {
   const mousePosRef = useRef({ x: 0.5, y: 0.5 });
   const parallaxRef = useRef(ARCHETYPES.map(() => ({ x: 0, y: 0 })));
   const cardDivRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const hoveredIndexRef = useRef<number | null>(null);
   const rafRef = useRef(0);
 
   useEffect(() => {
@@ -142,9 +143,27 @@ export default function CinematicLanding() {
         const floatY = Math.sin(t / 60 + i * 1.1) * 5;
         const floatX = Math.cos(t / 80 + i * 0.9) * 2.5;
 
+        const isHovered = hoveredIndexRef.current === i;
+        const tiltX = (my - 0.5) * -22 + (isHovered ? Math.sin(t / 20) * 4 : 0);
+        const tiltY = (mx - 0.5) * 22 + (isHovered ? Math.cos(t / 20) * 4 : 0);
+
         const el = cardDivRefs.current[i];
         if (el) {
-          el.style.transform = `translate(${par[i].x + floatX}px, ${par[i].y + floatY}px) rotate(${a.rot}deg)`;
+          el.style.transform = `perspective(600px) translate3d(${par[i].x + floatX}px, ${par[i].y + floatY}px, ${isHovered ? '40px' : '0px'}) rotateX(${tiltX}deg) rotateY(${tiltY}deg) rotateZ(${a.rot}deg) scale(${isHovered ? 1.08 : 1})`;
+          el.style.zIndex = isHovered ? '50' : '10';
+
+          const cardInner = el.firstElementChild as HTMLElement;
+          if (cardInner) {
+            if (isHovered) {
+              const shX = (mx - 0.5) * -12;
+              const shY = (my - 0.5) * -12;
+              cardInner.style.boxShadow = `${shX}px ${shY}px 30px ${a.color}90, 0 0 15px ${a.color}60`;
+              cardInner.style.borderColor = 'rgba(255,255,255,0.4)';
+            } else {
+              cardInner.style.boxShadow = `0 12px 40px ${a.color}40`;
+              cardInner.style.borderColor = 'transparent';
+            }
+          }
         }
       });
     };
@@ -290,7 +309,7 @@ export default function CinematicLanding() {
             <button
               onClick={handleEnter}
               disabled={leaving}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 relative overflow-hidden group laser-btn"
               style={{
                 background: ctaBg,
                 color: ctaText,
@@ -310,11 +329,30 @@ export default function CinematicLanding() {
                 el.style.boxShadow = 'none';
               }}
             >
-              {leaving ? 'ENTERING...' : 'ENTER THE LORE →'}
+              {/* Scanning Grid Overlay */}
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
+                  backgroundSize: '8px 8px',
+                  animation: 'grid-scroll 4s linear infinite',
+                }}
+              />
+              {/* Laser swipe */}
+              <span
+                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
+                style={{
+                  background:
+                    'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                  transform: 'translateX(-100%) skewX(-15deg)',
+                }}
+              />
+              <span className="relative z-10">{leaving ? 'ENTERING...' : 'ENTER THE LORE →'}</span>
             </button>
             <a
               href="/trips/join"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em]"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
               style={{
                 background: 'transparent',
                 border: `1.5px solid ${ghostBorder}`,
@@ -335,11 +373,32 @@ export default function CinematicLanding() {
                 el.style.color = ghostText;
               }}
             >
-              JOIN A SEASON
+              {/* Scanning Grid Overlay */}
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  backgroundImage: D
+                    ? 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)'
+                    : 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
+                  backgroundSize: '8px 8px',
+                  animation: 'grid-scroll 4s linear infinite',
+                }}
+              />
+              {/* Laser swipe */}
+              <span
+                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
+                style={{
+                  background: D
+                    ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)'
+                    : 'linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent)',
+                  transform: 'translateX(-100%) skewX(-15deg)',
+                }}
+              />
+              <span className="relative z-10">JOIN A SEASON</span>
             </a>
             <button
               onClick={() => setShowFeatures(true)}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em]"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
               style={{
                 background: 'transparent',
                 border: `1.5px solid ${ghostBorder}`,
@@ -360,7 +419,28 @@ export default function CinematicLanding() {
                 el.style.color = ghostText;
               }}
             >
-              FEATURES
+              {/* Scanning Grid Overlay */}
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  backgroundImage: D
+                    ? 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)'
+                    : 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
+                  backgroundSize: '8px 8px',
+                  animation: 'grid-scroll 4s linear infinite',
+                }}
+              />
+              {/* Laser swipe */}
+              <span
+                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
+                style={{
+                  background: D
+                    ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)'
+                    : 'linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent)',
+                  transform: 'translateX(-100%) skewX(-15deg)',
+                }}
+              />
+              <span className="relative z-10">FEATURES</span>
             </button>
           </div>
 
@@ -399,7 +479,13 @@ export default function CinematicLanding() {
               ref={el => {
                 cardDivRefs.current[i] = el;
               }}
-              className="absolute select-none"
+              onMouseEnter={() => {
+                hoveredIndexRef.current = i;
+              }}
+              onMouseLeave={() => {
+                hoveredIndexRef.current = null;
+              }}
+              className="absolute select-none cursor-pointer"
               style={{
                 left: `${a.x - 58}%`,
                 top: `${a.y}%`,
@@ -410,7 +496,7 @@ export default function CinematicLanding() {
               }}
             >
               <div
-                className="rounded-2xl p-4"
+                className="rounded-2xl p-4 border border-transparent transition-all duration-300"
                 style={{
                   background: a.color,
                   boxShadow: `0 12px 40px ${a.color}40`,
@@ -566,15 +652,16 @@ export default function CinematicLanding() {
           {[...Array(3)].map((_, ri) => (
             <div key={ri} className="flex items-center">
               {TICKER_ITEMS.map(item => (
-                <span key={item} className="inline-flex items-center gap-4 px-6">
+                <span key={item} className="inline-flex items-center gap-4 px-6 group/ticker">
                   <span
-                    className="font-mono text-[8px] uppercase tracking-[0.3em]"
+                    className="font-mono text-[8px] uppercase tracking-[0.3em] cursor-pointer hover:text-[#FF4D4D] transition-colors relative hover:glitch-text"
+                    data-text={item}
                     style={{ color: tickerText, transition: 'color 0.55s' }}
                   >
                     {item}
                   </span>
                   <span
-                    className="w-1 h-1 rounded-full flex-shrink-0"
+                    className="w-1 h-1 rounded-full flex-shrink-0 group-hover/ticker:scale-125 transition-transform"
                     style={{ background: 'oklch(60% 0.22 25 / 0.35)' }}
                   />
                 </span>
@@ -604,6 +691,25 @@ export default function CinematicLanding() {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
           }
+        }
+        @keyframes grid-scroll {
+          0% {
+            background-position: 0 0;
+          }
+          100% {
+            background-position: 0 40px;
+          }
+        }
+        @keyframes laser-swipe {
+          0% {
+            transform: translateX(-100%) skewX(-15deg);
+          }
+          100% {
+            transform: translateX(100%) skewX(-15deg);
+          }
+        }
+        .laser-btn:hover .laser-swipe {
+          animation: laser-swipe 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>

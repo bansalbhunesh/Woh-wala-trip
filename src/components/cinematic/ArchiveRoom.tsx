@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
@@ -463,10 +463,61 @@ export function ArchiveReveal({
 // ─────────────────────────────────────────────────────────────────────────────
 // SIDEBAR WIDGETS
 // ─────────────────────────────────────────────────────────────────────────────
+export function GlassmorphicWidget({
+  children,
+  className,
+  accent = '#FF4D4D',
+  isLight = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  accent?: string;
+  isLight?: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [hovered, setHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCoords({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={cn(
+        'relative overflow-hidden transition-all duration-500',
+        isLight
+          ? 'bg-[#FAF1E4]/30 backdrop-blur-xl border border-black/[0.06] hover:border-black/[0.12] hover:shadow-2xl'
+          : 'bg-[#0E0E0C]/35 backdrop-blur-xl border border-white/[0.06] hover:border-white/[0.12] hover:shadow-3xl',
+        className
+      )}
+    >
+      {/* Dynamic Backlit Glow */}
+      <div
+        className="absolute pointer-events-none rounded-full blur-[40px] transition-opacity duration-700"
+        style={{
+          width: 160,
+          height: 160,
+          background: `radial-gradient(circle, ${accent}${isLight ? '15' : '22'} 0%, transparent 70%)`,
+          left: coords.x - 80,
+          top: coords.y - 80,
+          opacity: hovered ? 1 : 0,
+        }}
+      />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
 export function ProducerWidget({ trip }: { trip: TripWithLore }) {
   const members = trip?.members || [];
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+    <GlassmorphicWidget accent="#FF4D4D" className="p-8 rounded-[2.5rem] space-y-6">
       <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">
         The Cast
       </span>
@@ -497,14 +548,14 @@ export function ProducerWidget({ trip }: { trip: TripWithLore }) {
           <p className="text-[11px] text-white/20 italic font-cinematic">Cast list processing...</p>
         )}
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 
 export function ChaosChartWidget({ trip }: { trip: TripWithLore }) {
   const stats = trip?.stats || [];
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+    <GlassmorphicWidget accent="#D49E2D" className="p-8 rounded-[2.5rem] space-y-6">
       <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">
         Data Receipts
       </span>
@@ -527,14 +578,14 @@ export function ChaosChartWidget({ trip }: { trip: TripWithLore }) {
           <p className="text-[11px] text-white/20 italic font-cinematic">Stats generating...</p>
         )}
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 
 export function SchematicWidget({ trip }: { trip: TripWithLore }) {
   const lore = trip?.lore_json;
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+    <GlassmorphicWidget accent="#7C6AFF" className="p-8 rounded-[2.5rem] space-y-6">
       <span className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-vibe font-black block">
         Inside Jokes Detected
       </span>
@@ -563,7 +614,7 @@ export function SchematicWidget({ trip }: { trip: TripWithLore }) {
           </div>
         )}
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 
@@ -807,7 +858,11 @@ export function CookedScoreLight({ trip }: { trip: TripWithLore }) {
   }, []);
 
   return (
-    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-5">
+    <GlassmorphicWidget
+      accent={accentColor}
+      isLight={true}
+      className="p-8 rounded-[2.5rem] space-y-5"
+    >
       <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
         Delusion Index
       </span>
@@ -868,7 +923,7 @@ export function CookedScoreLight({ trip }: { trip: TripWithLore }) {
           <span>Historically Cooked</span>
         </div>
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 
@@ -904,7 +959,7 @@ export function BadFeelingsChart({ trip }: { trip: TripWithLore }) {
         ];
 
   return (
-    <div className="p-8 rounded-[2.5rem] bg-[#0E0E0C] border border-white/[0.06] space-y-6">
+    <GlassmorphicWidget accent="#FF4D4D" className="p-8 rounded-[2.5rem] space-y-6">
       <span className="text-[9px] uppercase tracking-[0.35em] text-white/40 font-vibe font-black block">
         Top Bad Feelings
       </span>
@@ -937,7 +992,7 @@ export function BadFeelingsChart({ trip }: { trip: TripWithLore }) {
           </div>
         ))}
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 
@@ -971,7 +1026,7 @@ export function DonutChart({ trip }: { trip: TripWithLore }) {
   });
 
   return (
-    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
+    <GlassmorphicWidget accent="#D49E2D" isLight={true} className="p-8 rounded-[2.5rem] space-y-6">
       <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
         Season Breakdown
       </span>
@@ -1014,7 +1069,7 @@ export function DonutChart({ trip }: { trip: TripWithLore }) {
           ))}
         </div>
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 
@@ -1023,7 +1078,7 @@ export function LightCastWidget({ trip }: { trip: TripWithLore }) {
   const COLORS = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF', '#FF6B35'];
 
   return (
-    <div className="p-8 rounded-[2.5rem] bg-chill-bg space-y-6">
+    <GlassmorphicWidget accent="#2D9E8B" isLight={true} className="p-8 rounded-[2.5rem] space-y-6">
       <span className="text-[9px] uppercase tracking-[0.35em] text-black/25 font-vibe font-black block">
         The Cast
       </span>
@@ -1057,7 +1112,7 @@ export function LightCastWidget({ trip }: { trip: TripWithLore }) {
           </div>
         ))}
       </div>
-    </div>
+    </GlassmorphicWidget>
   );
 }
 

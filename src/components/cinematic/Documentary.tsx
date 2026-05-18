@@ -65,9 +65,72 @@ export function CookedLevelReveal({ trip }: { trip: TripWithLore }) {
   const level = lore?.cooked_level ?? trip?.chaos_score ?? 0;
   const verdict = lore?.cooked_verdict ?? '—';
   const explanation = lore?.cooked_explanation;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [slammed, setSlammed] = useState(false);
 
   const accentColor =
     level >= 76 ? '#FF4D4D' : level >= 51 ? '#D49E2D' : level >= 26 ? '#D45D2D' : '#2D9E8B';
+
+  useEffect(() => {
+    setSlammed(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const W = (canvas.width = 300);
+    const H = (canvas.height = 300);
+
+    let sparks = Array.from({ length: 32 }).map(() => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 5 + 3.5;
+      return {
+        x: W / 2,
+        y: H / 2 + 10,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        alpha: 1,
+        color: accentColor,
+        size: Math.random() * 2.2 + 1.2,
+      };
+    });
+
+    let active = true;
+    const draw = () => {
+      if (!active) return;
+      ctx.clearRect(0, 0, W, H);
+      let live = false;
+      sparks.forEach(s => {
+        s.x += s.vx;
+        s.y += s.vy;
+        s.vy += 0.12;
+        s.vx *= 0.98;
+        s.alpha -= 0.018;
+        if (s.alpha > 0) {
+          live = true;
+          ctx.save();
+          ctx.globalAlpha = s.alpha;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = s.color;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+      if (live) {
+        requestAnimationFrame(draw);
+      } else {
+        active = false;
+      }
+    };
+    const delay = setTimeout(() => {
+      draw();
+    }, 120);
+    return () => {
+      active = false;
+      clearTimeout(delay);
+    };
+  }, [accentColor]);
 
   return (
     <motion.div
@@ -101,17 +164,30 @@ export function CookedLevelReveal({ trip }: { trip: TripWithLore }) {
           <div className="text-[9px] uppercase tracking-[0.45em] text-white/15 font-vibe font-black">
             AI Delusion Index · Peer Reviewed
           </div>
-          {/* Giant glitch number */}
-          <div
-            className="glitch-text font-vibe font-black leading-[0.82] tracking-tighter select-none"
-            data-text={String(level)}
-            style={{
-              fontSize: 'clamp(100px, 18vw, 200px)',
-              color: accentColor,
-              textShadow: `0 0 120px ${accentColor}30`,
-            }}
-          >
-            {level}
+          {/* Giant glitch number with spark canvas */}
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0"
+              style={{ mixBlendMode: 'screen' }}
+            />
+            <div
+              className={cn(
+                'glitch-text font-vibe font-black leading-[0.82] tracking-tighter select-none relative z-10',
+                slammed && 'animate-crt-slam'
+              )}
+              data-text={String(level)}
+              style={
+                {
+                  fontSize: 'clamp(100px, 18vw, 200px)',
+                  color: accentColor,
+                  textShadow: `0 0 120px ${accentColor}30`,
+                  '--color': accentColor,
+                } as React.CSSProperties
+              }
+            >
+              {level}
+            </div>
           </div>
         </div>
 
@@ -573,99 +649,106 @@ export function EvidenceBoard({
 
       {/* Evidence cards */}
       <div className="relative z-10 p-8 space-y-4">
-        {/* Top row: 2-3 secondary cards */}
-        <div className={cn('grid gap-4', villain && mvp ? 'grid-cols-2' : 'grid-cols-1')}>
-          {mvp && (
-            <motion.div
-              initial={{ opacity: 0, rotate: -4, y: 10 }}
-              whileInView={{ opacity: 1, rotate: -2, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1, type: 'spring', stiffness: 120 }}
-              className="tape-strip relative bg-[#0E0E0C] border border-white/[0.08] rounded-2xl p-5 space-y-2 overflow-hidden"
-            >
-              {/* Tape pin */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white/5 border border-white/10" />
-              <div className="text-[7px] font-mono text-chill-accent/50 uppercase tracking-[0.3em]">
-                Unlikely Hero
-              </div>
-              <h4 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none">
-                {formatName(mvp.display_name)}
-              </h4>
-              <p className="text-[9px] font-vibe font-black text-white/40 uppercase tracking-wider">
-                {mvp.role_title || 'The Anchor'}
-              </p>
-              {mvp.role_description && (
-                <p className="text-[10px] text-white/50 font-data italic leading-relaxed line-clamp-2">
-                  {mvp.role_description}
-                </p>
-              )}
-              <div className="flex items-center gap-2 pt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-chill-accent" />
-                <span className="text-[8px] font-mono text-chill-accent/60">
-                  Chaos: {mvp.role_chaos_rating ?? '?'}/10
-                </span>
-              </div>
-            </motion.div>
+        <div className="relative">
+          {mvp && villain && (
+            <div className="absolute inset-0 pointer-events-none z-20">
+              <svg
+                className="w-full h-full overflow-visible"
+                aria-hidden="true"
+                style={{ minHeight: 180 }}
+              >
+                <path
+                  d="M 24% 40% Q 50% 68% 76% 45%"
+                  fill="none"
+                  stroke="#FF4D4D"
+                  strokeWidth="2"
+                  strokeDasharray="2 3"
+                  style={{ filter: 'drop-shadow(0 2px 4px rgba(255, 77, 77, 0.4))' }}
+                />
+                <circle cx="50%" cy="57%" r="3.5" fill="#FF4D4D" className="animate-pulse" />
+              </svg>
+            </div>
           )}
 
-          {villain && (
-            <motion.div
-              initial={{ opacity: 0, rotate: 3, y: 10 }}
-              whileInView={{ opacity: 1, rotate: 1.5, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 120 }}
-              className="tape-strip-right relative bg-[#0E0E0C] border border-cooked-accent/15 rounded-2xl p-5 space-y-2 overflow-hidden"
-            >
-              <div className="absolute top-0 right-8 -translate-y-1/2 w-4 h-4 rounded-full bg-cooked-accent/10 border border-cooked-accent/20" />
-              <div className="text-[7px] font-mono text-cooked-accent/50 uppercase tracking-[0.3em]">
-                Primary Suspect
-              </div>
-              <h4 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-none">
-                {formatName(villain.display_name)}
-              </h4>
-              <p className="text-[9px] font-vibe font-black text-white/40 uppercase tracking-wider">
-                {villain.role_title || 'The Source'}
-              </p>
-              {villain.role_description && (
-                <p className="text-[10px] text-white/50 font-data italic leading-relaxed line-clamp-2">
-                  {villain.role_description}
+          <div
+            className={cn(
+              'grid gap-8 relative z-10',
+              villain && mvp ? 'grid-cols-2' : 'grid-cols-1'
+            )}
+          >
+            {mvp && (
+              <motion.div
+                initial={{ opacity: 0, rotate: -4, y: 10 }}
+                whileInView={{ opacity: 1, rotate: -2, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1, type: 'spring', stiffness: 120 }}
+                className="relative bg-[#FAF8F5] shadow-2xl rounded-sm p-4 pb-8 border-t-[8px] border-l-[8px] border-r-[8px] border-b-[32px] border-[#FAF8F5] text-black"
+              >
+                {/* Tape pin */}
+                <div
+                  className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-14 h-4 bg-white/40 border border-white/20 shadow-sm rounded-sm rotate-[-2deg] opacity-75"
+                  style={{ backdropFilter: 'blur(2px)' }}
+                />
+                <div className="text-[7px] font-mono text-chill-accent uppercase tracking-[0.3em] font-bold">
+                  Unlikely Hero
+                </div>
+                <h4 className="text-[24px] font-cinematic font-black tracking-tight text-[#1C1A17] leading-none italic uppercase">
+                  {formatName(mvp.display_name)}
+                </h4>
+                <p className="text-[9px] font-vibe font-black text-black/40 uppercase tracking-wider">
+                  {mvp.role_title || 'The Anchor'}
                 </p>
-              )}
-              <div className="flex items-center gap-2 pt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-cooked-accent animate-pulse" />
-                <span className="text-[8px] font-mono text-cooked-accent/60">
-                  Chaos: {villain.role_chaos_rating ?? '?'}/10 · Confirmed
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </div>
+                {mvp.role_description && (
+                  <p className="text-[10px] text-black/60 font-data italic leading-relaxed line-clamp-2 pt-1 border-t border-black/5">
+                    {mvp.role_description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 pt-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-chill-accent" />
+                  <span className="text-[8px] font-mono text-chill-accent font-bold">
+                    Chaos: {mvp.role_chaos_rating ?? '?'}/10
+                  </span>
+                </div>
+              </motion.div>
+            )}
 
-        {/* SVG connecting strings */}
-        {mvp && villain && (
-          <div className="relative h-8 -my-2">
-            <svg className="absolute inset-0 w-full h-full overflow-visible" aria-hidden="true">
-              <line
-                x1="25%"
-                y1="0"
-                x2="50%"
-                y2="100%"
-                stroke="rgba(255,77,77,0.12)"
-                strokeWidth="1"
-                strokeDasharray="4 3"
-              />
-              <line
-                x1="75%"
-                y1="0"
-                x2="50%"
-                y2="100%"
-                stroke="rgba(255,77,77,0.12)"
-                strokeWidth="1"
-                strokeDasharray="4 3"
-              />
-            </svg>
+            {villain && (
+              <motion.div
+                initial={{ opacity: 0, rotate: 3, y: 10 }}
+                whileInView={{ opacity: 1, rotate: 1.5, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 120 }}
+                className="relative bg-[#FAF8F5] shadow-2xl rounded-sm p-4 pb-8 border-t-[8px] border-l-[8px] border-r-[8px] border-b-[32px] border-[#FAF8F5] text-black"
+              >
+                {/* Tape pin */}
+                <div
+                  className="absolute top-[-10px] right-6 w-14 h-4 bg-white/40 border border-white/20 shadow-sm rounded-sm rotate-[3deg] opacity-75"
+                  style={{ backdropFilter: 'blur(2px)' }}
+                />
+                <div className="text-[7px] font-mono text-cooked-accent uppercase tracking-[0.3em] font-bold">
+                  Primary Suspect
+                </div>
+                <h4 className="text-[24px] font-cinematic font-black tracking-tight text-cooked-accent leading-none italic uppercase">
+                  {formatName(villain.display_name)}
+                </h4>
+                <p className="text-[9px] font-vibe font-black text-black/40 uppercase tracking-wider">
+                  {villain.role_title || 'The Source'}
+                </p>
+                {villain.role_description && (
+                  <p className="text-[10px] text-black/60 font-data italic leading-relaxed line-clamp-2 pt-1 border-t border-black/5">
+                    {villain.role_description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 pt-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cooked-accent animate-pulse" />
+                  <span className="text-[8px] font-mono text-cooked-accent font-bold">
+                    Chaos: {villain.role_chaos_rating ?? '?'}/10 · Confirmed
+                  </span>
+                </div>
+              </motion.div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Bottom: Inside Joke / Core Evidence — larger, centered */}
         {insideJoke && (
@@ -1141,48 +1224,142 @@ export function SuperlativeCard({
   const COLORS = ['#FF4D4D', '#D49E2D', '#2D9E8B', '#7C6AFF', '#FF6B35'];
   const color = COLORS[index % COLORS.length];
   const rotations = [-1.5, 1, -0.5, 2, -1];
+  const rot = rotations[index % rotations.length];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12, rotate: rotations[index % rotations.length] - 3 }}
-      whileInView={{ opacity: 1, y: 0, rotate: rotations[index % rotations.length] }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.5, delay: index * 0.07, type: 'spring', stiffness: 150 }}
-      className="relative tape-strip doc-card overflow-hidden rounded-[2rem] bg-[#0E0E0C] border border-white/[0.06] p-8 space-y-4"
-    >
-      {/* Yearbook label */}
-      <div className="text-[8px] font-mono text-white/15 uppercase tracking-[0.4em]">
-        Yearbook Award #{index + 1} · AI Certified
-      </div>
+    <>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .preserve-3d {
+          transform-style: preserve-3d;
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
+        @keyframes crt-slam {
+          0% {
+            transform: scale(2.2);
+            filter: blur(16px) brightness(2.5);
+            text-shadow: 0 0 40px var(--color), 0 0 80px var(--color);
+            opacity: 0;
+          }
+          25% {
+            transform: scale(0.95);
+            filter: blur(2px) brightness(1.2);
+            opacity: 0.9;
+          }
+          30% {
+            transform: translate3d(-4px, -2px, 0) skewX(-6deg);
+            filter: hue-rotate(90deg) saturate(1.8);
+          }
+          35% {
+            transform: translate3d(4px, 2px, 0) skewX(6deg);
+            filter: hue-rotate(-90deg) saturate(1.8);
+          }
+          40% {
+            transform: translate3d(-2px, 1px, 0) scale(1.02);
+            filter: brightness(1.5);
+          }
+          45% {
+            transform: translate3d(2px, -1px, 0) scale(0.99);
+          }
+          50% {
+            transform: translate3d(0, 0, 0) scale(1);
+            filter: none;
+            opacity: 1;
+          }
+        }
+        .animate-crt-slam {
+          animation: crt-slam 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `,
+        }}
+      />
 
-      <div className="space-y-2">
-        <p className="text-base font-cinematic italic text-white/40">most likely to</p>
-        <h3 className="text-[26px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-tight">
-          {sup.question}
-        </h3>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 12, rotate: rot - 3 }}
+        whileInView={{ opacity: 1, y: 0, rotate: rot }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.5, delay: index * 0.07, type: 'spring', stiffness: 150 }}
+        className="relative group perspective-1000 w-full h-[280px]"
+      >
+        <div
+          className="w-full h-full duration-700 preserve-3d relative cursor-pointer"
+          style={{ transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        >
+          {/* FRONT FACE */}
+          <div className="absolute inset-0 backface-hidden rounded-[2rem] bg-[#0E0E0C] border border-white/[0.06] p-8 flex flex-col justify-between transition-transform duration-700 group-hover:rotate-y-180">
+            <div className="space-y-4">
+              <div className="text-[8px] font-mono text-white/15 uppercase tracking-[0.4em]">
+                Yearbook Award #{index + 1} · AI Certified
+              </div>
+              <div className="space-y-2">
+                <p className="text-base font-cinematic italic text-white/40">most likely to</p>
+                <h3 className="text-[22px] font-cinematic font-black tracking-tight text-[#F5F0E8] leading-tight line-clamp-3">
+                  {sup.question}
+                </h3>
+              </div>
+            </div>
 
-      <div className="flex items-center gap-3">
-        <div className="w-0.5 h-8 rounded-full" style={{ backgroundColor: color }} />
-        <div>
-          <p className="text-2xl font-vibe font-black text-[#F5F0E8]">{sup.winner_name}</p>
-          {sup.archetype && (
-            <p
-              className="text-[9px] uppercase tracking-widest font-vibe font-black"
-              style={{ color: `${color}70` }}
-            >
-              {sup.archetype}
-            </p>
-          )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-0.5 h-8 rounded-full" style={{ backgroundColor: color }} />
+                <div>
+                  <p className="text-xl font-vibe font-black text-[#F5F0E8]">{sup.winner_name}</p>
+                  {sup.archetype && (
+                    <p
+                      className="text-[9px] uppercase tracking-widest font-vibe font-black"
+                      style={{ color: `${color}70` }}
+                    >
+                      {sup.archetype}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <span className="text-[8px] font-mono text-white/10 uppercase tracking-widest">
+                Hover
+              </span>
+            </div>
+          </div>
+
+          {/* BACK FACE */}
+          <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-[2rem] bg-gradient-to-br from-[#12120F] to-[#0A0A08] border border-white/[0.12] p-8 flex flex-col justify-between transition-transform duration-700 group-hover:rotate-y-0">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[8px] font-mono text-cooked-accent uppercase tracking-[0.3em] font-bold">
+                  Intel Decode
+                </span>
+                <span className="text-[8px] font-mono text-white/20 uppercase tracking-[0.2em]">
+                  Secret Dossier
+                </span>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em]">
+                  Behavioral Evidence
+                </p>
+                <p className="text-xs text-white/60 font-data italic leading-relaxed line-clamp-4">
+                  {sup.reason ||
+                    'The AI system detected repeated high-scoring occurrences of this archetype during trip photo processing and chat patterns. Action sealed.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[8px] font-mono text-white/30 uppercase tracking-widest">
+              <span>Class: {sup.archetype || 'Pending'}</span>
+              <span style={{ color }}>Verified</span>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {sup.reason && (
-        <p className="text-[11px] text-white/30 font-data font-light italic leading-relaxed border-l border-white/10 pl-4">
-          {sup.reason}
-        </p>
-      )}
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
 
