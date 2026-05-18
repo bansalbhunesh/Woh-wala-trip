@@ -86,6 +86,23 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
     if (tripData && loreStatus && loreStatus !== 'ready') router.push(`/trips/${tripId}`);
   }, [tripData, loreStatus, tripId, router]);
 
+  const cookedScore = (lore as any)?.cooked_level ?? 60;
+  const slides = lore ? buildSlides(tripId, lore, members) : [];
+  const current = slides[idx] || null;
+  const isFirst = idx === 0;
+
+  const isVillainSlide = current?.type === 'villain';
+  const tapBlocked = isVillainSlide && !villainRevealed;
+
+  // Trigger slam on cooked slide
+  useEffect(() => {
+    if (current?.type === 'cooked') {
+      const t = setTimeout(() => setSlamActive(true), 200);
+      return () => clearTimeout(t);
+    }
+    setSlamActive(false);
+  }, [current?.type, animKey]);
+
   if (!lore) {
     return (
       <div className="min-h-screen bg-[#060604] flex flex-col items-center justify-center gap-4">
@@ -103,14 +120,6 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
     );
   }
 
-  const cookedScore = (lore as any)?.cooked_level ?? 60;
-  const slides = buildSlides(tripId, lore, members);
-  const current = slides[idx];
-  const isFirst = idx === 0;
-
-  const isVillainSlide = current?.type === 'villain';
-  const tapBlocked = isVillainSlide && !villainRevealed;
-
   const advance = () => {
     if (tapBlocked || idx >= slides.length - 1) return;
     if ('vibrate' in navigator) navigator.vibrate(8);
@@ -127,15 +136,6 @@ export default function StoryPage({ params }: { params: Promise<{ tripId: string
     setIdx(i => i - 1);
     setSlamActive(false);
   };
-
-  // Trigger slam on cooked slide
-  useEffect(() => {
-    if (current.type === 'cooked') {
-      const t = setTimeout(() => setSlamActive(true), 200);
-      return () => clearTimeout(t);
-    }
-    setSlamActive(false);
-  }, [current.type, animKey]);
 
   const handleTap = (e: React.MouseEvent) => {
     if (e.clientX < window.innerWidth * 0.33) retreat();

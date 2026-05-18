@@ -228,7 +228,6 @@ export default function GeneratingPage() {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', onResize);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
   const currentStage = STAGES[stage];

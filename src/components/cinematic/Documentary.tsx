@@ -79,7 +79,7 @@ export function CookedLevelReveal({ trip }: { trip: TripWithLore }) {
     const W = (canvas.width = 300);
     const H = (canvas.height = 300);
 
-    let sparks = Array.from({ length: 32 }).map(() => {
+    const sparks = Array.from({ length: 32 }).map(() => {
       const angle = Math.random() * Math.PI * 2;
       const speed = Math.random() * 5 + 3.5;
       return {
@@ -596,10 +596,13 @@ export function EvidenceBoard({
   insideJoke?: string;
   lore?: any;
 }) {
-  if (!mvp && !villain && !insideJoke) return null;
-
   // Stable ID derived from props — prevents Framer Motion re-animation on every refetch
-  const caseId = React.useRef(`YL-${Math.random().toString(36).slice(-6).toUpperCase()}`).current;
+  const caseId = React.useMemo(
+    () => `YL-${Math.random().toString(36).slice(-6).toUpperCase()}`,
+    []
+  );
+
+  if (!mvp && !villain && !insideJoke) return null;
 
   return (
     <motion.div
