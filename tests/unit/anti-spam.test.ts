@@ -264,37 +264,40 @@ describe('logBlockedAttempt', () => {
 });
 
 // ── Rate limiter ─────────────────────────────────────────────────────────
+// Note: checkRateLimit is async (returns Promise<boolean>). Redis env vars are
+// absent in the default test environment, so these tests exercise the in-memory
+// fallback path. Fake timers are used to advance the window without real delays.
 
 describe('checkRateLimit', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('allows first N requests', () => {
+  it('allows first N requests', async () => {
     const key = `test-rl-${Math.random()}`;
-    expect(checkRateLimit(key, 3, 60_000)).toBe(true);
-    expect(checkRateLimit(key, 3, 60_000)).toBe(true);
-    expect(checkRateLimit(key, 3, 60_000)).toBe(true);
+    expect(await checkRateLimit(key, 3, 60_000)).toBe(true);
+    expect(await checkRateLimit(key, 3, 60_000)).toBe(true);
+    expect(await checkRateLimit(key, 3, 60_000)).toBe(true);
   });
 
-  it('blocks on N+1 request within window', () => {
+  it('blocks on N+1 request within window', async () => {
     const key = `test-rl-${Math.random()}`;
-    checkRateLimit(key, 2, 60_000);
-    checkRateLimit(key, 2, 60_000);
-    expect(checkRateLimit(key, 2, 60_000)).toBe(false);
+    await checkRateLimit(key, 2, 60_000);
+    await checkRateLimit(key, 2, 60_000);
+    expect(await checkRateLimit(key, 2, 60_000)).toBe(false);
   });
 
-  it('resets after window expires', () => {
+  it('resets after window expires', async () => {
     const key = `test-rl-${Math.random()}`;
-    checkRateLimit(key, 1, 1_000);
-    checkRateLimit(key, 1, 1_000);
+    await checkRateLimit(key, 1, 1_000);
+    await checkRateLimit(key, 1, 1_000);
     vi.advanceTimersByTime(1_001);
-    expect(checkRateLimit(key, 1, 1_000)).toBe(true);
+    expect(await checkRateLimit(key, 1, 1_000)).toBe(true);
   });
 
-  it('different keys are independent', () => {
-    checkRateLimit('key-indep-a', 1, 60_000);
-    checkRateLimit('key-indep-a', 1, 60_000);
-    expect(checkRateLimit('key-indep-b', 1, 60_000)).toBe(true);
+  it('different keys are independent', async () => {
+    await checkRateLimit('key-indep-a', 1, 60_000);
+    await checkRateLimit('key-indep-a', 1, 60_000);
+    expect(await checkRateLimit('key-indep-b', 1, 60_000)).toBe(true);
   });
 });
 
