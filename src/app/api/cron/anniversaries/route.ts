@@ -3,7 +3,9 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import type { LoreJson } from '@/lib/types';
 
 // Runs daily at 6am UTC via Vercel Cron
-// Sends anniversary emails for trips that hit their 1-year mark today
+// Sends:
+//   • anniversary_1yr        — one year after trip_start_date
+//   • first_week_followup    — 7 days after lore became ready (REL-07)
 export async function GET(req: NextRequest) {
   // Verify Vercel cron secret
   const auth = req.headers.get('authorization');
@@ -23,8 +25,8 @@ export async function GET(req: NextRequest) {
     .select(
       `
       id, trip_id, user_id, email_type,
-      trips:trip_id(id, name, destination, lore_json, chaos_score, invite_code, trip_start_date),
-      profiles:user_id(email, display_name)
+      trips:trip_id(id, name, destination, lore_json, chaos_score, invite_code, trip_start_date, story_visible),
+      profiles:user_id(email, display_name, username)
     `
     )
     .is('sent_at', null)
@@ -37,11 +39,11 @@ export async function GET(req: NextRequest) {
   }
 
   if (!due || due.length === 0) {
-    return NextResponse.json({ sent: 0, message: 'No anniversaries today' });
+    return NextResponse.json({ sent: 0, message: 'No emails due today' });
   }
 
   // Push fatigue limit: max 1 anniversary email per user per 7-day window.
-  // If a user has multiple anniversaries in the same window, send the trip with
+  // If a user has multiple emails in the same window, send the trip with
   // the highest chaos score only (the most emotionally resonant one).
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: recentlySent } = await supabase
@@ -87,7 +89,20 @@ export async function GET(req: NextRequest) {
   for (const row of filtered) {
     const trip = (row as any).trips;
     const profile = (row as any).profiles;
+    const emailType: string = (row as any).email_type ?? 'anniversary_1yr';
+
     if (!trip?.lore_json || !profile?.email) continue;
+
+    // first_week_followup: only send if the story is publicly visible
+    if (emailType === 'first_week_followup' && !trip.story_visible) {
+      // Mark as sent to prevent future retries — story not visible, nothing to share
+      await supabase
+        .from('scheduled_emails' as never)
+        .update({ sent_at: new Date().toISOString() } as never)
+        .eq('id' as never, (row as any).id)
+        .is('sent_at' as never, null);
+      continue;
+    }
 
     const lore = trip.lore_json as LoreJson;
     const cookedLevel = lore.cooked_level ?? trip.chaos_score ?? 84;
@@ -97,6 +112,29 @@ export async function GET(req: NextRequest) {
       ? new Date(trip.trip_start_date).getFullYear()
       : new Date().getFullYear() - 1;
 
+    // Build the invite / WhatsApp share URL for first_week_followup
+    const inviteUrl = `${origin}/trips/join?code=${trip.invite_code}`;
+    const whatsappText = encodeURIComponent(
+      `Bhai dekh — our trip got turned into a full AI documentary 🎬\n${storyUrl}`
+    );
+    const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+
+    // Per-email-type HTML body
+    const subjectAndHtml =
+      emailType === 'first_week_followup'
+        ? buildFirstWeekEmail({
+            name,
+            trip,
+            lore,
+            cookedLevel,
+            storyUrl,
+            inviteUrl,
+            whatsappUrl,
+            tripYear,
+            origin,
+          })
+        : buildAnniversaryEmail({ name, trip, lore, cookedLevel, storyUrl, tripYear });
+
     try {
       if (process.env.RESEND_API_KEY) {
         const { Resend } = await import('resend');
@@ -104,26 +142,79 @@ export async function GET(req: NextRequest) {
         const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
 
         // REL-06: send FIRST, then mark sent — so a Resend failure leaves sent_at=null
-        // and the next cron run will retry. Accepted tradeoff: if the process crashes
-        // between successful send and the UPDATE below, the email may be sent twice on
-        // the next run (within the 25-hour window). Duplicate send is preferred over
-        // silent email loss.
+        // and the next cron run will retry.
         await resend.emails.send({
           from: `Yaarlore <${from}>`,
           to: profile.email,
-          subject: `One year ago, ${name} was ${lore.cooked_verdict?.toLowerCase() ?? 'historically cooked'} 🔥`,
-          html: `<!DOCTYPE html>
+          subject: subjectAndHtml.subject,
+          html: subjectAndHtml.html,
+        });
+
+        // Only mark sent AFTER confirmed delivery from Resend
+        const { error: claimError } = await supabase
+          .from('scheduled_emails' as never)
+          .update({ sent_at: new Date().toISOString() } as never)
+          .eq('id' as never, (row as any).id)
+          .is('sent_at' as never, null);
+
+        if (claimError) {
+          console.log(
+            `[anniversary] row ${(row as any).id} claim failed after send (duplicate possible):`,
+            claimError.message
+          );
+        }
+      } else {
+        console.log(
+          `[anniversary] Would send [${emailType}] to ${profile.email} for trip: ${trip.name}`
+        );
+      }
+
+      sent++;
+    } catch (err) {
+      console.error(`[anniversary] [${emailType}] failed for ${profile.email}:`, err);
+      // sent_at is NOT set — next cron run will retry within the 25-hour window
+    }
+  }
+
+  console.log(
+    `[cron/anniversaries] Sent ${sent}/${filtered.length} emails (${skippedByFatigue} suppressed by fatigue limit)`
+  );
+  return NextResponse.json({ sent, total: filtered.length, skipped_fatigue: skippedByFatigue });
+}
+
+// ─── Email builders ────────────────────────────────────────────────────────────
+
+interface EmailContext {
+  name: string;
+  trip: any;
+  lore: LoreJson;
+  cookedLevel: number;
+  storyUrl: string;
+  tripYear: number;
+}
+
+interface FirstWeekEmailContext extends EmailContext {
+  inviteUrl: string;
+  whatsappUrl: string;
+  origin: string;
+}
+
+function buildAnniversaryEmail(ctx: EmailContext): { subject: string; html: string } {
+  const { name, trip, lore, cookedLevel, storyUrl, tripYear } = ctx;
+  return {
+    subject: `One year ago, ${name} was ${lore.cooked_verdict?.toLowerCase() ?? 'historically cooked'} 🔥`,
+    html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0a08;font-family:monospace;">
   <div style="max-width:480px;margin:0 auto;padding:48px 32px;">
     <p style="font-size:10px;letter-spacing:0.6em;text-transform:uppercase;color:rgba(255,77,77,0.5);margin:0 0 32px;">
-      ● ONE YEAR ANNIVERSARY
+      &#11044; ONE YEAR ANNIVERSARY
     </p>
 
     <div style="background:#0e0e0c;border:1px solid rgba(255,77,77,0.15);border-radius:16px;padding:40px;text-align:center;margin-bottom:32px;">
       <p style="font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(245,240,232,0.3);margin:0 0 12px;">
-        ${tripYear} — ${trip.name}
+        ${tripYear} &mdash; ${trip.name}
       </p>
       <h1 style="font-size:28px;font-weight:900;color:#F5F0E8;margin:0 0 8px;line-height:1.2;">
         ${lore.trip_title ?? trip.name}
@@ -147,45 +238,75 @@ export async function GET(req: NextRequest) {
     </p>
 
     <a href="${storyUrl}" style="display:block;background:rgba(255,77,77,0.12);border:1px solid rgba(255,77,77,0.4);color:rgba(255,77,77,0.9);text-align:center;padding:16px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.35em;text-transform:uppercase;text-decoration:none;margin-bottom:32px;">
-      RELIVE THE STORY →
+      RELIVE THE STORY &rarr;
     </a>
 
     <div style="border-top:1px solid rgba(245,240,232,0.05);padding-top:24px;">
       <p style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(245,240,232,0.15);margin:0;">
-        YAARLORE · AI FRIENDSHIP ARCHIVE · ${tripYear + 1}
+        YAARLORE &middot; AI FRIENDSHIP ARCHIVE &middot; ${tripYear + 1}
       </p>
     </div>
   </div>
 </body>
 </html>`,
-        });
+  };
+}
 
-        // Only mark sent AFTER confirmed delivery from Resend
-        const { error: claimError } = await supabase
-          .from('scheduled_emails' as never)
-          .update({ sent_at: new Date().toISOString() } as never)
-          .eq('id' as never, (row as any).id)
-          .is('sent_at' as never, null);
+function buildFirstWeekEmail(ctx: FirstWeekEmailContext): { subject: string; html: string } {
+  const { name, trip, lore, cookedLevel, storyUrl, whatsappUrl, tripYear } = ctx;
+  return {
+    subject: `🎬 Your trip is still live — have you shared it yet?`,
+    html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a08;font-family:monospace;">
+  <div style="max-width:480px;margin:0 auto;padding:48px 32px;">
+    <p style="font-size:10px;letter-spacing:0.6em;text-transform:uppercase;color:rgba(255,77,77,0.5);margin:0 0 32px;">
+      &#11044; YOUR LORE IS LIVE
+    </p>
 
-        if (claimError) {
-          console.log(
-            `[anniversary] row ${(row as any).id} claim failed after send (duplicate possible):`,
-            claimError.message
-          );
-        }
-      } else {
-        console.log(`[anniversary] Would send to ${profile.email} for trip: ${trip.name}`);
-      }
+    <div style="background:#0e0e0c;border:1px solid rgba(255,77,77,0.15);border-radius:16px;padding:40px;text-align:center;margin-bottom:32px;">
+      <p style="font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(245,240,232,0.3);margin:0 0 12px;">
+        ${tripYear} &mdash; ${trip.name}
+      </p>
+      <h1 style="font-size:28px;font-weight:900;color:#F5F0E8;margin:0 0 8px;line-height:1.2;">
+        ${lore.trip_title ?? trip.name}
+      </h1>
+      <p style="font-size:14px;font-style:italic;color:rgba(245,240,232,0.5);margin:0 0 24px;">
+        &ldquo;${lore.tagline ?? ''}&rdquo;
+      </p>
+      <div style="font-size:64px;font-weight:900;color:#FF4D4D;line-height:1;margin:0 0 8px;">
+        ${cookedLevel}
+      </div>
+      <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,77,77,0.7);margin:0;">
+        ${lore.cooked_verdict ?? 'Historically Cooked'}
+      </p>
+    </div>
 
-      sent++;
-    } catch (err) {
-      console.error(`[anniversary] failed for ${profile.email}:`, err);
-      // sent_at is NOT set — next cron run will retry within the 25-hour window
-    }
-  }
+    <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.6;margin:0 0 8px;">
+      ${name}, your crew&apos;s documentary dropped 7 days ago. Has everyone seen it?
+    </p>
+    <p style="font-size:13px;color:rgba(245,240,232,0.35);line-height:1.6;margin:0 0 32px;">
+      Share the story &mdash; the chaos score, the verdicts, the memories. Your friends will lose it.
+    </p>
 
-  console.log(
-    `[cron/anniversaries] Sent ${sent}/${filtered.length} anniversary emails (${skippedByFatigue} suppressed by fatigue limit)`
-  );
-  return NextResponse.json({ sent, total: filtered.length, skipped_fatigue: skippedByFatigue });
+    <!-- Primary CTA: view story -->
+    <a href="${storyUrl}" style="display:block;background:#FF4D4D;color:#060604;text-align:center;padding:18px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.35em;text-transform:uppercase;text-decoration:none;margin-bottom:12px;">
+      VIEW THE STORY &rarr;
+    </a>
+
+    <!-- Secondary CTA: WhatsApp share -->
+    <a href="${whatsappUrl}" style="display:block;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);color:rgba(37,211,102,0.85);text-align:center;padding:14px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.3em;text-transform:uppercase;text-decoration:none;margin-bottom:32px;">
+      &#128172; SHARE ON WHATSAPP
+    </a>
+
+    <div style="border-top:1px solid rgba(245,240,232,0.05);padding-top:24px;">
+      <p style="font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(245,240,232,0.15);margin:0;">
+        YAARLORE &middot; AI FRIENDSHIP ARCHIVE &middot; ${tripYear}
+      </p>
+    </div>
+  </div>
+</body>
+</html>`,
+  };
 }
