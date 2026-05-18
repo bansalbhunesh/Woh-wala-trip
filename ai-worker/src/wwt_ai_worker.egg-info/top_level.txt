@@ -1,0 +1,9 @@
+auth
+clients
+config
+embeddings
+image_gen
+lore
+main
+nostalgia
+thumbnails

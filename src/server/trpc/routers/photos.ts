@@ -452,6 +452,17 @@ export const photosRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      // Explicit membership guard — prevents leaking service-role signed URLs if RLS is bypassed.
+      const { data: member } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!member) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this trip' });
+      }
+
       // PERF-02: explicit column list — excludes clip_embedding (~2KB/row of unused vector data)
       const PHOTO_COLUMNS =
         'id, trip_id, user_id, storage_path, thumbnail_path, signed_url, thumb_signed_url, url_expires_at, embedding_status, created_at, file_size';

@@ -71,12 +71,12 @@ Every trip becomes a **cinematic tap-through experience** — like Instagram Sto
 
 Every trip archive, teaser, and profile is generated with unique, permanently shareable routing paths that require **no login** for visitors.
 
-| Experience Endpoint | Visual Format | Deep-Link Experience |
-| :------------------ | :------------ | :------------------ |
-| <kbd>**`/t/:inviteCode`**</kbd> | **The Dossier Teaser** | High-fidelity briefing dashboard featuring the title, cooked score, group tagline, and core stats. |
+| Experience Endpoint                   | Visual Format          | Deep-Link Experience                                                                                          |
+| :------------------------------------ | :--------------------- | :------------------------------------------------------------------------------------------------------------ |
+| <kbd>**`/t/:inviteCode`**</kbd>       | **The Dossier Teaser** | High-fidelity briefing dashboard featuring the title, cooked score, group tagline, and core stats.            |
 | <kbd>**`/t/:inviteCode/story`**</kbd> | **The Cinematic Reel** | Immersive, full-screen tap-through narrative utilizing directional slide physics and Web Audio track syncing. |
-| <kbd>**`/wrap/:year`**</kbd> | **The Retrospective** | Spotify Wrapped-style annual group overview showcasing cumulative stats and year-wide behaviors. |
-| <kbd>**`/u/:username`**</kbd> | **The Lore Profile** | A sleek, high-contrast digital portfolio showing a user's complete trip index and chaos sparklines. |
+| <kbd>**`/wrap/:year`**</kbd>          | **The Retrospective**  | Spotify Wrapped-style annual group overview showcasing cumulative stats and year-wide behaviors.              |
+| <kbd>**`/u/:username`**</kbd>         | **The Lore Profile**   | A sleek, high-contrast digital portfolio showing a user's complete trip index and chaos sparklines.           |
 
 ---
 
@@ -86,22 +86,38 @@ Two trips enter. One leaves. The ultimate arena for friendship bragging rights.
 
 > [!TIP]
 > **Who is truly the most cooked?** Trips can be submitted to head-to-head public battles where the community decides the winner in real time.
-> * **🗳️ Zero-Friction Voting** — Open voting bars that animate dynamically with instantaneous client-side updates.
-> * **⚖️ The AI Arbitrator** — Claude acts as the arena judge, analyzing the photos and stories from both trips to deliver a hilarious, definitive verdict.
-> * **⚡ Live Stat Modulators** — Dynamic, real-time vote percentage sweeps that respond instantly to database changes.
+>
+> - **🗳️ Zero-Friction Voting** — Open voting bars that animate dynamically with instantaneous client-side updates.
+> - **⚖️ The AI Arbitrator** — Claude acts as the arena judge, analyzing the photos and stories from both trips to deliver a hilarious, definitive verdict.
+> - **⚡ Live Stat Modulators** — Dynamic, real-time vote percentage sweeps that respond instantly to database changes.
 
 ---
 
-### 🎬 Year Wrap Retrospective — `/wrap/[year]`
+### 🎬 Year Wrap Retrospective &middot; `[ /wrap/:year ]`
+
+<kbd><b>Dynamic Spotify Wrapped for Friendships</b></kbd>
+
+```text
+  ┌──────────────────────────────────────────────────────────┐
+  │  YAARLORE WRAP 2026                                      │
+  ├──────────────────────────────────────────────────────────┤
+  │  Collective Delusion: "We are definitely coming back"   │
+  │  Total Trips: 14  ·  Cooked Rating: 84% [Historically]   │
+  │                                                          │
+  │  [|||||||||||||||||||||||||||||||||||..........] 72%     │
+  │  Group Social Battery Trajectory (Q1-Q4)                 │
+  └──────────────────────────────────────────────────────────┘
+```
 
 An epic, cinematic retrospection that compiles an entire year of trips, chaos, and collective delusions into a single immersive walk down memory lane.
 
 > [!IMPORTANT]
 > **Your year in friendship mythology, analyzed.** The Wrap page runs aggregate models across all your trips for the year to build a premium interactive slide deck:
-> * **📊 Chaos Trajectory** — Interactive bar charts detailing the cooked rating over time, rendered with smooth SVG progress indicators.
-> * **👑 The Summit of Chaos** — Crown the single highest cooked trip of the year with visual trophy animations.
-> * **🧠 Long-Term Behavior Analysis** — Surfaces recurring behavioral patterns, chronic photo-dump offenders, and evolving group dynamics.
-> * **🎞️ Shareable Film Strip** — A mobile-responsive summary slide styled like an analogue film-negative frame, perfect for social sharing.
+>
+> - **📊 Chaos Trajectory** — Interactive bar charts detailing the cooked rating over time, rendered with smooth SVG progress indicators.
+> - **👑 The Summit of Chaos** — Crown the single highest cooked trip of the year with visual trophy animations.
+> - **🧠 Long-Term Behavior Analysis** — Surfaces recurring behavioral patterns, chronic photo-dump offenders, and evolving group dynamics.
+> - **🎞️ Shareable Film Strip** — A mobile-responsive summary slide styled like an analogue film-negative frame, perfect for social sharing.
 
 ---
 
@@ -163,15 +179,31 @@ Auto-scheduled via SQL trigger the moment lore generation completes. Sent at 6am
 
 ---
 
-### 👤 Public Lore Profiles — `/u/[username]`
+### 👤 Public Lore Profiles &middot; `[ /u/:username ]`
+
+<kbd><b>The Friendship Hall of Adventures</b></kbd>
+
+```text
+  ┌──────────────────────────────────────────────────────────┐
+  │  @bansalbhunesh  ·  Level: Peak Delusion [84]             │
+  ├──────────────────────────────────────────────────────────┤
+  │  Primary Archetype: resident "Chaos Source" (8 trips)    │
+  │  Trips Completed: 12  ·  Superlatives Won: 4             │
+  │                                                          │
+  │  Chaos Sparkline:                                        │
+  │  /\    /\        /\__/\                                  │
+  │    \__/  \______/      \___                              │
+  └──────────────────────────────────────────────────────────┘
+```
 
 A gorgeous, high-fidelity developer/explorer portfolio that serves as your personal **Hall of Adventures**.
 
 > [!NOTE]
 > **Share your legend.** Your public profile showcases your lifetime journey of trips and group events:
-> * **📈 Chaos Sparklines** — Sleek, client-side SVG sparklines tracking your collective delusion trajectory across different trips.
-> * **📂 The Lore Library** — A stunning grid of all your generated trip dossier covers, tags, and season titles.
-> * **🏷️ Role Archetypes** — Highlights the most recurrent role assigned to you by the AI across your adventures (e.g. the resident *Chaos Source* or *NPC*).
+>
+> - **📈 Chaos Sparklines** — Sleek, client-side SVG sparklines tracking your collective delusion trajectory across different trips.
+> - **📂 The Lore Library** — A stunning grid of all your generated trip dossier covers, tags, and season titles.
+> - **🏷️ Role Archetypes** — Highlights the most recurrent role assigned to you by the AI across your adventures (e.g. the resident _Chaos Source_ or _NPC_).
 
 ---
 
@@ -185,10 +217,10 @@ A secure, passwordless authentication loop designed to get you from landing page
 └──────────────┘      └──────────────────┘      └─────────────┘      └─────────────┘
 ```
 
-* **⚡ Lightning Delivery** — OTP codes delivered instantly to your inbox via high-deliverability **Resend** nodes.
-* **🛡️ Hardened Security** — All raw codes are hashed using a robust **HMAC-SHA256** mechanism with server-only salts before database writing.
-* **🛑 Anti-Spam Sentry** — Built-in rate limiting (hard cap of 5 attempts / 15 minutes) coupled with dynamic anti-spam middleware to block disposable domains and bots.
-* **✨ Instant Onboarding** — New accounts and user profiles are created dynamically on first login, with zero setup required.
+- **⚡ Lightning Delivery** — OTP codes delivered instantly to your inbox via high-deliverability **Resend** nodes.
+- **🛡️ Hardened Security** — All raw codes are hashed using a robust **HMAC-SHA256** mechanism with server-only salts before database writing.
+- **🛑 Anti-Spam Sentry** — Built-in rate limiting (hard cap of 5 attempts / 15 minutes) coupled with dynamic anti-spam middleware to block disposable domains and bots.
+- **✨ Instant Onboarding** — New accounts and user profiles are created dynamically on first login, with zero setup required.
 
 ---
 

@@ -20,8 +20,8 @@ from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 from deepeval.dataset import EvaluationDataset
 
-from ..src.lore.validators import validate_lore_json, scan_forbidden_phrases
-from ..src.nostalgia import NostalgiaEngine
+from src.lore.validators import validate_lore_json, scan_forbidden_phrases
+from src.nostalgia import NostalgiaEngine
 from .conftest import lore_to_text
 
 
@@ -178,7 +178,7 @@ def test_nostalgia_score_formula_correctness():
 @pytest.mark.asyncio
 async def test_compute_trip_signals_structure(sample_signals):
     """_compute_trip_signals must return a dict with all expected keys."""
-    from ..src.lore.orchestrator import LoreOrchestrator
+    from src.lore.orchestrator import LoreOrchestrator
 
     trip = sample_signals["trip"]
     photos = [

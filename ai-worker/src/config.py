@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Set to 1.0 in dev (evaluate every run).
     # Set to 0.2 in production (evaluate 20% of runs — reduces Haiku call volume by ~80%).
     # Override via LORE_EVAL_SAMPLE_RATE env var on Render.
-    LORE_EVAL_SAMPLE_RATE: float = 1.0
+    LORE_EVAL_SAMPLE_RATE: float = 0.2
 
     # Set to "true" ONLY in dev/staging — disables /debug-pipeline and /test-claude in prod
     DEBUG_ENABLED: str = "false"

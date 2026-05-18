@@ -16,13 +16,23 @@ function seasonAccent(name: string) {
   return SEASON_ACCENTS[hashName(name) % SEASON_ACCENTS.length];
 }
 
+let sharedAudioCtx: AudioContext | null = null;
+
 // Global lightweight browser chime synthesizer for premium interaction feedback
 function playHomeChime(pitchMultiplier = 1.0, volume = 0.02) {
   try {
     if (typeof window === 'undefined') return;
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new AudioContextClass();
+    }
+    if (sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+
+    const ctx = sharedAudioCtx;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -41,12 +51,6 @@ function playHomeChime(pitchMultiplier = 1.0, volume = 0.02) {
 
     osc.start();
     osc.stop(ctx.currentTime + 1.1);
-
-    setTimeout(() => {
-      try {
-        ctx.close();
-      } catch (_) {}
-    }, 1200);
   } catch (_) {}
 }
 

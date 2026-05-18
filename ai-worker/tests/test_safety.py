@@ -12,7 +12,7 @@ from deepeval.metrics import ToxicityMetric, BiasMetric
 from deepeval.test_case import LLMTestCase
 
 from .conftest import lore_to_text
-from ..src.lore.validators import FORBIDDEN_PHRASES, scan_forbidden_phrases
+from src.lore.validators import FORBIDDEN_PHRASES, scan_forbidden_phrases
 
 
 # ─── Toxicity ─────────────────────────────────────────────────────────────────

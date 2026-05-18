@@ -496,19 +496,35 @@ class LoreOrchestrator:
     # -------------------------------------------------------------------------
 
     def _get_trip(self, trip_id: str) -> dict:
-        return supabase.table("trips").select("*").eq("id", trip_id).single().execute().data
+        from ..clients import supabase
+        data = supabase.table("trips").select("*").eq("id", trip_id).execute().data
+        if not data:
+            return {}
+        trip = data[0]
+        # Sanitize user-provided fields to prevent XML prompt injection
+        def sanitize(s): return str(s).replace('<', '&lt;').replace('>', '&gt;') if s else s
+        trip["name"] = sanitize(trip.get("name"))
+        trip["destination"] = sanitize(trip.get("destination"))
+        return trip
 
     def _get_photos(self, trip_id: str) -> list[dict]:
         return supabase.table("photos").select("*").eq("trip_id", trip_id).execute().data
 
     def _get_members(self, trip_id: str) -> list[dict]:
-        return (
+        data = (
             supabase.table("trip_members")
             .select("*, profiles:user_id(display_name)")
             .eq("trip_id", trip_id)
             .execute()
             .data
         )
+        def sanitize(s): return str(s).replace('<', '&lt;').replace('>', '&gt;') if s else s
+        for member in (data or []):
+            if member.get("profiles") and member["profiles"].get("display_name"):
+                member["profiles"]["display_name"] = sanitize(member["profiles"]["display_name"])
+            if member.get("confession_text"):
+                member["confession_text"] = sanitize(member["confession_text"])
+        return data
 
     def _get_confessions(self, trip_id: str) -> list[str]:
         try:
@@ -520,7 +536,9 @@ class LoreOrchestrator:
                 .execute()
                 .data
             )
-            return [r["confession_text"] for r in (rows or []) if r.get("confession_text")]
+            # Sanitize to prevent XML prompt injection
+            def sanitize(s): return str(s).replace('<', '&lt;').replace('>', '&gt;')
+            return [sanitize(r["confession_text"]) for r in (rows or []) if r.get("confession_text")]
         except Exception:
             return []
 

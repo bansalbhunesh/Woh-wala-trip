@@ -5,6 +5,7 @@ Uses deepeval with a custom Claude evaluator so evaluation itself uses the
 same model + proxy the app uses. All API keys are loaded from ai-worker/.env.
 """
 
+import sys
 import json
 import os
 import asyncio
@@ -13,6 +14,12 @@ from typing import Optional
 
 import pytest
 from dotenv import load_dotenv
+
+ROOT = Path(__file__).parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
 # ─── Load ai-worker env (must happen before importing anything that reads env) ─
 _env_path = Path(__file__).parent.parent / ".env"

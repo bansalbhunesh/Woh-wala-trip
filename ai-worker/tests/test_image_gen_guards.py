@@ -12,7 +12,7 @@ import threading
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ..src import image_gen as ig
+import src.image_gen as ig
 
 
 # ─── Budget guard ─────────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@ async def test_portraits_skip_members_with_existing_url():
 
     mock_sb = MagicMock()
     (mock_sb.table.return_value.select.return_value
-     .eq.return_value.not_.return_value.is_.return_value
+     .eq.return_value.not_.is_.return_value
      .execute.return_value.data) = members
 
     generated = []
@@ -286,7 +286,7 @@ async def test_portraits_regenerate_all_with_force():
 
     mock_sb = MagicMock()
     (mock_sb.table.return_value.select.return_value
-     .eq.return_value.not_.return_value.is_.return_value
+     .eq.return_value.not_.is_.return_value
      .execute.return_value.data) = members
 
     generated = []

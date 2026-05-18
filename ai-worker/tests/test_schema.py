@@ -13,7 +13,7 @@ from deepeval.metrics import GEval
 from deepeval.test_case import SingleTurnParams
 
 from .conftest import lore_to_text
-from ..src.lore.validators import validate_lore_json, scan_forbidden_phrases
+from src.lore.validators import validate_lore_json, scan_forbidden_phrases
 
 REQUIRED_FIELDS = [
     "trip_title", "tagline", "opening_line", "closing_line",

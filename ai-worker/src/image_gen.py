@@ -91,12 +91,11 @@ def _budget_ok() -> bool:
             return True
 
         except Exception as e:
-            # Budget DB unavailable — fail open with a warning rather than
-            # blocking all image generation.  Log prominently so it surfaces.
+            # Budget DB unavailable — fail CLOSED to prevent unlimited billing.
             log.error(
-                f"[image_gen] fal_budget DB check failed (failing open): {e}"
+                f"[image_gen] fal_budget DB check failed (failing CLOSED): {e}"
             )
-            return True
+            return False
 
 
 def _trip_quota_ok(trip_id: str) -> bool:
