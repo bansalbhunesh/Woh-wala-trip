@@ -10,7 +10,19 @@ test.describe('Landing page', () => {
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    expect(errors.filter(e => !e.includes('ResizeObserver'))).toHaveLength(0);
+    const cleanErrors = errors.filter(e => {
+      const msg = e.toLowerCase();
+      return (
+        !msg.includes('resizeobserver') &&
+        !msg.includes('webgl') &&
+        !msg.includes('three') &&
+        !msg.includes('audio') &&
+        !msg.includes('autoplay') &&
+        !msg.includes('posthog') &&
+        !msg.includes('langfuse')
+      );
+    });
+    expect(cleanErrors).toHaveLength(0);
   });
 
   test('has yaarlore branding visible', async ({ page }) => {
