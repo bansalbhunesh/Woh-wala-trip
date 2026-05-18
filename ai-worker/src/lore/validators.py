@@ -41,6 +41,24 @@ FORBIDDEN_PHRASES = [
     # Generic character labels (too sanitized)
     "everyone had a role",
     "each person contributed",
+    # Prompt injection / AI self-referential output
+    "as an ai",
+    "i am an ai",
+    "i cannot",
+    "i'm unable",
+    "language model",
+    "large language model",
+    "ai assistant",
+    "i don't have access to",
+    "i was not trained",
+    "chatgpt",
+    "gpt-4",
+    "claude",
+    # Tourist-board clichés specific to Indian travel
+    "incredible india",
+    "god's own country",
+    "the group had an amazing time",
+    "memories that will last forever",
 ]
 
 

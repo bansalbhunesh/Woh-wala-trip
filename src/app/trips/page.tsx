@@ -399,21 +399,71 @@ export default function TripsPage() {
       {/* Content */}
       <main className="relative z-10 px-8 py-10 pb-24">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-5">
-            <div
-              className="w-8 h-8 rounded-full"
-              style={{
-                border: '2px solid rgba(245,240,232,0.12)',
-                borderTopColor: '#FF4D4D',
-                animation: 'trips-spin 0.9s linear infinite',
-              }}
-            />
-            <p
-              className="font-mono text-[8px] uppercase tracking-[0.6em]"
-              style={{ color: 'rgba(245,240,232,0.30)' }}
-            >
-              LOADING ARCHIVES...
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {[0, 1, 2].map(i => (
+              <div
+                key={i}
+                className="relative flex flex-col rounded-2xl overflow-hidden animate-pulse"
+                style={{
+                  background: 'rgba(245,240,232,0.03)',
+                  border: '1.5px solid rgba(245,240,232,0.08)',
+                  minHeight: 220,
+                }}
+              >
+                {/* Coloured header strip */}
+                <div
+                  className="h-2 w-full flex-shrink-0"
+                  style={{ background: 'rgba(245,240,232,0.07)' }}
+                />
+
+                <div className="p-6 flex flex-col flex-1 gap-4">
+                  {/* Status pill */}
+                  <div
+                    className="h-2.5 rounded-full"
+                    style={{ width: '40%', background: 'rgba(245,240,232,0.07)' }}
+                  />
+
+                  {/* Trip name — two lines */}
+                  <div className="space-y-2">
+                    <div
+                      className="h-6 rounded-lg"
+                      style={{ width: '80%', background: 'rgba(245,240,232,0.07)' }}
+                    />
+                    <div
+                      className="h-6 rounded-lg"
+                      style={{ width: '55%', background: 'rgba(245,240,232,0.05)' }}
+                    />
+                  </div>
+
+                  {/* Meta lines */}
+                  <div className="space-y-2">
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ width: '60%', background: 'rgba(245,240,232,0.05)' }}
+                    />
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ width: '45%', background: 'rgba(245,240,232,0.04)' }}
+                    />
+                  </div>
+
+                  {/* Bottom bar */}
+                  <div
+                    className="flex items-center justify-between pt-4 mt-auto"
+                    style={{ borderTop: '1px solid rgba(245,240,232,0.07)' }}
+                  >
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ width: '30%', background: 'rgba(245,240,232,0.05)' }}
+                    />
+                    <div
+                      className="h-4 w-4 rounded-full"
+                      style={{ background: 'rgba(245,240,232,0.07)' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : trips?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-8 text-center max-w-sm mx-auto">

@@ -649,7 +649,11 @@ export default function CinematicAuth() {
               willChange: 'transform, opacity',
             }}
           >
+            <label htmlFor="yaarlore-email" className="sr-only">
+              Email address
+            </label>
             <input
+              id="yaarlore-email"
               type="email"
               value={email}
               onChange={e => {
@@ -661,6 +665,7 @@ export default function CinematicAuth() {
               onKeyDown={e => e.key === 'Enter' && sendOtp()}
               placeholder="enter.your@signal.address"
               autoFocus
+              autoComplete="email"
               className="w-full py-6 px-8 text-center font-mono text-base outline-none"
               style={{
                 background: 'rgba(245,240,232,0.025)',
@@ -696,6 +701,13 @@ export default function CinematicAuth() {
             <button
               onClick={sendOtp}
               disabled={sendLoading || !email.trim() || cooldown > 0}
+              aria-label={
+                sendLoading
+                  ? 'Sending code…'
+                  : cooldown > 0
+                    ? `Resend available in ${cooldown} seconds`
+                    : 'Send login code to email'
+              }
               className="w-full py-4 rounded-2xl font-ui font-black text-[10px] uppercase tracking-[0.35em] flex items-center justify-center gap-3 disabled:opacity-30"
               style={{
                 background: 'rgba(255,77,77,0.08)',

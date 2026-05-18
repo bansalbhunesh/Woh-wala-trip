@@ -4,8 +4,35 @@ import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { langfuse } from '@/lib/langfuse';
 import { logger } from '@/lib/logger';
-import crypto from 'crypto';
 import { signWorkerRequest } from '@/lib/worker-auth';
+import { Redis } from '@upstash/redis';
+// TYPE-01: Centralised type overrides for stale Supabase codegen.
+// See src/lib/supabase-extended.types.ts for full JSDoc on each type.
+// Remove imports one-by-one as TYPE-01 is resolved (supabase gen types re-run).
+import type {
+  BackgroundJobInsert,
+  GenerationJobUpsert,
+  TripStatusUpdate,
+  TripPaymentUpdate,
+  StoryVisibilityUpdate,
+  ProfileReferralUpdate,
+  TripMemberAbsenceUpdate,
+  YearlyWrapUpsert,
+  YearlyWrapRow,
+  SupabaseRpcClient,
+  ListUserTripsArgs,
+  ListUserTripsClient,
+  GetTripFullResult,
+  JoinTripResult,
+  ConfessionResult,
+  NostalgiaRow,
+  SimilarPhotoRow,
+  TripCreatorRow,
+  TripUpgradeRow,
+  TripSummary,
+  ChaosDistributionRow,
+  ProfileTokenUsage,
+} from '@/lib/supabase-extended.types';
 
 // COST-05: Server-side warmupWorker cache.
 // Maps userId → Unix timestamp (ms) of the last successful warmup call.
@@ -14,78 +41,37 @@ import { signWorkerRequest } from '@/lib/worker-auth';
 const _warmupCache = new Map<string, number>();
 const WARMUP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-// PERF-03: in-memory cache for getChaosDistribution (10-minute TTL).
-// Prevents a full-table scan on every /trips page load.
-// Uses a single cache key since the distribution is global (all ready trips).
-const chaosDistCache = new Map<
-  'global',
-  { data: { p50: number; p75: number; p90: number; total: number } | null; expiry: number }
->();
-const CHAOS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+// PERF-03: Redis-backed cache for getChaosDistribution (10-minute TTL).
+// In production each Vercel function instance shares the same Upstash Redis store, so a
+// single DB query populates the cache for all concurrent instances simultaneously —
+// replacing the old module-level Map that gave every cold-start instance its own empty
+// cache and triggered 50 simultaneous full-table scans under traffic.
+//
+// Fallback strategy (matches the pattern in @/lib/anti-spam.ts):
+//   - Redis configured → always use Redis; never fall back to in-memory in production.
+//   - Redis absent    → in-memory fallback, accepted in dev; blocked in production by the
+//     existing UPSTASH_* requirement that anti-spam already enforces.
+const CHAOS_REDIS_KEY = 'chaos_dist:global';
+const CHAOS_CACHE_TTL_S = 600; // 10 min (Redis `ex` param, in seconds)
+const CHAOS_CACHE_TTL_MS = CHAOS_CACHE_TTL_S * 1000; // for in-memory fallback only
 
-// TYPE-02/03: local type overrides for tables / columns added after last Supabase codegen.
-// Remove once supabase gen types is re-run (TYPE-01).
-type BackgroundJobInsert = {
-  trip_id: string;
-  job_type: string;
-  status: string;
-  payload?: Record<string, unknown>;
-};
+// Initialise the Redis client once per module so it is reused across warm invocations.
+const _redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const _redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const chaosCacheRedis =
+  _redisUrl && _redisToken ? new Redis({ url: _redisUrl, token: _redisToken }) : null;
 
-// TripStatusUpdate: columns added post-codegen that TypeScript doesn't know about.
-type TripStatusUpdate = {
-  lore_status?: string;
-  processing_started_at?: string | null;
-  lore_status_override?: string;
-};
+type ChaosDist = { p50: number; p75: number; p90: number; total: number };
 
-// ProfileReferralUpdate: referral columns added post-codegen.
-type ProfileReferralUpdate = {
-  referral_counted?: boolean;
-  referral_count?: number;
-  referral_bonus_unlocked?: boolean;
-  invited_by_user_id?: string;
-};
+// Module-level in-memory fallback — used ONLY when Redis is not configured (dev only).
+const _chaosDistMemCache = new Map<'global', { data: ChaosDist | null; expiry: number }>();
 
-// RPC return type shapes (RPCs return Json — cast to these after error checking)
-interface GetTripFullResult {
-  trip: Record<string, unknown>;
-  members: unknown[];
-  stats: unknown[];
-  eras: unknown[];
-  cover_photo: unknown | null;
-  error?: string;
-}
-interface JoinTripResult {
-  trip_id: string;
-  error?: string;
-}
-interface ConfessionResult {
-  success?: boolean;
-  error?: string;
-}
-// Explicit trip column shapes — Supabase type inference fails when columns were added after codegen
-interface TripCreatorRow {
-  creator_id: string;
-}
-interface TripUpgradeRow {
-  creator_id: string;
-  tier: string;
-}
-interface TripSummary {
-  id: string;
-  name: string;
-  destination?: string | null;
-  trip_start_date?: string | null;
-  trip_end_date?: string | null;
-  lore_status?: string | null;
-  lore_json?: unknown;
-  chaos_score?: number | null;
-  member_count?: number | null;
-  total_photos?: number | null;
-  tier?: string | null;
-  created_at?: string | null;
-}
+// All module-level type declarations moved to @/lib/supabase-extended.types.ts (TYPE-01).
+// The import block above brings in: BackgroundJobInsert, GenerationJobUpsert,
+// TripStatusUpdate, TripPaymentUpdate, StoryVisibilityUpdate, ProfileReferralUpdate,
+// TripMemberAbsenceUpdate, YearlyWrapUpsert, YearlyWrapRow, SupabaseRpcClient,
+// GetTripFullResult, JoinTripResult, ConfessionResult, NostalgiaRow, SimilarPhotoRow,
+// TripCreatorRow, TripUpgradeRow, TripSummary, ChaosDistributionRow, ProfileTokenUsage.
 
 const TripCreateInput = z.object({
   name: z.string().min(2).max(80),
@@ -171,16 +157,16 @@ export const tripsRouter = router({
       };
 
       if (profile?.invited_by_user_id && !profile.referral_counted) {
-        // Mark this user as counted so future trips don't fire again
-        // TYPE-02: ProfileReferralUpdate is a local type — columns added post-codegen.
-        type ProfileUpdateClient = {
+        // Mark this user as counted so future trips don't fire again.
+        // ProfileEqUpdateClient uses ProfileReferralUpdate from supabase-extended.types.ts.
+        type ProfileEqUpdateClient = {
           from: (t: 'profiles') => {
             update: (d: ProfileReferralUpdate) => {
               eq: (c: string, v: string) => Promise<unknown>;
             };
           };
         };
-        await (admin as unknown as ProfileUpdateClient)
+        await (admin as unknown as ProfileEqUpdateClient)
           .from('profiles')
           .update({ referral_counted: true })
           .eq('id', userId);
@@ -193,7 +179,7 @@ export const tripsRouter = router({
           .eq('id', referrerId)
           .single()) as unknown as { data: { referral_count: number } | null };
         const newCount = (referrer?.referral_count ?? 0) + 1;
-        await (admin as unknown as ProfileUpdateClient)
+        await (admin as unknown as ProfileEqUpdateClient)
           .from('profiles')
           .update({
             referral_count: newCount,
@@ -211,14 +197,8 @@ export const tripsRouter = router({
   getFull: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      // TYPE-02: get_trip_full RPC not in generated types.
-      type TripRpcClient = {
-        rpc: (
-          fn: string,
-          args: Record<string, string>
-        ) => Promise<{ data: unknown; error: { message: string } | null }>;
-      };
-      const { data, error } = await (ctx.supabase as unknown as TripRpcClient).rpc(
+      // SupabaseRpcClient from supabase-extended.types.ts — generic RPC wrapper.
+      const { data, error } = await (ctx.supabase as unknown as SupabaseRpcClient).rpc(
         'get_trip_full',
         {
           p_trip_id: input.tripId,
@@ -232,6 +212,7 @@ export const tripsRouter = router({
         });
       }
 
+      // GetTripFullResult from supabase-extended.types.ts
       const res = data as unknown as GetTripFullResult;
       if (res && typeof res === 'object' && 'error' in res) {
         throw new TRPCError({
@@ -246,14 +227,8 @@ export const tripsRouter = router({
   joinByCode: protectedProcedure
     .input(z.object({ inviteCode: z.string().min(6).max(8) }))
     .mutation(async ({ ctx, input }) => {
-      // TYPE-02: join_trip_by_code RPC not in generated types.
-      type TripRpcClient = {
-        rpc: (
-          fn: string,
-          args: Record<string, string>
-        ) => Promise<{ data: unknown; error: { message: string } | null }>;
-      };
-      const { data, error } = await (ctx.supabase as unknown as TripRpcClient).rpc(
+      // SupabaseRpcClient from supabase-extended.types.ts
+      const { data, error } = await (ctx.supabase as unknown as SupabaseRpcClient).rpc(
         'join_trip_by_code',
         {
           p_invite_code: input.inviteCode.trim().toUpperCase(),
@@ -267,6 +242,7 @@ export const tripsRouter = router({
         });
       }
 
+      // JoinTripResult from supabase-extended.types.ts
       const res = data as unknown as JoinTripResult;
       if (res?.error) {
         const errorMap: Record<string, string> = {
@@ -306,15 +282,15 @@ export const tripsRouter = router({
           // Set invited_by only if not already set (first platform join wins).
           // The referral counter fires when the joiner creates their first trip,
           // not at join time — see the create mutation.
-          // TYPE-02: invited_by_user_id added post-codegen; use local ProfileReferralUpdate.
-          type ProfileIsClient = {
+          // ProfileEqIsUpdateClient uses ProfileReferralUpdate from supabase-extended.types.ts.
+          type ProfileEqIsUpdateClient = {
             from: (t: 'profiles') => {
               update: (d: ProfileReferralUpdate) => {
                 eq: (c: string, v: string) => { is: (c: string, v: null) => Promise<unknown> };
               };
             };
           };
-          await (admin as unknown as ProfileIsClient)
+          await (admin as unknown as ProfileEqIsUpdateClient)
             .from('profiles')
             .update({ invited_by_user_id: referrerId })
             .eq('id', joinerId)
@@ -340,37 +316,25 @@ export const tripsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      // Supabase PostgREST does not support filtering on columns of embedded foreign-table
-      // selects via the JS client (e.g. `.lt('trips.created_at', cursor)` is not valid).
-      // Instead, we fetch the user's trip_member rows (capped at 200 — a user who genuinely
-      // has 200+ trips is an edge case that can be addressed with a dedicated RPC later),
-      // sort by the nested trip's created_at descending in application code, then apply
-      // the cursor filter and page slice.  For the typical user (5–20 trips) this is
-      // indistinguishable from a DB-side cursor.
-      const { data, error } = await ctx.supabase
-        .from('trip_members')
-        .select(
-          `
-          trip_id,
-          status,
-          trips:trip_id (
-            id,
-            name,
-            destination,
-            trip_start_date,
-            trip_end_date,
-            lore_status,
-            lore_json,
-            chaos_score,
-            member_count,
-            total_photos,
-            tier,
-            created_at
-          )
-        `
-        )
-        .eq('user_id', ctx.user.id)
-        .limit(200); // hard upper bound to prevent runaway queries on pathological accounts
+      // PERF: Delegate sorting, cursor filtering, and page slicing to the DB via the
+      // list_user_trips SECURITY DEFINER function (migration 2026051906_list_trips_paginated.sql).
+      // This replaces the previous pattern of fetching up to 200 trip_member rows and
+      // sorting/slicing them in application code.
+      //
+      // The function uses a single indexed scan (trip_members.user_id + trips.created_at DESC)
+      // and returns at most LEAST(p_limit, 50) rows — no JS-side sort or filter needed.
+      //
+      // ListUserTripsClient + ListUserTripsArgs from supabase-extended.types.ts.
+      const rpcArgs: ListUserTripsArgs = {
+        p_user_id: ctx.user.id,
+        p_limit: input.limit,
+        ...(input.cursor ? { p_cursor: input.cursor } : {}),
+      };
+
+      const { data, error } = await (ctx.supabase as unknown as ListUserTripsClient).rpc(
+        'list_user_trips',
+        rpcArgs
+      );
 
       if (error)
         throw new TRPCError({
@@ -378,25 +342,12 @@ export const tripsRouter = router({
           message: error.message,
         });
 
-      // Flatten, drop nulls, sort newest-first
-      const allTrips = (data || [])
-        .map(row => (row as unknown as { trips: TripSummary | null }).trips)
-        .filter((t): t is TripSummary => t !== null)
-        .sort((a, b) => {
-          const ta = a.created_at ?? '';
-          const tb = b.created_at ?? '';
-          return tb.localeCompare(ta); // descending
-        });
+      // TripSummary from supabase-extended.types.ts — cast and preserve the existing
+      // return contract so all callers remain unaffected.
+      const page = (data as unknown as TripSummary[]) ?? [];
 
-      // Apply cursor: skip all trips created at or after the cursor timestamp
-      const afterCursor = input.cursor
-        ? allTrips.filter(t => (t.created_at ?? '') < input.cursor!)
-        : allTrips;
-
-      // Page slice
-      const page = afterCursor.slice(0, input.limit);
-
-      // Next cursor = created_at of the last trip on this page (undefined if last page)
+      // Next cursor = created_at of the last trip on this page (undefined if last page).
+      // When the page is shorter than the requested limit we are on the last page.
       const nextCursor =
         page.length === input.limit ? (page[page.length - 1].created_at ?? undefined) : undefined;
 
@@ -411,6 +362,7 @@ export const tripsRouter = router({
         .select('creator_id')
         .eq('id', input.tripId)
         .single();
+      // TripCreatorRow from supabase-extended.types.ts
       const trip = tripRaw as TripCreatorRow | null;
 
       if (!trip || trip.creator_id !== ctx.user.id) {
@@ -442,21 +394,6 @@ export const tripsRouter = router({
         });
       }
 
-      // Rate limit: max 1 active lore generation per user across all their trips
-      const { count: activeJobs } = await ctx.supabase
-        .from('trips')
-        .select('id', { count: 'exact', head: true })
-        .eq('creator_id', ctx.user.id)
-        .eq('lore_status', 'processing');
-
-      if ((activeJobs || 0) > 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'You already have a trip generating lore. Wait for it to finish before starting another.',
-        });
-      }
-
       // FREEMIUM-01: First trip generation is always free — skip the monthly token cap check.
       // Count trips where lore_status = 'ready' for this user (completed generations).
       const admin = createSupabaseServiceClient();
@@ -471,19 +408,14 @@ export const tripsRouter = router({
       // REFERRAL-03: Check if user has an unclaimed referral bonus (3 successful referrals).
       // If so, this generation is free — skip the monthly token cap check.
       // The bonus is consumed (set to false) after a successful generation trigger below.
+      // ProfileTokenUsage from supabase-extended.types.ts.
       const { data: profileRefRaw } = (await admin
         .from('profiles')
         .select(
           'referral_bonus_unlocked, generation_tokens_used_this_month, generation_tokens_month'
         )
         .eq('id', ctx.user.id)
-        .single()) as unknown as {
-        data: {
-          referral_bonus_unlocked: boolean;
-          generation_tokens_used_this_month: number | null;
-          generation_tokens_month: string | null;
-        } | null;
-      };
+        .single()) as unknown as { data: ProfileTokenUsage | null };
       const referralBonusActive = profileRefRaw?.referral_bonus_unlocked === true;
 
       // COST-01: Monthly token cap per user.
@@ -512,39 +444,44 @@ export const tripsRouter = router({
         }
       }
 
-      // Atomically claim 'processing' only if not already processing — prevents double-fire race.
-      // Also set processing_started_at so the stuck-job cron can detect and reset stalled runs.
-      // TYPE-02: lore_status and processing_started_at added post-codegen; use TripStatusUpdate.
-      type TripUpdateClient = {
-        from: (t: 'trips') => {
-          update: (d: TripStatusUpdate) => {
-            eq: (
-              c: string,
-              v: string
-            ) => {
-              neq: (
-                c: string,
-                v: string
-              ) => { select: (c: string) => Promise<{ data: { id: string }[] | null }> };
-            };
-          };
-        };
-      };
-      const { data: claimed } = await (ctx.supabase as unknown as TripUpdateClient)
-        .from('trips')
-        .update({
-          lore_status: 'processing',
-          processing_started_at: new Date().toISOString(),
-        })
-        .eq('id', input.tripId)
-        .neq('lore_status', 'processing')
-        .select('id');
+      // Atomically claim the lore generation slot using a Postgres SECURITY DEFINER function.
+      // This eliminates the race condition between the cross-trip activeJobs check and the
+      // trip-level claim — both happen in a single serialized transaction with FOR UPDATE.
+      // See migration: 2026051905_atomic_lore_claim.sql
+      // SupabaseRpcClient from supabase-extended.types.ts; result narrowed below.
+      const { data: claimResultRaw, error: claimError } = await (
+        admin as unknown as SupabaseRpcClient
+      ).rpc('claim_lore_generation', { p_trip_id: input.tripId, p_user_id: ctx.user.id });
+      const claimResult = claimResultRaw as string | null;
 
-      if (!claimed || claimed.length === 0) {
+      if (claimError) {
+        logger.error(
+          { procedure: 'trips.generateLore', userId: ctx.user.id, tripId: input.tripId },
+          `claim_lore_generation RPC failed: ${claimError.message}`
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start generation',
+        });
+      }
+
+      if (claimResult === 'already_processing') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Lore generation is already running. Check back in a few minutes.',
+          message:
+            'You already have a trip generating lore. Wait for it to finish before starting another.',
         });
+      }
+
+      if (claimResult === 'forbidden') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the creator can trigger generation',
+        });
+      }
+
+      if (claimResult !== 'claimed') {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unexpected claim result' });
       }
 
       const span = langfuse.span({
@@ -572,15 +509,16 @@ export const tripsRouter = router({
 
         // REFERRAL-03: Consume the referral bonus after successful trigger.
         // Best-effort: never break generation if this fails.
+        // ProfileEqUpdateClient uses ProfileReferralUpdate from supabase-extended.types.ts.
         if (referralBonusActive) {
-          type ProfileBonusClient = {
+          type ProfileEqUpdateClient = {
             from: (t: 'profiles') => {
               update: (d: ProfileReferralUpdate) => {
                 eq: (c: string, v: string) => Promise<unknown>;
               };
             };
           };
-          await (admin as unknown as ProfileBonusClient)
+          await (admin as unknown as ProfileEqUpdateClient)
             .from('profiles')
             .update({ referral_bonus_unlocked: false })
             .eq('id', ctx.user.id);
@@ -596,14 +534,13 @@ export const tripsRouter = router({
         // within 60 seconds. Don't reset lore_status to 'pending': it stays 'processing'
         // so the generating page keeps polling and the stuck-job cron handles any crash.
         // Note: `admin` is already declared in the outer scope above (COST-01 check).
-        // TYPE-02: generation_jobs not in generated types; use local type.
-        type GenerationJobUpsert = { trip_id: string; status: string };
-        type GenJobClient = {
+        // GenerationJobUpsertClient uses GenerationJobUpsert from supabase-extended.types.ts.
+        type GenerationJobUpsertClient = {
           from: (t: 'generation_jobs') => {
             upsert: (d: GenerationJobUpsert, opts: { onConflict: string }) => Promise<unknown>;
           };
         };
-        await (admin as unknown as GenJobClient)
+        await (admin as unknown as GenerationJobUpsertClient)
           .from('generation_jobs')
           .upsert({ trip_id: input.tripId, status: 'pending' }, { onConflict: 'trip_id' });
         logger.warn(
@@ -624,14 +561,8 @@ export const tripsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // TYPE-02: submit_confession RPC not in generated types.
-      type RpcClient = {
-        rpc: (
-          fn: string,
-          args: Record<string, string>
-        ) => Promise<{ data: unknown; error: { message: string } | null }>;
-      };
-      const { data, error } = await (ctx.supabase as unknown as RpcClient).rpc(
+      // SupabaseRpcClient from supabase-extended.types.ts; ConfessionResult for return shape.
+      const { data, error } = await (ctx.supabase as unknown as SupabaseRpcClient).rpc(
         'submit_confession',
         {
           p_trip_id: input.tripId,
@@ -685,16 +616,15 @@ export const tripsRouter = router({
         });
       }
 
-      // TYPE-02: absence_reason added post-codegen; use local type override.
-      type TripMemberAbsenceUpdate = { status: string; absence_reason?: string };
-      type TripMemberUpdateClient = {
+      // TripMemberAbsenceUpdateClient uses TripMemberAbsenceUpdate from supabase-extended.types.ts.
+      type TripMemberAbsenceUpdateClient = {
         from: (t: 'trip_members') => {
           update: (d: TripMemberAbsenceUpdate) => {
             eq: (c: string, v: string) => { eq: (c: string, v: string) => Promise<unknown> };
           };
         };
       };
-      await (ctx.supabase as unknown as TripMemberUpdateClient)
+      await (ctx.supabase as unknown as TripMemberAbsenceUpdateClient)
         .from('trip_members')
         .update({
           status: 'absent',
@@ -707,14 +637,14 @@ export const tripsRouter = router({
       // background_jobs.trip_id is NOT NULL so we use input.tripId.
       // payload carries absent_user_id so the worker's generate_missing_person() call has it.
       // Using service client because background_jobs has service-role-only RLS (Phase 1).
+      // BackgroundJobInsertClient uses BackgroundJobInsert from supabase-extended.types.ts.
       const admin = createSupabaseServiceClient();
-      // TYPE-02: BackgroundJobInsert is a local type — background_jobs added post-codegen.
-      type BackgroundJobClient = {
+      type BackgroundJobInsertClient = {
         from: (t: 'background_jobs') => {
           insert: (d: BackgroundJobInsert) => Promise<{ error: { message: string } | null }>;
         };
       };
-      const { error: jobError } = await (admin as unknown as BackgroundJobClient)
+      const { error: jobError } = await (admin as unknown as BackgroundJobInsertClient)
         .from('background_jobs')
         .insert({
           trip_id: input.tripId,
@@ -758,16 +688,16 @@ export const tripsRouter = router({
         return { reset: false, reason: 'not_processing' as const };
       }
 
+      // TripStatusResetClient uses TripStatusUpdate from supabase-extended.types.ts.
       const admin = createSupabaseServiceClient();
-      // TYPE-02: lore_status and processing_started_at added post-codegen.
-      type TripResetClient = {
+      type TripStatusResetClient = {
         from: (t: 'trips') => {
           update: (d: TripStatusUpdate) => {
             eq: (c: string, v: string) => { eq: (c: string, v: string) => Promise<unknown> };
           };
         };
       };
-      await (admin as unknown as TripResetClient)
+      await (admin as unknown as TripStatusResetClient)
         .from('trips')
         .update({ lore_status: 'failed', processing_started_at: null })
         .eq('id', input.tripId)
@@ -780,60 +710,86 @@ export const tripsRouter = router({
     .input(
       z.object({
         tripId: z.string().uuid(),
+        // tier is still accepted so the client can hint what it expected, but the actual
+        // tier is authoritative from the webhook write — we never trust client input for this.
         tier: z.enum(['digital', 'print']),
         paymentId: z.string(),
-        orderId: z.string(),
-        signature: z.string(),
+        // orderId and signature are intentionally removed: the webhook is the sole source of
+        // truth for payment confirmation. Accepting a client-provided signature here created a
+        // race condition (client could call before webhook) and a false sense of security
+        // (signature only proves the order exists, not that money settled).
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Ownership + idempotency check BEFORE touching the payment signature —
-      // prevents replaying a valid signature from trip A against trip B.
-      const { data: tripRawUpgrade } = await ctx.supabase
+      // Ownership check — prevents one user from polling another user's payment status.
+      // TripUpgradeRow from supabase-extended.types.ts; extended with webhook_payment_id column.
+      type TripUpgradeWithWebhook = TripUpgradeRow & { webhook_payment_id: string | null };
+      type TripWebhookSelectClient = {
+        from: (t: 'trips') => {
+          select: (cols: string) => {
+            eq: (
+              c: string,
+              v: string
+            ) => {
+              single: () => Promise<{ data: TripUpgradeWithWebhook | null }>;
+            };
+          };
+        };
+      };
+      const admin = createSupabaseServiceClient();
+      const { data: tripRow } = await (admin as unknown as TripWebhookSelectClient)
         .from('trips')
-        .select('creator_id, tier')
+        .select('creator_id, tier, webhook_payment_id')
         .eq('id', input.tripId)
         .single();
-      const trip = tripRawUpgrade as TripUpgradeRow | null;
+
+      const trip = tripRow as TripUpgradeWithWebhook | null;
       if (!trip || trip.creator_id !== ctx.user.id) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorised for this trip' });
       }
+
+      // If the trip is already upgraded (any non-free tier), return success idempotently.
+      // This handles the case where the webhook fired before the client called this mutation.
       if (trip.tier !== 'free') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Trip already upgraded' });
+        return { success: true, alreadyUpgraded: true };
       }
 
-      // Verify Razorpay signature
-      const expectedSig = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-        .update(input.orderId + '|' + input.paymentId)
-        .digest('hex');
-      if (expectedSig !== input.signature) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Payment signature invalid' });
+      // webhook_payment_id is stamped by the webhook handler (route.ts) when Razorpay confirms
+      // the payment. If it is not set, the webhook has not fired yet — the payment is pending.
+      // The client should poll this mutation or wait for a real-time DB subscription update.
+      if (!trip.webhook_payment_id) {
+        // Payment pending — webhook hasn't confirmed yet. Return a typed pending state so the
+        // client can show a "confirming payment…" UI rather than a hard error.
+        return { success: false, pending: true } as const;
       }
 
-      // payment_id / expires_at may not yet be in generated types — use service role for update
-      // TYPE-02: payment_id and expires_at added post-codegen.
-      type TripPaymentUpdate = { tier: string; payment_id: string; expires_at: null };
-      type TripPaymentClient = {
+      // Webhook has confirmed: webhook_payment_id is set, meaning Razorpay's authoritative
+      // signal (payment.captured or subscription.charged) already wrote the upgrade.
+      // The tier on this row should already be non-free, but guard defensively.
+      // If for some reason the tier wasn't updated (e.g. a partial DB failure on the webhook
+      // path), we can complete the upgrade now using the webhook_payment_id as proof.
+      // TripPaymentUpdateClient uses TripPaymentUpdate from supabase-extended.types.ts.
+      type TripPaymentUpdateClient = {
         from: (t: 'trips') => {
           update: (d: TripPaymentUpdate) => {
             eq: (
               c: string,
               v: string
-            ) => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> };
+            ) => {
+              eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
+            };
           };
         };
       };
-      const admin = createSupabaseServiceClient();
-      const { error } = await (admin as unknown as TripPaymentClient)
+      const { error } = await (admin as unknown as TripPaymentUpdateClient)
         .from('trips')
-        .update({ tier: input.tier, payment_id: input.paymentId, expires_at: null })
+        .update({ tier: input.tier, payment_id: trip.webhook_payment_id, expires_at: null })
         .eq('id', input.tripId)
         .eq('creator_id', ctx.user.id);
 
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
 
-      return { success: true };
+      return { success: true, alreadyUpgraded: false };
     }),
 
   // REFERRAL-01: Capture referral linkage when a new user arrives via ?ref=USERNAME.
@@ -864,8 +820,8 @@ export const tripsRouter = router({
       }
 
       // Idempotent update: only set invited_by_user_id if not already set (first join wins).
-      // TYPE-02: ProfileReferralUpdate is a local type — columns added post-codegen.
-      type ProfileIsClient = {
+      // ProfileEqIsUpdateClient uses ProfileReferralUpdate from supabase-extended.types.ts.
+      type ProfileEqIsUpdateClient = {
         from: (t: 'profiles') => {
           update: (d: ProfileReferralUpdate) => {
             eq: (
@@ -875,7 +831,7 @@ export const tripsRouter = router({
           };
         };
       };
-      const { error } = (await (admin as unknown as ProfileIsClient)
+      const { error } = (await (admin as unknown as ProfileEqIsUpdateClient)
         .from('profiles')
         .update({ invited_by_user_id: referrerProfile.id })
         .eq('id', joinerId)
@@ -939,9 +895,8 @@ export const tripsRouter = router({
         });
       }
 
-      // TYPE-02: story_visible added post-codegen; use local type override.
-      type StoryVisibilityUpdate = { story_visible: boolean };
-      type StoryVisibilityClient = {
+      // StoryVisibilityUpdateClient uses StoryVisibilityUpdate from supabase-extended.types.ts.
+      type StoryVisibilityUpdateClient = {
         from: (t: 'trips') => {
           update: (d: StoryVisibilityUpdate) => {
             eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
@@ -949,7 +904,7 @@ export const tripsRouter = router({
         };
       };
       const adminVis = createSupabaseServiceClient();
-      const { error: visError } = await (adminVis as unknown as StoryVisibilityClient)
+      const { error: visError } = await (adminVis as unknown as StoryVisibilityUpdateClient)
         .from('trips')
         .update({ story_visible: input.visible })
         .eq('id', input.tripId);
@@ -961,10 +916,33 @@ export const tripsRouter = router({
     }),
 
   getChaosDistribution: protectedProcedure.query(async ({ ctx }) => {
-    // PERF-03: return cached distribution if within 10-minute TTL.
-    const cached = chaosDistCache.get('global');
-    if (cached && Date.now() < cached.expiry) {
-      return cached.data;
+    // PERF-03: check Redis cache first (shared across all Vercel instances).
+    // Falls back to the module-level in-memory Map only in dev when Redis is absent.
+    if (chaosCacheRedis) {
+      try {
+        const cached = await chaosCacheRedis.get<ChaosDist | null>(CHAOS_REDIS_KEY);
+        // Redis.get returns null on cache miss; any other value means a cache hit.
+        // The sentinel string 'null' is used to cache the "not enough data" result.
+        if (cached !== null) {
+          // 'null' sentinel → not enough trips yet; return null to callers.
+          return (cached as unknown) === 'null' ? null : (cached as ChaosDist);
+        }
+        // Cache miss — fall through to DB query below.
+      } catch (redisErr) {
+        // Redis read failure — log and fall through to recompute from DB.
+        // In production we never silently fall back to in-memory (each instance
+        // would recompute independently, defeating the purpose of the cache).
+        logger.warn(
+          { procedure: 'trips.getChaosDistribution' },
+          `Redis GET failed, recomputing from DB: ${(redisErr as Error).message}`
+        );
+      }
+    } else {
+      // Development-only in-memory fallback (Redis not configured).
+      const memCached = _chaosDistMemCache.get('global');
+      if (memCached && Date.now() < memCached.expiry) {
+        return memCached.data;
+      }
     }
 
     // PERF-03 / SCALABILITY: query chaos_distribution_cache materialized view instead of
@@ -975,23 +953,22 @@ export const tripsRouter = router({
     // We use it for the global percentile distribution (p50/p75/p90) which is intentionally
     // anonymous — it tells a user where their trip ranks among all trips on the platform.
     // No trip names or user IDs are exposed; chaos_score alone is returned.
-    // TYPE-02: chaos_distribution_cache not in generated types; use local cast.
-    type CacheRow = { chaos_score: number };
+    // ChaosDistributionRow from supabase-extended.types.ts covers the materialized view row shape.
     const { data: viewData, error: viewError } = await createSupabaseServiceClient()
       .from('chaos_distribution_cache' as never)
       .select('chaos_score');
 
     // If the view doesn't exist yet (pre-migration deployment), fall back to direct query.
-    const rawData: CacheRow[] =
+    const rawData: ChaosDistributionRow[] =
       !viewError && viewData
-        ? (viewData as unknown as CacheRow[])
+        ? (viewData as unknown as ChaosDistributionRow[])
         : await (async () => {
             const { data: fallback } = await ctx.supabase
               .from('trips')
               .select('chaos_score')
               .eq('lore_status', 'ready')
               .not('chaos_score', 'is', null);
-            return (fallback || []) as CacheRow[];
+            return (fallback || []) as ChaosDistributionRow[];
           })();
 
     const scores = rawData
@@ -999,18 +976,43 @@ export const tripsRouter = router({
       .filter((s): s is number => s != null && s > 0)
       .sort((a, b) => a - b);
 
+    // PERF-03: persist computed result with TTL.
     if (scores.length < 10) {
-      // Cache the null result too to avoid hammering the DB on new installs
-      chaosDistCache.set('global', { data: null, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
+      // Cache the null result too (as the sentinel string 'null') to avoid
+      // hammering the DB on new installs where there aren't enough trips yet.
+      if (chaosCacheRedis) {
+        try {
+          await chaosCacheRedis.set(CHAOS_REDIS_KEY, 'null', { ex: CHAOS_CACHE_TTL_S });
+        } catch (e) {
+          logger.warn(
+            { procedure: 'trips.getChaosDistribution' },
+            `Redis SET failed: ${(e as Error).message}`
+          );
+        }
+      } else {
+        _chaosDistMemCache.set('global', { data: null, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
+      }
       return null;
     }
 
     const at = (pct: number) =>
       scores[Math.min(Math.floor((scores.length * pct) / 100), scores.length - 1)];
-    const result = { p50: at(50), p75: at(75), p90: at(90), total: scores.length };
+    const result: ChaosDist = { p50: at(50), p75: at(75), p90: at(90), total: scores.length };
 
-    // PERF-03: persist computed result with TTL.
-    chaosDistCache.set('global', { data: result, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
+    if (chaosCacheRedis) {
+      try {
+        await chaosCacheRedis.set(CHAOS_REDIS_KEY, JSON.stringify(result), {
+          ex: CHAOS_CACHE_TTL_S,
+        });
+      } catch (e) {
+        logger.warn(
+          { procedure: 'trips.getChaosDistribution' },
+          `Redis SET failed: ${(e as Error).message}`
+        );
+      }
+    } else {
+      _chaosDistMemCache.set('global', { data: result, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
+    }
 
     return result;
   }),
@@ -1062,14 +1064,8 @@ export const tripsRouter = router({
   // Returns photos from trips taken around the same time in prior years.
   // Delegates to the get_nostalgia_moments RPC (defined in 005_photo_embeddings.sql).
   getNostalgiaFeed: protectedProcedure.query(async ({ ctx }) => {
-    // TYPE-02: get_nostalgia_moments RPC not in generated types (added post-codegen).
-    type NostalgiaRpcClient = {
-      rpc: (
-        fn: string,
-        args: Record<string, unknown>
-      ) => Promise<{ data: unknown; error: { message: string } | null }>;
-    };
-    const { data, error } = await (ctx.supabase as unknown as NostalgiaRpcClient).rpc(
+    // SupabaseRpcClient from supabase-extended.types.ts; NostalgiaRow for result shape.
+    const { data, error } = await (ctx.supabase as unknown as SupabaseRpcClient).rpc(
       'get_nostalgia_moments',
       {
         p_user_id: ctx.user.id,
@@ -1084,19 +1080,8 @@ export const tripsRouter = router({
       );
       return [];
     }
-    const rows =
-      (data as unknown as Array<{
-        photo_id: string;
-        trip_id: string;
-        trip_name: string;
-        trip_year: number;
-        destination: string | null;
-        storage_path: string;
-        thumbnail_path: string | null;
-        chaos_score: number | null;
-        years_ago: number;
-        lore_tagline: string | null;
-      }> | null) ?? [];
+    // NostalgiaRow from supabase-extended.types.ts
+    const rows = (data as unknown as NostalgiaRow[] | null) ?? [];
     if (rows.length === 0) return [];
 
     // Generate signed URLs so thumbnails render client-side
@@ -1137,14 +1122,9 @@ export const tripsRouter = router({
       // Find visually similar photos (RPC filters to trips the user is a member of).
       // We use the service client here so we also discover public trips outside the
       // user's membership — the RLS bypass is intentional for this discovery surface.
-      type SimilarRpcClient = {
-        rpc: (
-          fn: string,
-          args: Record<string, unknown>
-        ) => Promise<{ data: unknown; error: { message: string } | null }>;
-      };
+      // SupabaseRpcClient from supabase-extended.types.ts.
       const { data: similarPhotos, error: rpcError } = await (
-        adminSupabase as unknown as SimilarRpcClient
+        adminSupabase as unknown as SupabaseRpcClient
       ).rpc('find_similar_photos', {
         p_photo_id: photos[0].id,
         p_user_id: ctx.user.id,
@@ -1159,17 +1139,8 @@ export const tripsRouter = router({
         return [];
       }
 
-      const rows =
-        (similarPhotos as unknown as Array<{
-          photo_id: string;
-          trip_id: string;
-          trip_name: string;
-          storage_path: string;
-          thumbnail_path: string | null;
-          similarity: number;
-          trip_year: number;
-          destination: string | null;
-        }> | null) ?? [];
+      // SimilarPhotoRow from supabase-extended.types.ts
+      const rows = (similarPhotos as unknown as SimilarPhotoRow[] | null) ?? [];
 
       // Deduplicate by trip_id, exclude the source trip
       const seen = new Set<string>([input.tripId]);
@@ -1260,20 +1231,15 @@ export const tripsRouter = router({
         });
       }
 
-      // Upsert a 'processing' row so the page can poll
-      // TYPE-02: yearly_wraps not in generated types; use local type.
-      type YearlyWrapUpsert = {
-        user_id: string;
-        year: number;
-        trip_ids: string[];
-        status: string;
-      };
-      type YearlyWrapClient = {
+      // Upsert a 'processing' row so the page can poll.
+      // YearlyWrapUpsertClient uses YearlyWrapUpsert from supabase-extended.types.ts —
+      // the generated Insert type is missing the trip_ids (text[]) column.
+      type YearlyWrapUpsertClient = {
         from: (t: 'yearly_wraps') => {
           upsert: (d: YearlyWrapUpsert, opts: { onConflict: string }) => Promise<unknown>;
         };
       };
-      await (admin as unknown as YearlyWrapClient).from('yearly_wraps').upsert(
+      await (admin as unknown as YearlyWrapUpsertClient).from('yearly_wraps').upsert(
         {
           user_id: ctx.user.id,
           year: input.year,
@@ -1316,16 +1282,9 @@ export const tripsRouter = router({
   getYearlyWrap: protectedProcedure
     .input(z.object({ year: z.number().int().min(2020).max(2030) }))
     .query(async ({ ctx, input }) => {
+      // YearlyWrapSelectClient uses YearlyWrapRow from supabase-extended.types.ts —
+      // trip_ids column is missing from the generated Row type.
       const admin = createSupabaseServiceClient();
-      // TYPE-02: yearly_wraps not in generated types.
-      type YearlyWrapRow = {
-        user_id: string;
-        year: number;
-        trip_ids: string[];
-        wrap_json: unknown;
-        status: string;
-        created_at?: string | null;
-      };
       type YearlyWrapSelectClient = {
         from: (t: 'yearly_wraps') => {
           select: (c: string) => {

@@ -42,13 +42,21 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
-            await upgradeTier.mutateAsync({
+            // orderId and signature are no longer sent — the webhook is the sole
+            // authoritative source of payment confirmation. This call verifies that
+            // the webhook has already fired (webhook_payment_id is set on the trip).
+            const result = await upgradeTier.mutateAsync({
               tripId,
               tier: 'digital',
               paymentId: response.razorpay_payment_id,
-              orderId: response.razorpay_order_id,
-              signature: response.razorpay_signature,
             });
+            if ('pending' in result && result.pending) {
+              // Webhook hasn't fired yet — show a brief confirmation message
+              setError(
+                'Payment received — confirming with Razorpay. This takes a few seconds; refresh in a moment.'
+              );
+              return;
+            }
             router.push('/trips');
           } catch (err) {
             console.error('[upgrade] annual activation failed:', err);
@@ -96,13 +104,18 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
-            await upgradeTier.mutateAsync({
+            // Webhook-first: the tRPC call verifies webhook_payment_id is set, not the signature
+            const result = await upgradeTier.mutateAsync({
               tripId,
               tier: 'digital',
               paymentId: response.razorpay_payment_id,
-              orderId: response.razorpay_order_id,
-              signature: response.razorpay_signature,
             });
+            if ('pending' in result && result.pending) {
+              setError(
+                'Payment received — confirming with Razorpay. This takes a few seconds; refresh in a moment.'
+              );
+              return;
+            }
             router.push(`/trips/${tripId}`);
           } catch (err) {
             console.error('[upgrade] tier update failed:', err);
@@ -143,15 +156,19 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
-            // Subscription: upgrade the current trip to digital as part of activation,
-            // then redirect to trips home so the user can start generating immediately.
-            await upgradeTier.mutateAsync({
+            // Subscription: verify webhook has confirmed, then redirect to trips home.
+            // Webhook-first: orderId and signature are no longer sent to the tRPC mutation.
+            const result = await upgradeTier.mutateAsync({
               tripId,
               tier: 'digital',
               paymentId: response.razorpay_payment_id,
-              orderId: response.razorpay_order_id,
-              signature: response.razorpay_signature,
             });
+            if ('pending' in result && result.pending) {
+              setError(
+                'Payment received — confirming with Razorpay. This takes a few seconds; refresh in a moment.'
+              );
+              return;
+            }
             router.push('/trips');
           } catch (err) {
             console.error('[upgrade] subscription activation failed:', err);
@@ -207,7 +224,7 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
           </div>
         )}
 
-        <header className="pt-6 pb-12 text-center space-y-3">
+        <header className="pt-6 pb-10 text-center space-y-3">
           <p
             className="font-mono text-[8px] uppercase tracking-[0.5em]"
             style={{ color: 'rgba(255,77,77,0.45)' }}
@@ -227,30 +244,16 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
           </p>
         </header>
 
-        <div className="space-y-4">
-          {/* MONETIZATION-03: Annual subscription — best overall value */}
-          <Plan
-            name="Yaarlore+ Annual"
-            price="₹799/yr"
-            badge="Best Value"
-            subtext="Save ₹390 vs monthly"
-            valueNote="≈ ₹133/person for 6 friends"
-            features={[
-              'Everything in Monthly — for a full year',
-              'Unlimited lore generations',
-              'All trips permanently archived',
-              'No watermarks — ever',
-              'Anniversary drops + nostalgia emails',
-              'Battle challenges enabled',
-            ]}
-            onClick={payAnnual}
-            featured
-          />
+        {/* What you get — shown above plans to anchor value */}
+        <WhatYouGet />
 
-          {/* MONETIZATION-02: Monthly subscription */}
+        <div className="mt-8 space-y-4">
+          {/* MONETIZATION-02: Monthly — PRIMARY / MOST POPULAR */}
           <Plan
             name="Yaarlore+ Monthly"
             price="₹99/mo"
+            badge="Most Popular"
+            badgeStyle="popular"
             subtext="Unlimited trips for your whole friend group"
             valueNote="₹17/person for 6 friends"
             features={[
@@ -261,24 +264,48 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
               'Battle challenges enabled',
             ]}
             onClick={paySubscription}
+            featured
           />
 
-          {/* Divider with "or pay per trip" label */}
+          {/* MONETIZATION-03: Annual — BEST VALUE */}
+          <Plan
+            name="Yaarlore+ Annual"
+            price="₹799/yr"
+            badge="Best Value"
+            badgeStyle="value"
+            subtext="Save ₹389 vs monthly · billed once a year"
+            valueNote="≈ ₹67/mo · ₹133/person for 6 friends"
+            features={[
+              'Everything in Monthly — for a full year',
+              'Unlimited lore generations',
+              'All trips permanently archived',
+              'No watermarks — ever',
+              'Anniversary drops + nostalgia emails',
+              'Battle challenges enabled',
+            ]}
+            onClick={payAnnual}
+          />
+
+          {/* Comparison table */}
+          <ComparisonTable />
+
+          {/* Divider */}
           <div className="flex items-center gap-3 py-1">
             <div className="flex-1 h-px" style={{ background: 'rgba(245,240,232,0.06)' }} />
             <p
               className="font-mono text-[8px] uppercase tracking-[0.4em] whitespace-nowrap"
               style={{ color: 'rgba(245,240,232,0.18)' }}
             >
-              or pay per trip
+              just this trip
             </p>
             <div className="flex-1 h-px" style={{ background: 'rgba(245,240,232,0.06)' }} />
           </div>
 
+          {/* One-time — demoted, secondary */}
           <Plan
             name="Digital"
             price="₹399"
-            subtext="One-time, this trip only"
+            subtext="One-time · this trip only · no subscription"
             features={[
               'Unlimited members + photos',
               'No watermark on share card',
@@ -288,6 +315,7 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
             ]}
             onClick={payDigital}
           />
+
           <Plan
             name="Printed book"
             price="₹799"
@@ -306,6 +334,162 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
   );
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// What you get — anchors value before the pricing cards
+// ────────────────────────────────────────────────────────────────────────────
+function WhatYouGet() {
+  const perks = [
+    'AI lore for all your trips',
+    'Character roles for every member',
+    'Trip battles',
+    'Yearly Wrap',
+    'Public story sharing',
+    'Cancel anytime',
+  ];
+  return (
+    <div
+      className="rounded-2xl px-6 py-5 space-y-3"
+      style={{ background: 'rgba(245,240,232,0.02)', border: '1px solid rgba(245,240,232,0.05)' }}
+    >
+      <p
+        className="font-mono text-[8px] uppercase tracking-[0.45em] mb-4"
+        style={{ color: 'rgba(255,77,77,0.4)' }}
+      >
+        Subscribers get
+      </p>
+      <ul className="space-y-2.5">
+        {perks.map((perk, i) => (
+          <li
+            key={i}
+            className="flex items-center gap-3 font-mono text-[10px]"
+            style={{ color: 'rgba(245,240,232,0.5)' }}
+          >
+            <span style={{ color: 'rgba(45,158,139,0.8)' }}>✓</span>
+            {perk}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Comparison table
+// ────────────────────────────────────────────────────────────────────────────
+function ComparisonTable() {
+  type Tier = 'Free' | 'Monthly' | 'Annual' | 'One-time';
+  const rows: { label: string; values: Record<Tier, string | boolean> }[] = [
+    {
+      label: 'AI lore',
+      values: { Free: '1 trip', Monthly: true, Annual: true, 'One-time': '1 trip' },
+    },
+    {
+      label: 'Archived trips',
+      values: { Free: false, Monthly: true, Annual: true, 'One-time': '1 trip' },
+    },
+    {
+      label: 'No watermark',
+      values: { Free: false, Monthly: true, Annual: true, 'One-time': true },
+    },
+    {
+      label: 'Battle challenges',
+      values: { Free: false, Monthly: true, Annual: true, 'One-time': false },
+    },
+    {
+      label: 'Yearly Wrap',
+      values: { Free: false, Monthly: true, Annual: true, 'One-time': false },
+    },
+    {
+      label: 'Character roles',
+      values: { Free: false, Monthly: true, Annual: true, 'One-time': false },
+    },
+    {
+      label: 'Anniversary drops',
+      values: { Free: false, Monthly: true, Annual: true, 'One-time': true },
+    },
+    {
+      label: 'Price',
+      values: { Free: '₹0', Monthly: '₹99/mo', Annual: '₹799/yr', 'One-time': '₹399' },
+    },
+  ];
+
+  const tiers: Tier[] = ['Free', 'Monthly', 'Annual', 'One-time'];
+  const highlightCol = (t: Tier) => t === 'Monthly';
+
+  const renderCell = (val: string | boolean, col: Tier) => {
+    const hi = highlightCol(col);
+    if (val === true)
+      return <span style={{ color: hi ? 'rgba(255,77,77,0.9)' : 'rgba(45,158,139,0.7)' }}>✓</span>;
+    if (val === false) return <span style={{ color: 'rgba(245,240,232,0.12)' }}>—</span>;
+    return (
+      <span style={{ color: hi ? 'rgba(255,77,77,0.9)' : 'rgba(245,240,232,0.35)' }}>{val}</span>
+    );
+  };
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ border: '1px solid rgba(245,240,232,0.06)' }}
+    >
+      {/* Header */}
+      <div className="grid grid-cols-5 text-center">
+        <div className="py-3 px-2" />
+        {tiers.map(t => (
+          <div
+            key={t}
+            className="py-3 px-1"
+            style={{
+              background: highlightCol(t) ? 'rgba(255,77,77,0.08)' : 'rgba(245,240,232,0.015)',
+              borderLeft: '1px solid rgba(245,240,232,0.05)',
+            }}
+          >
+            <p
+              className="font-mono text-[7px] uppercase tracking-[0.3em] leading-tight"
+              style={{ color: highlightCol(t) ? 'rgba(255,77,77,0.7)' : 'rgba(245,240,232,0.25)' }}
+            >
+              {t}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Rows */}
+      {rows.map((row, ri) => (
+        <div
+          key={ri}
+          className="grid grid-cols-5 text-center"
+          style={{
+            borderTop: '1px solid rgba(245,240,232,0.04)',
+            background: ri % 2 === 0 ? 'rgba(245,240,232,0.01)' : 'transparent',
+          }}
+        >
+          <div
+            className="py-3 px-3 text-left font-mono text-[8px] leading-tight"
+            style={{ color: 'rgba(245,240,232,0.3)' }}
+          >
+            {row.label}
+          </div>
+          {tiers.map(t => (
+            <div
+              key={t}
+              className="py-3 px-1 flex items-center justify-center font-mono text-[8px]"
+              style={{
+                background: highlightCol(t) ? 'rgba(255,77,77,0.04)' : 'transparent',
+                borderLeft: '1px solid rgba(245,240,232,0.04)',
+              }}
+            >
+              {renderCell(row.values[t], t)}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Plan card
+// ────────────────────────────────────────────────────────────────────────────
 function Plan({
   name,
   price,
@@ -313,6 +497,7 @@ function Plan({
   onClick,
   featured,
   badge,
+  badgeStyle,
   subtext,
   valueNote,
 }: {
@@ -322,9 +507,20 @@ function Plan({
   onClick: () => void;
   featured?: boolean;
   badge?: string;
+  badgeStyle?: 'popular' | 'value';
   subtext?: string;
   valueNote?: string;
 }) {
+  // Popular badge uses the accent red; Value badge uses the green/teal
+  const badgeColor =
+    badgeStyle === 'value'
+      ? {
+          bg: 'rgba(45,158,139,0.12)',
+          text: 'rgba(45,158,139,0.8)',
+          border: 'rgba(45,158,139,0.2)',
+        }
+      : { bg: 'rgba(255,77,77,0.15)', text: 'rgba(255,77,77,0.7)', border: 'rgba(255,77,77,0.2)' };
+
   return (
     <div
       className="relative overflow-hidden rounded-[2rem] p-7 transition-all duration-500 cursor-pointer"
@@ -346,16 +542,16 @@ function Plan({
           : 'none';
       }}
     >
-      {(badge ?? featured) && (
+      {badge && (
         <div
           className="absolute top-5 right-5 font-mono text-[7px] uppercase tracking-[0.4em] px-3 py-1 rounded-full"
           style={{
-            background: 'rgba(255,77,77,0.15)',
-            color: 'rgba(255,77,77,0.7)',
-            border: '1px solid rgba(255,77,77,0.2)',
+            background: badgeColor.bg,
+            color: badgeColor.text,
+            border: `1px solid ${badgeColor.border}`,
           }}
         >
-          {badge ?? 'Best for Lore'}
+          {badge}
         </div>
       )}
 

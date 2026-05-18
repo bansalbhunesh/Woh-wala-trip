@@ -23,26 +23,56 @@ from .validators import validate_lore_json, scan_forbidden_phrases
 def sanitize_for_prompt(value: str, max_length: int = 200) -> str:
     """Strip prompt injection attempts from user-supplied strings.
 
-    Applies four layers of defense:
+    Applies six layers of defense:
     1. Truncation to max_length.
-    2. XML/HTML tag stripping — prevents tag-based injection.
-    3. Instruction-like keyword removal — removes "ignore/override/system prompt" patterns.
-    4. Newline collapse — newlines can break prompt structure and introduce injected turns.
+    2. Unicode normalization — converts lookalike characters to ASCII equivalents.
+    3. XML/HTML tag stripping — prevents tag-based injection.
+    4. Instruction keyword removal — covers exact, spaced, and hyphenated variants.
+    5. Base64 detection — removes embedded base64 strings (common injection vector).
+    6. Newline/carriage return collapse — prevents injected prompt turns.
     """
     if not value:
         return ""
-    # 1. Truncate
+
+    # 1. Truncate before any processing to limit attack surface
     value = value[:max_length]
-    # 2. Remove XML/HTML tags that could escape prompt delimiters
+
+    # 2. Unicode normalization: NFKC maps lookalike codepoints to canonical ASCII.
+    #    Covers: ı→i (Turkish dotless i), ᴏ→o (small caps), ℐ→I, etc.
+    import unicodedata
+    value = unicodedata.normalize("NFKC", value)
+
+    # 3. Remove XML/HTML tags (including nested and malformed variants)
     value = re.sub(r'<\s*/?[a-zA-Z][^>]*>', '[removed]', value)
-    # 3. Remove instruction-like override patterns (case-insensitive)
-    value = re.sub(
-        r'(?i)\b(ignore|disregard|forget|override|system\s*prompt|jailbreak|bypass)\b',
-        '[removed]',
-        value,
-    )
-    # 4. Collapse newlines — these can inject new prompt "turns"
-    value = value.replace('\n', ' ').replace('\r', ' ')
+    # Also remove CDATA sections and processing instructions
+    value = re.sub(r'<!\[CDATA\[.*?\]\]>', '[removed]', value, flags=re.DOTALL)
+
+    # 4. Instruction keyword removal.
+    #    Covers: exact ("ignore"), spaced ("i g n o r e"), hyphenated ("i-g-n-o-r-e").
+    #    The separator-variant pattern allows any non-alpha character between letters.
+    _INJECTION_KEYWORDS = [
+        "ignore", "disregard", "forget", "override", "bypass", "jailbreak",
+        "system prompt", "systemprompt", "developer mode", "devmode",
+        "do anything now", "dan", "act as", "pretend", "roleplay",
+        "you are now", "new instructions", "initial instructions",
+    ]
+    for kw in _INJECTION_KEYWORDS:
+        # Exact word boundary match (case-insensitive)
+        value = re.sub(rf'(?i)\b{re.escape(kw)}\b', '[removed]', value)
+        # Separator injection: letters of keyword separated by non-alpha chars (e.g. "i-g-n-o-r-e")
+        if len(kw) > 3 and " " not in kw:
+            spaced_pattern = r'[^a-zA-Z0-9]?'.join(re.escape(c) for c in kw)
+            value = re.sub(rf'(?i){spaced_pattern}', '[removed]', value)
+
+    # 5. Base64 detection — remove long base64-looking strings (potential encoded instructions)
+    #    Base64 strings are 20+ chars of [A-Za-z0-9+/=]
+    value = re.sub(r'[A-Za-z0-9+/]{20,}={0,2}', '[removed]', value)
+
+    # 6. Collapse all whitespace variants that could break prompt structure
+    value = value.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    # Collapse multiple spaces into one
+    value = re.sub(r'  +', ' ', value)
+
     return value.strip()
 
 log = logging.getLogger("wwt.lore")
@@ -292,7 +322,7 @@ class LoreOrchestrator:
             self._current_step = "lore"
             confessions = self._get_confessions(trip_id)
             lore = await self._generate_lore_with_retry(trip, aggregated, confessions, low_confidence=low_confidence)
-            lore, eval_result = await self._quality_gate(trip, aggregated, confessions, lore, low_confidence=low_confidence)
+            lore, eval_result, retry_meta = await self._quality_gate(trip, aggregated, confessions, lore, low_confidence=low_confidence)
             self._update_pipeline_state(trip_id, "lore", "done")
 
             # Steps 5-7: parallel enrichment
@@ -367,6 +397,7 @@ class LoreOrchestrator:
                     "step_durations": step_durations,
                 },
                 "lore_eval_json": eval_result,
+                "lore_prompt_version": prompts.PROMPT_VERSION,
                 # overall=None means the evaluator itself crashed — don't flag for review,
                 # since we have no signal to act on.  Only flag when a real score is low.
                 "lore_needs_review": (
@@ -376,11 +407,17 @@ class LoreOrchestrator:
             }
             if total_tokens > 0:
                 update_payload["generation_cost_tokens"] = total_tokens
+            # Merge retry metadata if a quality retry fired — empty dict is a no-op
+            update_payload.update(retry_meta)
             supabase.table("trips").update(update_payload).eq("id", trip_id).execute()
             log.info(
                 f"[{trip_id}][{trace_id}] pipeline complete — tokens={total_tokens} "
-                f"by_step={self._step_tokens} durations={step_durations}"
+                f"by_step={self._step_tokens} durations={step_durations} "
+                f"prompt_version={prompts.PROMPT_VERSION}"
             )
+
+            # Notify trip creator by email — non-blocking, never crashes the pipeline
+            self._notify_lore_ready(trip_id)
 
             # Phase 2: durable image generation job (no fire-and-forget asyncio.create_task)
             self._enqueue_image_job(trip_id, trace_id)
@@ -401,6 +438,41 @@ class LoreOrchestrator:
                 },
             }).eq("id", trip_id).execute()
             raise
+
+    # -------------------------------------------------------------------------
+    # Lore-ready notification — fires after status is written to Supabase
+    # -------------------------------------------------------------------------
+
+    def _notify_lore_ready(self, trip_id: str) -> None:
+        """POST to Next.js /api/notify/lore-ready so the trip creator gets an email.
+
+        Completely non-blocking and non-fatal — any exception is swallowed and
+        logged so it never affects the lore pipeline result.
+        """
+        from src.config import settings
+        import urllib.request
+
+        base_url = settings.NEXTJS_BASE_URL.rstrip("/")
+        if not base_url:
+            log.debug(f"[{trip_id}] NEXTJS_BASE_URL not set — skipping lore-ready notification")
+            return
+
+        try:
+            payload = f'{{"trip_id":"{trip_id}"}}'.encode()
+            url = f"{base_url}/api/notify/lore-ready"
+            http_req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.AI_WORKER_SECRET}",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(http_req, timeout=10) as resp:
+                log.info(f"[{trip_id}] lore-ready notification sent — status={resp.status}")
+        except Exception as exc:
+            log.warning(f"[{trip_id}] lore-ready notification failed (non-fatal): {exc}")
 
     # -------------------------------------------------------------------------
     # Phase 1 / OBS-02: Pipeline state tracking with per-step timestamps
@@ -493,8 +565,12 @@ class LoreOrchestrator:
         confessions: list[str],
         lore: dict,
         low_confidence: bool = False,
-    ) -> tuple[dict, dict]:
+    ) -> tuple[dict, dict, dict]:
         """Evaluate lore quality. If overall < 0.55, retry once with dimension feedback.
+
+        Returns (lore, eval_result, retry_meta) where retry_meta records whether a
+        quality retry fired and the before/after scores. retry_meta is empty dict when
+        no retry occurred so callers can always unpack safely.
 
         COST-03: LoreEvaluator.evaluate() is only called on a sampled fraction of
         pipeline runs (controlled by settings.LORE_EVAL_SAMPLE_RATE).  In production
@@ -502,6 +578,8 @@ class LoreOrchestrator:
         Skipped runs return a neutral placeholder so downstream consumers always
         receive a valid eval_result dict.
         """
+        retry_meta: dict = {}
+
         if random.random() >= settings.LORE_EVAL_SAMPLE_RATE:
             log.debug(
                 f"[{trip['id']}] quality gate skipped by sampling "
@@ -513,7 +591,7 @@ class LoreOrchestrator:
                 "weakest_dimension": "sampled_out",
                 "feedback": "Evaluation skipped by LORE_EVAL_SAMPLE_RATE",
                 "sampled": False,
-            }
+            }, retry_meta
 
         evaluator   = LoreEvaluator()
         eval_result = await evaluator.evaluate(trip["id"], lore)
@@ -542,10 +620,15 @@ class LoreOrchestrator:
                 eval_result = await evaluator.evaluate(trip["id"], lore)
                 retry_overall = eval_result.get("overall")
                 log.info(f"[{trip['id']}] quality retry result: overall={retry_overall}")
+                retry_meta = {
+                    "lore_quality_retried": True,
+                    "lore_quality_retry_score_before": overall,
+                    "lore_quality_retry_score_after": retry_overall,
+                }
             except Exception as qe:
                 log.warning(f"[{trip['id']}] quality retry failed ({qe}) — keeping original lore")
 
-        return lore, eval_result
+        return lore, eval_result, retry_meta
 
     # -------------------------------------------------------------------------
     # Data fetching
@@ -921,6 +1004,7 @@ class LoreOrchestrator:
             system=prompts.SIGNAL_AGGREGATION_SYSTEM,
             messages=[{"role": "user", "content": user_prompt}],
             max_tokens=2000,
+            cache_system=True,
             step="aggregate",
         )
         return self._parse_json(response)
@@ -1100,6 +1184,7 @@ class LoreOrchestrator:
             system=prompts.CHARACTER_ROLE_SYSTEM,
             messages=[{"role": "user", "content": user_prompt}],
             max_tokens=900,
+            cache_system=True,
             model=settings.CLAUDE_HAIKU_MODEL,
             step="roles",
         )

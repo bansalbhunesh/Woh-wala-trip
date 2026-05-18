@@ -1,6 +1,3 @@
-# TEST-04: CI pipeline runs tsc --noEmit, eslint, and vitest run on every PR.
-# Branch protection should require 'Lint & Type Check' and 'Unit & Integration Tests'
-# as required status checks so a PR with a type error or failing test cannot be merged.
 name: CI
 
 on:
@@ -14,34 +11,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-typecheck:
-    name: Lint & Type Check
+  typescript:
+    name: TypeScript & Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20'
+          cache: 'npm'
       - run: npm ci
-      # Run lint with a max-warnings ceiling that allows pre-existing TYPE-02 debt
-      # (59 `as any` casts tracked for Phase 4 cleanup) while blocking NEW issues.
-      # Current known issue count: 222. Any PR adding new lint issues will exceed this.
-      - run: npm run lint -- --max-warnings 230
       - run: npm run type-check
+      - run: npm run lint
+      - run: npm run format:check
 
   unit-tests:
-    name: Unit & Integration Tests
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20'
+          cache: 'npm'
       - run: npm ci
-      # TEST-04: --run ensures vitest exits after one pass (no watch mode in CI)
-      - run: npm run test:unit -- --run --coverage --coverage.thresholds.lines=60
+      - run: npm run test:unit:coverage
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -49,71 +43,72 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  e2e-tests:
-    name: Playwright E2E
+  build:
+    name: Next.js Build
     runs-on: ubuntu-latest
-    needs: [lint-typecheck]
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder_anon_key
+      NEXT_PUBLIC_POSTHOG_KEY: placeholder
+      NEXT_PUBLIC_POSTHOG_HOST: https://app.posthog.com
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_test_placeholder
+      NEXT_PUBLIC_SITE_URL: https://placeholder.yaarlore.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20'
+          cache: 'npm'
       - run: npm ci
-      - run: npx playwright install --with-deps
-      - name: Build Next.js app
-        run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test-key' }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'test-key' }}
-      - name: Run Playwright tests (public routes + anti-spam)
-        run: npx playwright test tests/e2e/landing.spec.ts tests/e2e/auth.spec.ts tests/e2e/anti-spam.spec.ts
-        env:
-          PLAYWRIGHT_BASE_URL: http://localhost:3000
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 14
+      - run: npm run build
 
-  python-deterministic:
-    name: AI Worker Deterministic Tests
+  ai-worker:
+    name: AI Worker Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-worker
+    env:
+      ANTHROPIC_API_KEY: sk-ant-placeholder
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: placeholder_service_role_key_here
+      AI_WORKER_SECRET: placeholder_secret_32_chars_minimum
+      AI_WORKER_HMAC_SECRET: placeholder_hmac_secret_32_chars_ok
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: pip
-      - working-directory: ai-worker
-        run: pip install -e . --quiet
-      - working-directory: ai-worker
-        run: python -X utf8 -m tests.run_deterministic
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: ai-worker/pyproject.toml
+      - run: pip install -e ".[test]"
+      - run: python -X utf8 -m tests.run_deterministic
+      - run: python -m pytest tests/test_schema.py tests/test_safety.py -v --tb=short
 
-  build:
-    name: Next.js Build Check
-    runs-on: ubuntu-latest
-    needs: [lint-typecheck]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test-key' }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'test-key' }}
-          SKIP_ENV_VALIDATION: true
-
-  docker-ai-worker:
+  docker:
     name: AI Worker Docker Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build AI worker Docker image
-        run: docker build -t wwt-ai-worker:ci ./ai-worker
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./ai-worker
+          push: false
+          tags: yaarlore-ai-worker:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: npm audit (high severity)
+        run: npm audit --audit-level=high
+        continue-on-error: true

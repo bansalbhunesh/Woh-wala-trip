@@ -61,10 +61,12 @@ export async function POST(req: NextRequest) {
         key_secret: process.env.RAZORPAY_KEY_SECRET,
       });
 
+      // Receipt is deterministic (no timestamp) so duplicate POSTs from network retries
+      // hit the same idempotency key and Razorpay deduplicates the order safely.
       const order = await rzp.orders.create({
         amount: planAmount,
         currency: 'INR',
-        receipt: `sub_${plan}_${user.id}_${Date.now()}`,
+        receipt: `sub_${plan}_${user.id}`,
         notes: { plan, userId: user.id, tripId: tripId ?? '' },
       });
 
@@ -104,10 +106,14 @@ export async function POST(req: NextRequest) {
       key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
 
+    // Receipt is deterministic: trip_<id>_<tier> with no timestamp.
+    // Razorpay uses receipt as an idempotency key, so duplicate requests for the same
+    // trip+tier combination (e.g. from a double-tap or network retry) resolve to the
+    // same order rather than creating a second charge.
     const order = await rzp.orders.create({
       amount: TIER_AMOUNTS[tier],
       currency: 'INR',
-      receipt: `trip_${tripId}_${tier}_${Date.now()}`,
+      receipt: `trip_${tripId}_${tier}`,
       notes: { tripId, tier, userId: user.id },
     });
 

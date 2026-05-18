@@ -317,6 +317,7 @@ export default function CinematicLanding() {
             <button
               onClick={handleEnter}
               disabled={leaving}
+              aria-label="Enter Yaarlore — go to login"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 relative overflow-hidden group laser-btn"
               style={{
                 background: ctaBg,
@@ -358,6 +359,41 @@ export default function CinematicLanding() {
               />
               <span className="relative z-10">{leaving ? 'ENTERING...' : 'ENTER THE LORE →'}</span>
             </button>
+            {/* Demo CTA — shows value before sign-up */}
+            <a
+              href="/demo"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
+              style={{
+                background: 'transparent',
+                border: `1.5px solid rgba(255,165,0,0.35)`,
+                color: `rgba(255,165,0,0.75)`,
+                transition:
+                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = 'translate3d(0,-2px,0)';
+                el.style.borderColor = 'rgba(255,165,0,0.65)';
+                el.style.color = 'rgba(255,165,0,1)';
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = 'translate3d(0,0,0)';
+                el.style.borderColor = 'rgba(255,165,0,0.35)';
+                el.style.color = 'rgba(255,165,0,0.75)';
+              }}
+            >
+              {/* Laser swipe */}
+              <span
+                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
+                style={{
+                  background:
+                    'linear-gradient(90deg, transparent, rgba(255,165,0,0.15), transparent)',
+                  transform: 'translateX(-100%) skewX(-15deg)',
+                }}
+              />
+              <span className="relative z-10">◎ SEE A DEMO</span>
+            </a>
             <a
               href="/trips/join"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
@@ -513,7 +549,7 @@ export default function CinematicLanding() {
               transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.75s, color 0.55s',
             }}
           >
-            UPLOAD PHOTOS · AI GENERATES LORE · SHARE WITH YOUR YAARS
+            UPLOAD PHOTOS · AI GENERATES LORE · SHARE WITH YOUR YAARS · SEE DEMO
           </p>
         </div>
 

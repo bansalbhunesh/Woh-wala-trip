@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from collections import defaultdict
 import asyncio
 import httpx
+import os
 import time
 import logging
 from datetime import datetime, timezone
@@ -173,7 +174,21 @@ async def poll_background_jobs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("WWT AI Worker starting...")
+    # --- Startup validation ---
+    required = [
+        "ANTHROPIC_API_KEY",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "AI_WORKER_SECRET",
+        "AI_WORKER_HMAC_SECRET",
+    ]
+    missing = [k for k in required if not os.environ.get(k)]
+    if missing:
+        log.critical(f"FATAL: Missing required env vars: {missing}. Worker cannot start.")
+        raise SystemExit(1)
+    log.info("All required environment variables present")
+    log.info(f"Worker starting — model={settings.CLAUDE_MODEL}")
+
     poll_task    = asyncio.create_task(poll_job_queue())
     bg_jobs_task = asyncio.create_task(poll_background_jobs())
     yield

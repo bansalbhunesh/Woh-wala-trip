@@ -6,10 +6,19 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_ROLE_KEY: str
     AI_WORKER_SECRET: str
-    AI_WORKER_HMAC_SECRET: str = ""  # Required after rollout; empty = bearer-only mode (transition)
+    # Required. No default. Worker crashes at startup if not set.
+    # Set on both Render (AI worker) and Vercel (Next.js) before deploying.
+    AI_WORKER_HMAC_SECRET: str
 
     # Optional: set if using a proxy (e.g. aicredits.in, openrouter, etc.)
     ANTHROPIC_BASE_URL: str = ""
+
+    # Base URL of the Next.js deployment — used to call internal notify endpoints.
+    # e.g. https://yaarlore.vercel.app  (no trailing slash)
+    NEXTJS_BASE_URL: str = ""
+
+    # Voyage AI — multimodal photo embeddings (optional; embeddings are skipped if not set)
+    VOYAGE_API_KEY: str = ""  # Optional — embeddings are skipped if not set
 
     # fal.ai — image generation via Sana Sprint (optional; all image gen skips if absent)
     FAL_API_KEY: str = ""
@@ -26,11 +35,10 @@ class Settings(BaseSettings):
     MAX_LORE_RETRIES: int = 3
     MAX_CONCURRENT_ROLES: int = 3     # semaphore limit on parallel character role calls
 
-    # COST-03: LoreEvaluator sampling rate.
-    # Set to 1.0 in dev (evaluate every run).
-    # Set to 0.2 in production (evaluate 20% of runs — reduces Haiku call volume by ~80%).
-    # Override via LORE_EVAL_SAMPLE_RATE env var on Render.
-    LORE_EVAL_SAMPLE_RATE: float = 0.2
+    # LoreEvaluator sampling rate.
+    # 1.0 = evaluate every pipeline run (production default — Haiku cost is negligible at $0.000125/run).
+    # Reduce only if Anthropic rate limits become a concern at scale (>10k runs/day).
+    LORE_EVAL_SAMPLE_RATE: float = 1.0
 
     # Redis (Upstash) — cross-instance lore-generation cooldown coordination.
     # When set, the /generate-lore cooldown uses a Redis SET NX EX check so that

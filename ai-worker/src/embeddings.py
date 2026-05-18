@@ -1,58 +1,54 @@
 """
-CLIP ViT-B/32 embedding extraction for the photo memory echo system.
+Photo embedding extraction via Voyage AI multimodal API.
 
-Model: openai/clip-vit-base-patch32
-Dim:   512
-Cost:  ~50ms CPU per photo (no GPU required)
-Storage: vector(512) in Postgres via pgvector
+Model: voyage-multimodal-3 (replaces on-device CLIP ViT-B/32)
+Dim:   1024 (voyage-multimodal-3 default)
+Cost:  API call per photo — skipped entirely when VOYAGE_API_KEY is not set.
 
-Embeddings are L2-normalized before storage so cosine similarity =
-dot product, which works correctly with pgvector's <=> cosine operator.
+Embeddings are stored in the clip_embedding column so downstream
+pgvector queries (<=> cosine operator) continue to work unchanged.
+
+Graceful degradation: if VOYAGE_API_KEY is absent or the API call fails,
+embed_photo sets embedding_status="failed" so the frontend can hide the
+findSimilar UI for trips where >20% of photos couldn't be embedded.
 """
 
-import io
-import asyncio
+import os
 import logging
-import numpy as np
+import httpx
 from .clients import supabase
 
 log = logging.getLogger("wwt.embeddings")
 
-_clip_processor = None
-_clip_model = None
+_VOYAGE_API_URL = "https://api.voyageai.com/v1/multimodalembeddings"
+_VOYAGE_MODEL   = "voyage-multimodal-3"
 
 
-def _load_clip():
-    global _clip_processor, _clip_model
-    if _clip_model is None:
-        from transformers import CLIPProcessor, CLIPModel
-        log.info("[clip] loading openai/clip-vit-base-patch32 ...")
-        _clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        _clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-        _clip_model.eval()
-        log.info("[clip] model ready")
-    return _clip_processor, _clip_model
-
-
-def _extract_sync(image_bytes: bytes) -> list[float]:
-    import torch
-    from PIL import Image
-
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    processor, model = _load_clip()
-    inputs = processor(images=img, return_tensors="pt")
-    with torch.no_grad():
-        features = model.get_image_features(**inputs)
-    vec = features[0].numpy().astype(np.float32)
-    # L2-normalize so pgvector <=> gives true cosine similarity
-    norm = np.linalg.norm(vec)
-    if norm > 0:
-        vec /= norm
-    return vec.tolist()
+async def _embed_image_url(image_url: str) -> list[float] | None:
+    """Call Voyage AI multimodal embeddings API. Returns None on any failure."""
+    api_key = os.environ.get("VOYAGE_API_KEY")
+    if not api_key:
+        log.debug("[embed] VOYAGE_API_KEY not set — skipping embedding")
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                _VOYAGE_API_URL,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "inputs": [{"content": [{"type": "image_url", "url": image_url}]}],
+                    "model": _VOYAGE_MODEL,
+                },
+            )
+            resp.raise_for_status()
+            return resp.json()["data"][0]["embedding"]
+    except Exception as e:
+        log.warning(f"[embed] Voyage API call failed: {e}")
+        return None
 
 
 async def embed_photo(photo_id: str) -> None:
-    """Download photo from storage, extract CLIP embedding, persist to DB."""
+    """Fetch photo public URL, extract Voyage embedding, persist to DB."""
     try:
         photo = (
             supabase.table("photos")
@@ -69,19 +65,30 @@ async def embed_photo(photo_id: str) -> None:
             log.debug(f"[embed] {photo_id}: already embedded, skipping")
             return
 
-        raw = supabase.storage.from_("trip-photos").download(photo["storage_path"])
-        embedding = await asyncio.to_thread(_extract_sync, raw)
+        # Build a public URL from the storage path so Voyage can fetch the image
+        storage_path = photo["storage_path"]
+        public_url = (
+            supabase.storage.from_("trip-photos").get_public_url(storage_path)
+        )
+
+        embedding = await _embed_image_url(public_url)
+
+        if embedding is None:
+            # API unavailable or key missing — mark failed so UI can respond correctly
+            supabase.table("photos").update({
+                "embedding_status": "failed",
+            }).eq("id", photo_id).execute()
+            log.warning(f"[embed] {photo_id}: no embedding returned, marked failed")
+            return
 
         supabase.table("photos").update({
-            "clip_embedding": embedding,
+            "clip_embedding":   embedding,
             "embedding_status": "ready",
         }).eq("id", photo_id).execute()
         log.info(f"[embed] {photo_id}: stored {len(embedding)}-dim embedding")
 
     except Exception:
         log.exception(f"[embed] {photo_id}: failed")
-        # Mark as failed so the frontend can detect silent embedding failures and
-        # hide the findSimilar UI for trips where > 20% of photos couldn't be embedded.
         try:
             supabase.table("photos").update({
                 "embedding_status": "failed",

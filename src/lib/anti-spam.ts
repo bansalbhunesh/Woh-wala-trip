@@ -424,16 +424,25 @@ function evictOldestBucket(map: Map<string, unknown>) {
 }
 
 /**
- * Distributed rate limiting using Upstash Redis, falling back to in-memory burst protection.
+ * Distributed rate limiting using Upstash Redis.
+ *
+ * In production: Redis is REQUIRED. Redis failure → request is rejected (fail-closed).
+ *   Rationale: silent degradation in a serverless environment is not rate limiting —
+ *   each cold-start process has an independent in-memory counter, making per-IP limits
+ *   bypassable by distributing requests across Vercel function instances.
+ *
+ * In development (NODE_ENV !== 'production'): falls back to in-memory if Redis is absent,
+ *   so local dev works without Upstash credentials.
  */
 export async function checkRateLimit(
   key: string,
   maxRequests: number,
   windowMs: number
 ): Promise<boolean> {
-  // Fail hard in production: in-memory rate limiting is useless in serverless (no persistent state).
-  // UPSTASH_REDIS_REST_URL must be set before deploying.
-  if (!redis && process.env.NODE_ENV === 'production') {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!redis && isProduction) {
+    // Fail hard — never silently allow in production without distributed state.
     throw new Error(
       '[anti-spam] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production. ' +
         'Rate limiting cannot be safely enforced without Redis in a serverless environment.'
@@ -441,33 +450,38 @@ export async function checkRateLimit(
   }
 
   if (redis) {
+    const limiterKey = `${maxRequests}:${windowMs}`;
+    let ratelimiter = upstashLimiters.get(limiterKey);
+    if (!ratelimiter) {
+      ratelimiter = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(maxRequests, `${windowMs} ms` as any),
+        analytics: false,
+      });
+      upstashLimiters.set(limiterKey, ratelimiter);
+    }
+
     try {
-      // Create a cache key for the ratelimiter instance config
-      const limiterKey = `${maxRequests}:${windowMs}`;
-      let ratelimiter = upstashLimiters.get(limiterKey);
-
-      if (!ratelimiter) {
-        ratelimiter = new Ratelimit({
-          redis,
-          limiter: Ratelimit.slidingWindow(maxRequests, `${windowMs} ms` as any),
-          analytics: false,
-        });
-        upstashLimiters.set(limiterKey, ratelimiter);
-      }
-
       const { success } = await ratelimiter.limit(key);
       return success;
     } catch (e) {
-      console.error('[anti-spam] Upstash Redis rate limit failed, falling back to memory:', e);
-      // Fall through to memory bucket on error
+      console.error('[anti-spam] Upstash Redis rate limit failed:', e);
+      if (isProduction) {
+        // Fail-closed: Redis failure in production = reject the request.
+        // This prevents rate limit bypass via Redis outage. Return false to block.
+        console.error(
+          '[anti-spam] Blocking request due to Redis failure (fail-closed in production).'
+        );
+        return false;
+      }
+      // Non-production: fall through to in-memory fallback for dev convenience.
     }
   }
 
-  // Fallback: In-memory burst protection
+  // Development-only in-memory fallback (unreachable in production — see fail-closed above).
   const now = Date.now();
   const bucket = ipBuckets.get(key);
   if (!bucket || now > bucket.resetAt) {
-    // Evict the oldest entry before inserting a new key to cap memory usage (ARCH-04)
     if (!bucket && ipBuckets.size >= MAX_IP_BUCKETS) {
       evictOldestBucket(ipBuckets);
     }
