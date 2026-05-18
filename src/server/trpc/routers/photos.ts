@@ -38,13 +38,21 @@ interface TripTierRow {
   storage_used_bytes: number;
 }
 
-// TYPE-02/03: local type override for background_jobs inserts (columns added after last codegen).
+// TYPE-02/03: local type overrides for tables / columns added after last Supabase codegen.
 // Remove once supabase gen types is re-run (TYPE-01).
 type BackgroundJobInsert = {
   trip_id: string;
   job_type: string;
   status: string;
   payload?: Record<string, unknown>;
+};
+
+// Typed RPC client for RPCs added post-codegen (find_similar_photos, get_nostalgia_moments, etc.)
+type SupabaseWithRpc = {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
 };
 
 export const photosRouter = router({
@@ -213,25 +221,34 @@ export const photosRouter = router({
       // if the storage.objects lookup returned nothing (race condition on eventual consistency).
       const resolvedFileSize = actualSize ?? input.fileSize ?? null;
 
-      // TYPE-02: photos.Insert is stale — file_size and user_id added after last codegen.
-      // Cast to the minimal shape the DB needs; remove once TYPE-01 is done.
-      type PhotoInsert = {
+      // TYPE-02: photos.Insert is stale — file_size and user_id were added after last codegen.
+      // Use a typed client wrapper so the insert shape is explicit instead of `as never`.
+      type PhotoInsertRow = {
         trip_id: string;
         user_id: string;
         storage_path: string;
         file_size?: number | null;
       };
-      const { data: insertedRaw, error } = await ctx.supabase
+      type PhotoInsertClient = {
+        from: (t: 'photos') => {
+          insert: (d: PhotoInsertRow) => {
+            select: () => {
+              single: () => Promise<{ data: PhotoRow | null; error: { message: string } | null }>;
+            };
+          };
+        };
+      };
+      const { data: insertedRaw, error } = await (ctx.supabase as unknown as PhotoInsertClient)
         .from('photos')
         .insert({
           trip_id: input.tripId,
           user_id: ctx.user.id,
           storage_path: input.storagePath,
           file_size: resolvedFileSize,
-        } as unknown as PhotoInsert)
+        })
         .select()
         .single();
-      const data = insertedRaw as PhotoRow | null;
+      const data = insertedRaw;
 
       if (error || !data) {
         throw new TRPCError({
@@ -340,12 +357,7 @@ export const photosRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // TYPE-02: find_similar_photos RPC not in generated types (added post-codegen).
-      type SupabaseWithRpc = {
-        rpc: (
-          fn: string,
-          args: Record<string, unknown>
-        ) => Promise<{ data: unknown; error: { message: string } | null }>;
-      };
+      // SupabaseWithRpc is defined at module level above.
       const { data, error } = await (ctx.supabase as unknown as SupabaseWithRpc).rpc(
         'find_similar_photos',
         {
