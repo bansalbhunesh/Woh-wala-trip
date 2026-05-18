@@ -84,13 +84,22 @@ function Booth({
   const [focused, setFocused] = useState(false);
 
   return (
-    <div
-      className="relative"
-      style={{
-        borderBottom: `1px solid ${focused ? 'rgba(255,77,77,0.18)' : 'rgba(255,255,255,0.055)'}`,
-        transition: 'border-color 0.25s',
-      }}
-    >
+    <div className="space-y-2">
+      {/* PROD-01: Explicit disclosure shown before the user types — cannot claim surprise */}
+      <p
+        className="font-mono text-[8px] uppercase tracking-wider leading-relaxed"
+        style={{ color: 'rgba(255,200,100,0.55)' }}
+      >
+        ⚠ Your confession may appear in the AI-generated story shared with all trip members and
+        publicly via the invite link.
+      </p>
+      <div
+        className="relative"
+        style={{
+          borderBottom: `1px solid ${focused ? 'rgba(255,77,77,0.18)' : 'rgba(255,255,255,0.055)'}`,
+          transition: 'border-color 0.25s',
+        }}
+      >
       <input
         ref={inputRef}
         type="text"
@@ -151,6 +160,7 @@ function Booth({
           }
         }
       `}</style>
+      </div>
     </div>
   );
 }

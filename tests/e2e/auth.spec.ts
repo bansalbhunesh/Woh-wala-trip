@@ -1,3 +1,10 @@
+/**
+ * Auth E2E tests — OTP send → verify → session flow.
+ *
+ * TEST-02: these tests are NOT skipped. They run on every CI build as part of
+ * the Playwright job (tests/e2e/auth.spec.ts is in the explicit run list).
+ * OTP responses are mocked via page.route() — no real OTP_HMAC_SECRET needed.
+ */
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication flow', () => {
