@@ -1,25 +1,18 @@
 /**
  * Unit tests for lore-adjacent utilities that live on the frontend:
- * - Chaos score → verdict label mapping
- * - Cooked percentile display
- * - Nostalgia score formula consistency with Python backend
+ * - Chaos score → verdict label mapping  (src/lib/types.ts)
+ * - Nostalgia score formula              (src/lib/utils.ts)
+ * - Invite code normalisation            (src/lib/utils.ts)
+ *
+ * TEST-03: tests now import and exercise the ACTUAL source exports rather than
+ * locally-redefined stubs.  If the source functions are changed, these tests
+ * will catch the regression.
  */
 import { describe, it, expect } from 'vitest';
+import { getCookedVerdict } from '@/lib/types';
+import { nostalgiaScore, normalizeInviteCode } from '@/lib/utils';
 
 // Verdict mapping — must stay in sync with ai-worker/tests/run_deterministic.py
-function getCookedVerdict(level: number): string {
-  if (level <= 25) return 'Mildly Simmering';
-  if (level <= 55) return 'Emotionally Unstable';
-  if (level <= 80) return 'Peak Delusion';
-  return 'Historically Cooked';
-}
-
-// Frontend nostalgia score (mirrors Python NostalgiaEngine._score)
-function nostalgiaScore(chaosScore: number, yearsAgo: number): number {
-  const ageBonus = 1 + Math.log1p(yearsAgo) * 0.5;
-  return Math.round(chaosScore * ageBonus * 10) / 10;
-}
-
 describe('getCookedVerdict', () => {
   const cases: [number, string][] = [
     [0, 'Mildly Simmering'],
@@ -86,24 +79,20 @@ describe('cooked score display', () => {
   });
 });
 
-describe('invite code normalization', () => {
-  function normalizeCode(raw: string): string {
-    return raw.trim().toUpperCase().slice(0, 8);
-  }
-
+describe('normalizeInviteCode', () => {
   it('uppercases input', () => {
-    expect(normalizeCode('kasol1')).toBe('KASOL1');
+    expect(normalizeInviteCode('kasol1')).toBe('KASOL1');
   });
 
   it('trims whitespace', () => {
-    expect(normalizeCode('  ABC123  ')).toBe('ABC123');
+    expect(normalizeInviteCode('  ABC123  ')).toBe('ABC123');
   });
 
   it('caps at 8 characters', () => {
-    expect(normalizeCode('ABCDEFGHI')).toBe('ABCDEFGH');
+    expect(normalizeInviteCode('ABCDEFGHI')).toBe('ABCDEFGH');
   });
 
   it('handles already-valid code', () => {
-    expect(normalizeCode('TRIP2024')).toBe('TRIP2024');
+    expect(normalizeInviteCode('TRIP2024')).toBe('TRIP2024');
   });
 });
