@@ -207,9 +207,19 @@ export const tripsRouter = router({
   getFull: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('get_trip_full', {
-        p_trip_id: input.tripId,
-      } as never);
+      // TYPE-02: get_trip_full RPC not in generated types.
+      type TripRpcClient = {
+        rpc: (
+          fn: string,
+          args: Record<string, string>
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data, error } = await (ctx.supabase as unknown as TripRpcClient).rpc(
+        'get_trip_full',
+        {
+          p_trip_id: input.tripId,
+        }
+      );
 
       if (error) {
         throw new TRPCError({
@@ -232,9 +242,19 @@ export const tripsRouter = router({
   joinByCode: protectedProcedure
     .input(z.object({ inviteCode: z.string().min(6).max(8) }))
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('join_trip_by_code', {
-        p_invite_code: input.inviteCode.trim().toUpperCase(),
-      } as never);
+      // TYPE-02: join_trip_by_code RPC not in generated types.
+      type TripRpcClient = {
+        rpc: (
+          fn: string,
+          args: Record<string, string>
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data, error } = await (ctx.supabase as unknown as TripRpcClient).rpc(
+        'join_trip_by_code',
+        {
+          p_invite_code: input.inviteCode.trim().toUpperCase(),
+        }
+      );
 
       if (error) {
         throw new TRPCError({
@@ -645,11 +665,19 @@ export const tripsRouter = router({
       }
 
       const admin = createSupabaseServiceClient();
-      await admin
+      // TYPE-02: lore_status and processing_started_at added post-codegen.
+      type TripResetClient = {
+        from: (t: 'trips') => {
+          update: (d: TripStatusUpdate) => {
+            eq: (c: string, v: string) => { eq: (c: string, v: string) => Promise<unknown> };
+          };
+        };
+      };
+      await (admin as unknown as TripResetClient)
         .from('trips')
-        .update({ lore_status: 'failed', processing_started_at: null } as never)
+        .update({ lore_status: 'failed', processing_started_at: null })
         .eq('id', input.tripId)
-        .eq('lore_status' as never, 'processing'); // atomic guard against race with worker completing
+        .eq('lore_status', 'processing'); // atomic guard against race with worker completing
 
       return { reset: true };
     }),
@@ -690,10 +718,22 @@ export const tripsRouter = router({
       }
 
       // payment_id / expires_at may not yet be in generated types — use service role for update
+      // TYPE-02: payment_id and expires_at added post-codegen.
+      type TripPaymentUpdate = { tier: string; payment_id: string; expires_at: null };
+      type TripPaymentClient = {
+        from: (t: 'trips') => {
+          update: (d: TripPaymentUpdate) => {
+            eq: (
+              c: string,
+              v: string
+            ) => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> };
+          };
+        };
+      };
       const admin = createSupabaseServiceClient();
-      const { error } = await admin
+      const { error } = await (admin as unknown as TripPaymentClient)
         .from('trips')
-        .update({ tier: input.tier, payment_id: input.paymentId, expires_at: null } as never)
+        .update({ tier: input.tier, payment_id: input.paymentId, expires_at: null })
         .eq('id', input.tripId)
         .eq('creator_id', ctx.user.id);
 
