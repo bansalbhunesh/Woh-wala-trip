@@ -31,6 +31,21 @@ type BackgroundJobInsert = {
   payload?: Record<string, unknown>;
 };
 
+// TripStatusUpdate: columns added post-codegen that TypeScript doesn't know about.
+type TripStatusUpdate = {
+  lore_status?: string;
+  processing_started_at?: string | null;
+  lore_status_override?: string;
+};
+
+// ProfileReferralUpdate: referral columns added post-codegen.
+type ProfileReferralUpdate = {
+  referral_counted?: boolean;
+  referral_count?: number;
+  referral_bonus_unlocked?: boolean;
+  invited_by_user_id?: string;
+};
+
 // RPC return type shapes (RPCs return Json — cast to these after error checking)
 interface GetTripFullResult {
   trip: Record<string, unknown>;
@@ -153,9 +168,17 @@ export const tripsRouter = router({
 
       if (profile?.invited_by_user_id && !profile.referral_counted) {
         // Mark this user as counted so future trips don't fire again
-        await admin
+        // TYPE-02: ProfileReferralUpdate is a local type — columns added post-codegen.
+        type ProfileUpdateClient = {
+          from: (t: 'profiles') => {
+            update: (d: ProfileReferralUpdate) => {
+              eq: (c: string, v: string) => Promise<unknown>;
+            };
+          };
+        };
+        await (admin as unknown as ProfileUpdateClient)
           .from('profiles')
-          .update({ referral_counted: true } as never)
+          .update({ referral_counted: true })
           .eq('id', userId);
 
         // Increment referrer's count and unlock bonus at 3
@@ -166,12 +189,12 @@ export const tripsRouter = router({
           .eq('id', referrerId)
           .single()) as unknown as { data: { referral_count: number } | null };
         const newCount = (referrer?.referral_count ?? 0) + 1;
-        await admin
+        await (admin as unknown as ProfileUpdateClient)
           .from('profiles')
           .update({
             referral_count: newCount,
             ...(newCount >= 3 ? { referral_bonus_unlocked: true } : {}),
-          } as never)
+          })
           .eq('id', referrerId);
       }
     } catch {
@@ -255,11 +278,19 @@ export const tripsRouter = router({
           // Set invited_by only if not already set (first platform join wins).
           // The referral counter fires when the joiner creates their first trip,
           // not at join time — see the create mutation.
-          await admin
+          // TYPE-02: invited_by_user_id added post-codegen; use local ProfileReferralUpdate.
+          type ProfileIsClient = {
+            from: (t: 'profiles') => {
+              update: (d: ProfileReferralUpdate) => {
+                eq: (c: string, v: string) => { is: (c: string, v: null) => Promise<unknown> };
+              };
+            };
+          };
+          await (admin as unknown as ProfileIsClient)
             .from('profiles')
-            .update({ invited_by_user_id: referrerId } as never)
+            .update({ invited_by_user_id: referrerId })
             .eq('id', joinerId)
-            .is('invited_by_user_id' as never, null);
+            .is('invited_by_user_id', null);
         }
       } catch (referralErr) {
         // Referral tracking must never break the join flow
@@ -393,12 +424,28 @@ export const tripsRouter = router({
 
       // Atomically claim 'processing' only if not already processing — prevents double-fire race.
       // Also set processing_started_at so the stuck-job cron can detect and reset stalled runs.
-      const { data: claimed } = await ctx.supabase
+      // TYPE-02: lore_status and processing_started_at added post-codegen; use TripStatusUpdate.
+      type TripUpdateClient = {
+        from: (t: 'trips') => {
+          update: (d: TripStatusUpdate) => {
+            eq: (
+              c: string,
+              v: string
+            ) => {
+              neq: (
+                c: string,
+                v: string
+              ) => { select: (c: string) => Promise<{ data: { id: string }[] | null }> };
+            };
+          };
+        };
+      };
+      const { data: claimed } = await (ctx.supabase as unknown as TripUpdateClient)
         .from('trips')
         .update({
           lore_status: 'processing',
           processing_started_at: new Date().toISOString(),
-        } as never)
+        })
         .eq('id', input.tripId)
         .neq('lore_status', 'processing')
         .select('id');
@@ -438,9 +485,16 @@ export const tripsRouter = router({
         // within 60 seconds. Don't reset lore_status to 'pending': it stays 'processing'
         // so the generating page keeps polling and the stuck-job cron handles any crash.
         // Note: `admin` is already declared in the outer scope above (COST-01 check).
-        await admin
-          .from('generation_jobs' as never)
-          .upsert({ trip_id: input.tripId, status: 'pending' } as never, { onConflict: 'trip_id' });
+        // TYPE-02: generation_jobs not in generated types; use local type.
+        type GenerationJobUpsert = { trip_id: string; status: string };
+        type GenJobClient = {
+          from: (t: 'generation_jobs') => {
+            upsert: (d: GenerationJobUpsert, opts: { onConflict: string }) => Promise<unknown>;
+          };
+        };
+        await (admin as unknown as GenJobClient)
+          .from('generation_jobs')
+          .upsert({ trip_id: input.tripId, status: 'pending' }, { onConflict: 'trip_id' });
         console.warn(
           '[generateLore] worker unreachable, queued for polling:',
           (err as Error).message
@@ -459,10 +513,20 @@ export const tripsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc('submit_confession', {
-        p_trip_id: input.tripId,
-        p_confession: input.confession,
-      } as never);
+      // TYPE-02: submit_confession RPC not in generated types.
+      type RpcClient = {
+        rpc: (
+          fn: string,
+          args: Record<string, string>
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data, error } = await (ctx.supabase as unknown as RpcClient).rpc(
+        'submit_confession',
+        {
+          p_trip_id: input.tripId,
+          p_confession: input.confession,
+        }
+      );
 
       const res = data as unknown as ConfessionResult;
       if (error || res?.error) {
@@ -510,12 +574,21 @@ export const tripsRouter = router({
         });
       }
 
-      await ctx.supabase
+      // TYPE-02: absence_reason added post-codegen; use local type override.
+      type TripMemberAbsenceUpdate = { status: string; absence_reason?: string };
+      type TripMemberUpdateClient = {
+        from: (t: 'trip_members') => {
+          update: (d: TripMemberAbsenceUpdate) => {
+            eq: (c: string, v: string) => { eq: (c: string, v: string) => Promise<unknown> };
+          };
+        };
+      };
+      await (ctx.supabase as unknown as TripMemberUpdateClient)
         .from('trip_members')
         .update({
           status: 'absent',
           absence_reason: input.reason,
-        } as never)
+        })
         .eq('trip_id', input.tripId)
         .eq('user_id', input.userId);
 
@@ -524,12 +597,20 @@ export const tripsRouter = router({
       // payload carries absent_user_id so the worker's generate_missing_person() call has it.
       // Using service client because background_jobs has service-role-only RLS (Phase 1).
       const admin = createSupabaseServiceClient();
-      const { error: jobError } = await admin.from('background_jobs' as never).insert({
-        trip_id: input.tripId,
-        job_type: 'missing_person_card',
-        status: 'pending',
-        payload: { absent_user_id: input.userId },
-      } as never);
+      // TYPE-02: BackgroundJobInsert is a local type — background_jobs added post-codegen.
+      type BackgroundJobClient = {
+        from: (t: 'background_jobs') => {
+          insert: (d: BackgroundJobInsert) => Promise<{ error: { message: string } | null }>;
+        };
+      };
+      const { error: jobError } = await (admin as unknown as BackgroundJobClient)
+        .from('background_jobs')
+        .insert({
+          trip_id: input.tripId,
+          job_type: 'missing_person_card',
+          status: 'pending',
+          payload: { absent_user_id: input.userId },
+        });
 
       if (jobError) {
         // Non-fatal: the member is already marked absent. Log so Langfuse/Render logs surface it.
