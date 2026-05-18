@@ -22,10 +22,12 @@ CREATE TABLE IF NOT EXISTS public.user_archetypes (
 
 ALTER TABLE public.user_archetypes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "users can read own archetypes" ON public.user_archetypes;
 CREATE POLICY "users can read own archetypes"
   ON public.user_archetypes FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "service role manages archetypes" ON public.user_archetypes;
 CREATE POLICY "service role manages archetypes"
   ON public.user_archetypes FOR ALL TO service_role
   USING (true) WITH CHECK (true);
@@ -42,14 +44,17 @@ CREATE TABLE IF NOT EXISTS public.yearly_wraps (
 
 ALTER TABLE public.yearly_wraps ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "users can read own wraps" ON public.yearly_wraps;
 CREATE POLICY "users can read own wraps"
   ON public.yearly_wraps FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "public can read wraps" ON public.yearly_wraps;
 CREATE POLICY "public can read wraps"
   ON public.yearly_wraps FOR SELECT TO anon
   USING (true);
 
+DROP POLICY IF EXISTS "service role manages wraps" ON public.yearly_wraps;
 CREATE POLICY "service role manages wraps"
   ON public.yearly_wraps FOR ALL TO service_role
   USING (true) WITH CHECK (true);

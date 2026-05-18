@@ -11,10 +11,12 @@ CREATE TABLE IF NOT EXISTS print_waitlist (
 
 ALTER TABLE print_waitlist ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can insert their own waitlist entries" ON print_waitlist;
 CREATE POLICY "Users can insert their own waitlist entries"
   ON print_waitlist FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view their own waitlist entries" ON print_waitlist;
 CREATE POLICY "Users can view their own waitlist entries"
   ON print_waitlist FOR SELECT
   USING (auth.uid() = user_id);

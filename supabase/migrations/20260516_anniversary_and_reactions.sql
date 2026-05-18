@@ -59,14 +59,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_lore_reactions_unique
 -- Allow anonymous reads (public story reactions visible without login)
 ALTER TABLE public.lore_reactions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "anyone can read reactions" ON public.lore_reactions;
 CREATE POLICY "anyone can read reactions"
   ON public.lore_reactions FOR SELECT TO anon, authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "authenticated users can react" ON public.lore_reactions;
 CREATE POLICY "authenticated users can react"
   ON public.lore_reactions FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "anyone can react on public story (anon)" ON public.lore_reactions;
 CREATE POLICY "anyone can react on public story (anon)"
   ON public.lore_reactions FOR INSERT TO anon
   WITH CHECK (user_id IS NULL);
