@@ -6,6 +6,31 @@ import { langfuse } from '@/lib/langfuse';
 import crypto from 'crypto';
 import { signWorkerRequest } from '@/lib/worker-auth';
 
+// COST-05: Server-side warmupWorker cache.
+// Maps userId → Unix timestamp (ms) of the last successful warmup call.
+// Resets on cold start (acceptable — this is purely an optimisation to reduce
+// redundant Render /health calls, not a correctness requirement).
+const _warmupCache = new Map<string, number>();
+const WARMUP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// PERF-03: in-memory cache for getChaosDistribution (10-minute TTL).
+// Prevents a full-table scan on every /trips page load.
+// Uses a single cache key since the distribution is global (all ready trips).
+const chaosDistCache = new Map<
+  'global',
+  { data: { p50: number; p75: number; p90: number; total: number } | null; expiry: number }
+>();
+const CHAOS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// TYPE-02/03: local type overrides for tables / columns added after last Supabase codegen.
+// Remove once supabase gen types is re-run (TYPE-01).
+type BackgroundJobInsert = {
+  trip_id: string;
+  job_type: string;
+  status: string;
+  payload?: Record<string, unknown>;
+};
+
 // RPC return type shapes (RPCs return Json — cast to these after error checking)
 interface GetTripFullResult {
   trip: Record<string, unknown>;
@@ -334,6 +359,38 @@ export const tripsRouter = router({
         });
       }
 
+      // COST-01: Monthly token cap per user.
+      // Configurable via MONTHLY_TOKEN_CAP_PER_USER env var (default 500,000 tokens
+      // ≈ 8 full pipeline runs at ~60k tokens each).  The profiles trigger
+      // (trg_increment_user_token_usage) keeps generation_tokens_used_this_month
+      // current without requiring an extra write here.
+      const monthlyCap = parseInt(process.env.MONTHLY_TOKEN_CAP_PER_USER ?? '500000', 10);
+      const admin = createSupabaseServiceClient();
+      const { data: profileRaw } = await admin
+        .from('profiles')
+        .select('generation_tokens_used_this_month, generation_tokens_month')
+        .eq('id', ctx.user.id)
+        .single();
+      const profile = profileRaw as {
+        generation_tokens_used_this_month: number | null;
+        generation_tokens_month: string | null;
+      } | null;
+
+      if (profile) {
+        // Reset counter if it's from a previous month
+        const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+        const profileMonth = profile.generation_tokens_month?.slice(0, 7) ?? null;
+        const tokensThisMonth =
+          profileMonth === thisMonth ? (profile.generation_tokens_used_this_month ?? 0) : 0;
+
+        if (tokensThisMonth >= monthlyCap) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: `Monthly generation limit reached (${tokensThisMonth.toLocaleString()} / ${monthlyCap.toLocaleString()} tokens). Resets next month.`,
+          });
+        }
+      }
+
       // Atomically claim 'processing' only if not already processing — prevents double-fire race.
       // Also set processing_started_at so the stuck-job cron can detect and reset stalled runs.
       const { data: claimed } = await ctx.supabase
@@ -380,7 +437,7 @@ export const tripsRouter = router({
         // HTTP trigger failed — queue the job so the worker's polling loop picks it up
         // within 60 seconds. Don't reset lore_status to 'pending': it stays 'processing'
         // so the generating page keeps polling and the stuck-job cron handles any crash.
-        const admin = createSupabaseServiceClient();
+        // Note: `admin` is already declared in the outer scope above (COST-01 check).
         await admin
           .from('generation_jobs' as never)
           .upsert({ trip_id: input.tripId, status: 'pending' } as never, { onConflict: 'trip_id' });
@@ -565,9 +622,23 @@ export const tripsRouter = router({
     }),
 
   getChaosDistribution: protectedProcedure.query(async ({ ctx }) => {
+    // ARCH-05: scope to trips where the calling user is a member to prevent cross-user data leak.
+    // trips has no RLS until Phase 1 lands, so we must filter explicitly here.
+    // After Phase 1 RLS is deployed, ctx.supabase will also enforce this automatically,
+    // but the explicit .in() filter below remains as defence-in-depth.
+    const { data: memberRows } = await ctx.supabase
+      .from('trip_members')
+      .select('trip_id')
+      .eq('user_id', ctx.user.id);
+
+    const memberTripIds = ((memberRows || []) as { trip_id: string }[]).map(r => r.trip_id);
+
+    if (memberTripIds.length === 0) return null;
+
     const { data } = await ctx.supabase
       .from('trips')
       .select('chaos_score')
+      .in('id', memberTripIds)
       .eq('lore_status', 'ready')
       .not('chaos_score', 'is', null);
 
@@ -586,14 +657,31 @@ export const tripsRouter = router({
   // Warm up the AI worker before the user clicks "Generate Lore".
   // Called client-side when photoCount first reaches 5 — gives Render free tier
   // 30-60s to exit cold start before the actual generation request fires.
-  warmupWorker: protectedProcedure.mutation(async () => {
+  //
+  // COST-05: Skip the /health call if the worker was successfully warmed within
+  // the last 10 minutes for this user.  The cache is module-level and resets on
+  // cold start, which is acceptable — this is a pure traffic-reduction optimisation.
+  warmupWorker: protectedProcedure.mutation(async ({ ctx }) => {
     const workerUrl = process.env.AI_WORKER_URL;
-    if (!workerUrl || workerUrl.includes('localhost')) return { ok: false };
+    if (!workerUrl || workerUrl.includes('localhost')) return { ok: false, cached: false };
+
+    const userId = ctx.user.id;
+    const lastWarmed = _warmupCache.get(userId) ?? 0;
+    const now = Date.now();
+
+    if (now - lastWarmed < WARMUP_TTL_MS) {
+      // Still within the 10-minute window — skip the HTTP call
+      return { ok: true, cached: true };
+    }
+
     try {
       const resp = await fetch(`${workerUrl}/health`, { signal: AbortSignal.timeout(5000) });
-      return { ok: resp.ok };
+      if (resp.ok) {
+        _warmupCache.set(userId, now);
+      }
+      return { ok: resp.ok, cached: false };
     } catch {
-      return { ok: false };
+      return { ok: false, cached: false };
     }
   }),
 });
