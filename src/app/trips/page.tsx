@@ -333,36 +333,65 @@ export default function TripsPage() {
           </h1>
         </div>
 
-        <Link
-          href="/trips/new"
-          className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
-          style={{
-            background: 'rgba(245,240,232,0.06)',
-            border: '1px solid rgba(245,240,232,0.18)',
-            color: '#F5F0E8',
-            opacity: revealed ? 1 : 0,
-            transition:
-              'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s, background 0.3s, border-color 0.3s',
-            willChange: 'transform',
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLAnchorElement;
-            el.style.transform = 'translate3d(0,-2px,0)';
-            el.style.boxShadow = '0 8px 32px rgba(245,240,232,0.05)';
-            el.style.background = 'rgba(245,240,232,0.1)';
-            el.style.borderColor = 'rgba(245,240,232,0.3)';
-            playHomeChime(1.4, 0.02);
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLAnchorElement;
-            el.style.transform = 'translate3d(0,0,0)';
-            el.style.boxShadow = 'none';
-            el.style.background = 'rgba(245,240,232,0.06)';
-            el.style.borderColor = 'rgba(245,240,232,0.18)';
-          }}
-        >
-          <Plus size={14} /> NEW SEASON
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* FEAT: Hall of Chaos leaderboard link */}
+          <Link
+            href="/leaderboard"
+            className="flex items-center gap-2 px-4 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+            style={{
+              background: 'rgba(212,158,45,0.08)',
+              border: '1px solid rgba(212,158,45,0.25)',
+              color: 'rgba(212,158,45,0.8)',
+              opacity: revealed ? 1 : 0,
+              transition:
+                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.18s, transform 0.3s cubic-bezier(0.16,1,0.3,1)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.transform = 'translate3d(0,-2px,0)';
+              el.style.borderColor = 'rgba(212,158,45,0.5)';
+              el.style.color = '#D49E2D';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.transform = 'translate3d(0,0,0)';
+              el.style.borderColor = 'rgba(212,158,45,0.25)';
+              el.style.color = 'rgba(212,158,45,0.8)';
+            }}
+          >
+            HALL OF CHAOS
+          </Link>
+          <Link
+            href="/trips/new"
+            className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
+            style={{
+              background: 'rgba(245,240,232,0.06)',
+              border: '1px solid rgba(245,240,232,0.18)',
+              color: '#F5F0E8',
+              opacity: revealed ? 1 : 0,
+              transition:
+                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s, background 0.3s, border-color 0.3s',
+              willChange: 'transform',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.transform = 'translate3d(0,-2px,0)';
+              el.style.boxShadow = '0 8px 32px rgba(245,240,232,0.05)';
+              el.style.background = 'rgba(245,240,232,0.1)';
+              el.style.borderColor = 'rgba(245,240,232,0.3)';
+              playHomeChime(1.4, 0.02);
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.transform = 'translate3d(0,0,0)';
+              el.style.boxShadow = 'none';
+              el.style.background = 'rgba(245,240,232,0.06)';
+              el.style.borderColor = 'rgba(245,240,232,0.18)';
+            }}
+          >
+            <Plus size={14} /> NEW SEASON
+          </Link>
+        </div>
       </header>
 
       <NostalgiaStrip />

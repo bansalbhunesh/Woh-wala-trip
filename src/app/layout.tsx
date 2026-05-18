@@ -24,18 +24,55 @@ const firaMono = Fira_Mono({
 });
 
 export const metadata = {
-  title: 'Yaarlore — AI Friendship Lore',
-  description: 'Turn your trips and friendships into cinematic chaos lore.',
+  title: "Yaarlore — Your Friend Group's Trip Documentary",
+  description:
+    "AI turns your trip photos into a cinematic documentary. Character roles, chaos scores, and a story worth sharing. India's first AI friendship mythology platform.",
+  keywords: [
+    'trip documentary',
+    'AI travel memories',
+    'friend group stories',
+    'India travel app',
+    'chaos score',
+    'yaarlore',
+    'trip lore',
+    'friendship mythology',
+  ],
   manifest: '/manifest.json',
   icons: {
     icon: [{ url: '/icon.png', type: 'image/png' }],
     apple: [{ url: '/icon.png', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Yaarlore',
-    description: "Your yaar group's lore, documented.",
+    title: "Yaarlore — Your Friend Group's Trip Documentary",
+    description:
+      "Upload your trip photos → AI generates character roles, chaos scores, trip eras, and a cinematic story you'll actually want to share.",
     type: 'website',
-    images: [{ url: '/icon.png' }],
+    url: 'https://yaarlore.com',
+    siteName: 'Yaarlore',
+    images: [
+      {
+        url: 'https://yaarlore.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Yaarlore — AI Trip Documentary',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image' as const,
+    title: "Yaarlore — Your Friend Group's Trip Documentary",
+    description:
+      "AI turns your trip photos into a cinematic documentary. India's first AI friendship mythology platform.",
+    images: ['https://yaarlore.com/og-image.png'],
+    creator: '@yaarlore',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 

@@ -224,17 +224,25 @@ describe('trips.generateLore', () => {
       }),
     };
 
-    // Service client: profile at monthly cap
+    // Service client: completeTrips = 1 (not first generation), profile at monthly cap
     mockServiceClient = {
-      from: vi.fn().mockReturnValue(
-        makeChain({
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'trips') {
+          return makeChain(
+            { data: null, count: 1, error: null },
+            { data: null, count: 1, error: null }
+          );
+        }
+        // table === 'profiles'
+        return makeChain({
           data: {
+            referral_bonus_unlocked: false,
             generation_tokens_used_this_month: 500000,
             generation_tokens_month: thisMonthDate,
           },
           error: null,
-        })
-      ),
+        });
+      }),
     };
 
     await expect(

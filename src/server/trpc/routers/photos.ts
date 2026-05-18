@@ -464,8 +464,9 @@ export const photosRouter = router({
       }
 
       // PERF-02: explicit column list — excludes clip_embedding (~2KB/row of unused vector data)
+      // FEAT-V2-02: is_private included so the client can render the privacy toggle state.
       const PHOTO_COLUMNS =
-        'id, trip_id, user_id, storage_path, thumbnail_path, signed_url, thumb_signed_url, url_expires_at, embedding_status, created_at, file_size';
+        'id, trip_id, user_id, storage_path, thumbnail_path, signed_url, thumb_signed_url, url_expires_at, embedding_status, created_at, file_size, is_private';
       const { data: rawData, error } = input.cursor
         ? await ctx.supabase
             .from('photos')
@@ -557,6 +558,58 @@ export const photosRouter = router({
         })),
         nextCursor,
       };
+    }),
+
+  // FEAT-V2-02: Toggle is_private for a single photo.
+  // Only the uploader (user_id = photo.user_id) can change privacy.
+  // When marked private the photo is hidden from other trip members, AI lore, and story player.
+  togglePrivacy: protectedProcedure
+    .input(
+      z.object({
+        photoId: z.string().uuid(),
+        isPrivate: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const adminSupabase = createSupabaseServiceClient();
+
+      // Verify the calling user is the uploader
+      const { data: photoRaw } = await adminSupabase
+        .from('photos')
+        .select('id, user_id')
+        .eq('id', input.photoId)
+        .single();
+      const photo = photoRaw as { id: string; user_id: string } | null;
+
+      if (!photo) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Photo not found' });
+      }
+      if (photo.user_id !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the uploader can change photo privacy',
+        });
+      }
+
+      // TYPE-02: is_private added post-codegen; cast update shape.
+      type PhotoPrivacyUpdate = { is_private: boolean };
+      type PhotoUpdateClient = {
+        from: (t: 'photos') => {
+          update: (d: PhotoPrivacyUpdate) => {
+            eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
+          };
+        };
+      };
+      const { error } = await (adminSupabase as unknown as PhotoUpdateClient)
+        .from('photos')
+        .update({ is_private: input.isPrivate })
+        .eq('id', input.photoId);
+
+      if (error) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+
+      return { photoId: input.photoId, isPrivate: input.isPrivate };
     }),
 
   embeddingHealth: protectedProcedure

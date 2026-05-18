@@ -475,6 +475,32 @@ export default function CinematicLanding() {
             >
               <span className="relative z-10">LIVE LORE</span>
             </button>
+            {/* FEAT: Hall of Chaos leaderboard link */}
+            <a
+              href="/leaderboard"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
+              style={{
+                background: 'transparent',
+                border: `1.5px solid ${ghostBorder}`,
+                color: ghostText,
+                transition:
+                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = 'translate3d(0,-2px,0)';
+                el.style.borderColor = '#D49E2D';
+                el.style.color = '#D49E2D';
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = 'translate3d(0,0,0)';
+                el.style.borderColor = ghostBorder;
+                el.style.color = ghostText;
+              }}
+            >
+              <span className="relative z-10">HALL OF CHAOS</span>
+            </a>
           </div>
 
           {/* Meta line */}

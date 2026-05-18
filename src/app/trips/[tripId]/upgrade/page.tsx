@@ -17,6 +17,55 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
   const upgradeTier = trpc.trips.upgradeTier.useMutation();
   const [error, setError] = useState<string | null>(null);
 
+  // MONETIZATION-03: Annual subscription — ₹799/year (save 33% vs monthly)
+  const payAnnual = async () => {
+    try {
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId, plan: 'annual' }),
+      });
+      if (!orderRes.ok) throw new Error(`Order failed: ${orderRes.status}`);
+      const order = await orderRes.json();
+
+      if (order.amount == null) {
+        throw new Error('Server did not return a payment amount. Cannot proceed.');
+      }
+
+      const rzp = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency ?? 'INR',
+        name: 'Yaarlore',
+        description: 'Yaarlore+ Annual — unlimited trips for a year',
+        order_id: order.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handler: async (response: any) => {
+          try {
+            await upgradeTier.mutateAsync({
+              tripId,
+              tier: 'digital',
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              signature: response.razorpay_signature,
+            });
+            router.push('/trips');
+          } catch (err) {
+            console.error('[upgrade] annual activation failed:', err);
+            setError(
+              'Payment received but subscription activation failed. Contact support at hello@yaarlore.app.'
+            );
+          }
+        },
+        theme: { color: '#FF4D4D' },
+      });
+      rzp.open();
+    } catch (err) {
+      console.error('[upgrade] annual payment init failed:', err);
+      setError('Could not start payment. Try again.');
+    }
+  };
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -179,11 +228,29 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
         </header>
 
         <div className="space-y-4">
-          {/* MONETIZATION-02: Subscription — framed as best value for friend groups */}
+          {/* MONETIZATION-03: Annual subscription — best overall value */}
           <Plan
-            name="Yaarlore+"
-            price="₹99/mo"
+            name="Yaarlore+ Annual"
+            price="₹799/yr"
             badge="Best Value"
+            subtext="Save ₹390 vs monthly"
+            valueNote="≈ ₹133/person for 6 friends"
+            features={[
+              'Everything in Monthly — for a full year',
+              'Unlimited lore generations',
+              'All trips permanently archived',
+              'No watermarks — ever',
+              'Anniversary drops + nostalgia emails',
+              'Battle challenges enabled',
+            ]}
+            onClick={payAnnual}
+            featured
+          />
+
+          {/* MONETIZATION-02: Monthly subscription */}
+          <Plan
+            name="Yaarlore+ Monthly"
+            price="₹99/mo"
             subtext="Unlimited trips for your whole friend group"
             valueNote="₹17/person for 6 friends"
             features={[
@@ -194,7 +261,6 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
               'Battle challenges enabled',
             ]}
             onClick={paySubscription}
-            featured
           />
 
           {/* Divider with "or pay per trip" label */}

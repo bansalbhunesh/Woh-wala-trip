@@ -9,10 +9,12 @@ const TIER_AMOUNTS: Record<string, number> = {
   print: 79900, // ₹799 in paise
 };
 
-// Subscription plan amounts (monthly recurring, in paise)
-// plan='monthly' → ₹99/month (unlimited trips for the whole friend group)
+// Subscription plan amounts (recurring, in paise)
+// plan='monthly' → ₹99/month  (unlimited trips for the whole friend group)
+// plan='annual'  → ₹799/year  (save 33% vs monthly — ₹133/person for 6 friends)
 const PLAN_AMOUNTS: Record<string, number> = {
   monthly: 9900, // ₹99 in paise
+  annual: 79900, // ₹799 in paise
 };
 
 export async function POST(req: NextRequest) {
@@ -38,11 +40,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { tripId, tier, plan = 'single' } = await req.json();
-    // plan: 'single' = one-time per-trip purchase, 'monthly' = ₹99/month subscription
+    // plan: 'single'  = one-time per-trip purchase
+    //       'monthly' = ₹99/month subscription
+    //       'annual'  = ₹799/year subscription (33% saving vs monthly)
 
     // Subscription plan order (tripId optional for subscription purchases)
-    if (plan === 'monthly') {
-      const planAmount = PLAN_AMOUNTS['monthly'];
+    if (plan === 'monthly' || plan === 'annual') {
+      const planAmount = PLAN_AMOUNTS[plan];
+      if (!planAmount) {
+        return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+      }
 
       if (!process.env.RAZORPAY_KEY_SECRET) {
         return NextResponse.json({ error: 'Payment service not configured' }, { status: 503 });
@@ -57,15 +64,15 @@ export async function POST(req: NextRequest) {
       const order = await rzp.orders.create({
         amount: planAmount,
         currency: 'INR',
-        receipt: `sub_monthly_${user.id}_${Date.now()}`,
-        notes: { plan: 'monthly', userId: user.id, tripId: tripId ?? '' },
+        receipt: `sub_${plan}_${user.id}_${Date.now()}`,
+        notes: { plan, userId: user.id, tripId: tripId ?? '' },
       });
 
       return NextResponse.json({
         id: order.id,
         amount: order.amount,
         currency: order.currency,
-        plan: 'monthly',
+        plan,
       });
     }
 

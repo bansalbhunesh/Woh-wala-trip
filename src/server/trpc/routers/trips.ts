@@ -468,22 +468,33 @@ export const tripsRouter = router({
 
       const isFirstGeneration = (completedTrips ?? 0) === 0;
 
+      // REFERRAL-03: Check if user has an unclaimed referral bonus (3 successful referrals).
+      // If so, this generation is free — skip the monthly token cap check.
+      // The bonus is consumed (set to false) after a successful generation trigger below.
+      const { data: profileRefRaw } = (await admin
+        .from('profiles')
+        .select(
+          'referral_bonus_unlocked, generation_tokens_used_this_month, generation_tokens_month'
+        )
+        .eq('id', ctx.user.id)
+        .single()) as unknown as {
+        data: {
+          referral_bonus_unlocked: boolean;
+          generation_tokens_used_this_month: number | null;
+          generation_tokens_month: string | null;
+        } | null;
+      };
+      const referralBonusActive = profileRefRaw?.referral_bonus_unlocked === true;
+
       // COST-01: Monthly token cap per user.
       // Configurable via MONTHLY_TOKEN_CAP_PER_USER env var (default 500,000 tokens
       // ≈ 8 full pipeline runs at ~60k tokens each).  The profiles trigger
       // (trg_increment_user_token_usage) keeps generation_tokens_used_this_month
       // current without requiring an extra write here.
-      if (!isFirstGeneration) {
+      // Skip cap check if this is the first generation OR user has a referral bonus.
+      if (!isFirstGeneration && !referralBonusActive) {
         const monthlyCap = parseInt(process.env.MONTHLY_TOKEN_CAP_PER_USER ?? '500000', 10);
-        const { data: profileRaw } = await admin
-          .from('profiles')
-          .select('generation_tokens_used_this_month, generation_tokens_month')
-          .eq('id', ctx.user.id)
-          .single();
-        const profile = profileRaw as {
-          generation_tokens_used_this_month: number | null;
-          generation_tokens_month: string | null;
-        } | null;
+        const profile = profileRefRaw;
 
         if (profile) {
           // Reset counter if it's from a previous month
@@ -558,7 +569,28 @@ export const tripsRouter = router({
         });
         if (!resp.ok) throw new Error(`Worker returned ${resp.status}`);
         span.end({ output: { status: 'processing' } });
-        return { status: 'processing' as const, isFirstTrip: isFirstGeneration };
+
+        // REFERRAL-03: Consume the referral bonus after successful trigger.
+        // Best-effort: never break generation if this fails.
+        if (referralBonusActive) {
+          type ProfileBonusClient = {
+            from: (t: 'profiles') => {
+              update: (d: ProfileReferralUpdate) => {
+                eq: (c: string, v: string) => Promise<unknown>;
+              };
+            };
+          };
+          await (admin as unknown as ProfileBonusClient)
+            .from('profiles')
+            .update({ referral_bonus_unlocked: false })
+            .eq('id', ctx.user.id);
+        }
+
+        return {
+          status: 'processing' as const,
+          isFirstTrip: isFirstGeneration,
+          usedReferralBonus: referralBonusActive,
+        };
       } catch (err) {
         // HTTP trigger failed — queue the job so the worker's polling loop picks it up
         // within 60 seconds. Don't reset lore_status to 'pending': it stays 'processing'
@@ -803,6 +835,84 @@ export const tripsRouter = router({
 
       return { success: true };
     }),
+
+  // REFERRAL-01: Capture referral linkage when a new user arrives via ?ref=USERNAME.
+  // Called client-side on first auth (OTP verify / OAuth) with the referrer's username
+  // extracted from the landing URL. Idempotent — sets invited_by_user_id only once
+  // (first call wins; subsequent calls with the same or a different username are no-ops).
+  applyReferral: protectedProcedure
+    .input(z.object({ referrerUsername: z.string().min(1).max(60) }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+      const joinerId = ctx.user.id;
+
+      // Look up the referrer by username
+      const { data: referrerProfile } = (await admin
+        .from('profiles')
+        .select('id')
+        .eq('username', input.referrerUsername)
+        .maybeSingle()) as unknown as { data: { id: string } | null };
+
+      if (!referrerProfile) {
+        // Not a hard error — bad referral codes should not break signup
+        return { applied: false, reason: 'referrer_not_found' as const };
+      }
+
+      // Prevent self-referral
+      if (referrerProfile.id === joinerId) {
+        return { applied: false, reason: 'self_referral' as const };
+      }
+
+      // Idempotent update: only set invited_by_user_id if not already set (first join wins).
+      // TYPE-02: ProfileReferralUpdate is a local type — columns added post-codegen.
+      type ProfileIsClient = {
+        from: (t: 'profiles') => {
+          update: (d: ProfileReferralUpdate) => {
+            eq: (
+              c: string,
+              v: string
+            ) => { is: (c: string, v: null) => Promise<{ error: { message: string } | null }> };
+          };
+        };
+      };
+      const { error } = (await (admin as unknown as ProfileIsClient)
+        .from('profiles')
+        .update({ invited_by_user_id: referrerProfile.id })
+        .eq('id', joinerId)
+        .is('invited_by_user_id', null)) as { error: { message: string } | null };
+
+      if (error) {
+        logger.error(
+          { procedure: 'trips.applyReferral', userId: joinerId },
+          `referral apply failed: ${error.message}`
+        );
+        return { applied: false, reason: 'db_error' as const };
+      }
+
+      return { applied: true };
+    }),
+
+  // REFERRAL-02: Return current user's profile info needed for the referral share UI
+  // (username, referral_count, referral_bonus_unlocked).
+  getReferralStatus: protectedProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseServiceClient();
+    const { data } = (await admin
+      .from('profiles')
+      .select('username, referral_count, referral_bonus_unlocked')
+      .eq('id', ctx.user.id)
+      .single()) as unknown as {
+      data: {
+        username: string | null;
+        referral_count: number;
+        referral_bonus_unlocked: boolean;
+      } | null;
+    };
+    return {
+      username: data?.username ?? null,
+      referralCount: data?.referral_count ?? 0,
+      bonusUnlocked: data?.referral_bonus_unlocked ?? false,
+    };
+  }),
 
   // PROD-02: Allow trip creator to show/hide the public /t/[code]/story page.
   // Only the trip creator can toggle this; members cannot hide someone else's story.
@@ -1126,6 +1236,203 @@ export const tripsRouter = router({
         })
         .filter((r): r is NonNullable<typeof r> => r !== null)
         .slice(0, 3);
+    }),
+
+  // FEAT-V2-01: Generate a yearly wrap for the calling user.
+  // Fetches all their lore-ready trips from the given year, triggers the AI worker,
+  // and returns the trip count so the UI can show a "processing" state.
+  generateYearlyWrap: protectedProcedure
+    .input(z.object({ year: z.number().int().min(2020).max(2030) }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+      const { data: yearTrips } = await admin
+        .from('trips')
+        .select('id, name, destination, chaos_score')
+        .eq('creator_id', ctx.user.id)
+        .eq('lore_status', 'ready')
+        .gte('created_at', `${input.year}-01-01`)
+        .lt('created_at', `${input.year + 1}-01-01`);
+
+      if (!yearTrips?.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No completed trips found for ${input.year}. Generate lore for at least one trip first.`,
+        });
+      }
+
+      // Upsert a 'processing' row so the page can poll
+      // TYPE-02: yearly_wraps not in generated types; use local type.
+      type YearlyWrapUpsert = {
+        user_id: string;
+        year: number;
+        trip_ids: string[];
+        status: string;
+      };
+      type YearlyWrapClient = {
+        from: (t: 'yearly_wraps') => {
+          upsert: (d: YearlyWrapUpsert, opts: { onConflict: string }) => Promise<unknown>;
+        };
+      };
+      await (admin as unknown as YearlyWrapClient).from('yearly_wraps').upsert(
+        {
+          user_id: ctx.user.id,
+          year: input.year,
+          trip_ids: yearTrips.map(t => t.id),
+          status: 'processing',
+        },
+        { onConflict: 'user_id,year' }
+      );
+
+      const workerUrl = process.env.AI_WORKER_URL;
+      if (workerUrl && !workerUrl.includes('localhost')) {
+        try {
+          const body = JSON.stringify({
+            trip_ids: yearTrips.map(t => t.id),
+            user_id: ctx.user.id,
+            year: input.year,
+          });
+          await fetch(`${workerUrl}/generate-yearly-wrap`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+            },
+            body,
+            signal: AbortSignal.timeout(8000),
+          });
+        } catch (err) {
+          // Non-fatal: worker is queued via the 'processing' upsert above
+          logger.warn(
+            { procedure: 'trips.generateYearlyWrap', userId: ctx.user.id },
+            `worker trigger failed, status row already set: ${(err as Error).message}`
+          );
+        }
+      }
+
+      return { status: 'processing' as const, tripCount: yearTrips.length };
+    }),
+
+  // FEAT-V2-01: Fetch the yearly wrap for the calling user.
+  getYearlyWrap: protectedProcedure
+    .input(z.object({ year: z.number().int().min(2020).max(2030) }))
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+      // TYPE-02: yearly_wraps not in generated types.
+      type YearlyWrapRow = {
+        user_id: string;
+        year: number;
+        trip_ids: string[];
+        wrap_json: unknown;
+        status: string;
+        created_at?: string | null;
+      };
+      type YearlyWrapSelectClient = {
+        from: (t: 'yearly_wraps') => {
+          select: (c: string) => {
+            eq: (
+              c: string,
+              v: unknown
+            ) => {
+              eq: (
+                c: string,
+                v: unknown
+              ) => {
+                maybeSingle: () => Promise<{
+                  data: YearlyWrapRow | null;
+                  error: { message: string } | null;
+                }>;
+              };
+            };
+          };
+        };
+      };
+      const { data, error } = await (admin as unknown as YearlyWrapSelectClient)
+        .from('yearly_wraps')
+        .select('*')
+        .eq('user_id', ctx.user.id)
+        .eq('year', input.year)
+        .maybeSingle();
+      if (error) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+      return data ?? null;
+    }),
+
+  // EXPORT-01: Trip archive data export — returns all trip data as a JSON bundle.
+  // Includes lore JSON, all photo signed URLs (24h), metadata, members, eras, stats.
+  // The client downloads this as a `.json` file via a Blob download.
+  exportData: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Verify caller is a member of this trip
+      const { data: membership } = await admin
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .maybeSingle();
+
+      if (!membership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not a member of this trip.',
+        });
+      }
+
+      // Fetch full trip with all related data
+      const { data: trip, error } = await admin
+        .from('trips')
+        .select('*, photos(*), trip_members(*), trip_eras(*), trip_stats(*)')
+        .eq('id', input.tripId)
+        .single();
+
+      if (error || !trip) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Trip not found.',
+        });
+      }
+
+      const anyTrip = trip as any;
+
+      // Generate fresh signed URLs for all photos (24-hour expiry)
+      const photos: any[] = anyTrip.photos ?? [];
+      const storagePaths = photos.map((p: any) => p.storage_path).filter(Boolean);
+      const signedUrlMap = new Map<string, string>();
+
+      if (storagePaths.length > 0) {
+        const { data: signed } = await admin.storage
+          .from('trip-photos')
+          .createSignedUrls(storagePaths, 86400); // 24 hours
+        (signed ?? []).forEach(u => {
+          if (u.signedUrl && u.path) signedUrlMap.set(u.path, u.signedUrl);
+        });
+      }
+
+      return {
+        exportedAt: new Date().toISOString(),
+        trip: {
+          name: anyTrip.name,
+          destination: anyTrip.destination ?? null,
+          chaosScore: anyTrip.chaos_score ?? null,
+          lore: anyTrip.lore_json ?? null,
+          eras: anyTrip.trip_eras ?? [],
+          stats: anyTrip.trip_stats ?? [],
+          members: (anyTrip.trip_members ?? []).map((m: any) => ({
+            userId: m.user_id,
+            status: m.status,
+            roleTitle: m.role_title ?? null,
+            roleChaosRating: m.role_chaos_rating ?? null,
+          })),
+        },
+        photos: photos.map((p: any) => ({
+          storagePath: p.storage_path,
+          signedUrl: signedUrlMap.get(p.storage_path) ?? null,
+          uploadedAt: p.created_at,
+        })),
+      };
     }),
 
   // VIRAL-01: Public showcase feed for the landing page — no auth required.
