@@ -1145,9 +1145,137 @@ function UploadState({
           {trip.name}
         </h2>
         <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)' }}>
-          "Upload your recovered memories. The archive is hungry."
+          &ldquo;Upload your recovered memories. The archive is hungry.&rdquo;
         </p>
       </div>
+
+      {/* ONBOARDING: Photo requirement guidance shown from the very start */}
+      {photoCount === 0 && (
+        <div className="w-full max-w-md mb-10 z-10 px-4 space-y-6">
+          {/* Minimum requirement callout */}
+          <div
+            className="px-5 py-4 rounded-2xl text-center"
+            style={{
+              background: 'rgba(255,77,77,0.05)',
+              border: '1px solid rgba(255,77,77,0.15)',
+            }}
+          >
+            <p
+              className="font-mono text-[9px] uppercase tracking-[0.4em] mb-2"
+              style={{ color: 'rgba(255,77,77,0.7)' }}
+            >
+              ● MINIMUM REQUIREMENT
+            </p>
+            <p
+              className="font-display italic text-sm leading-relaxed"
+              style={{ color: 'rgba(245,240,232,0.6)' }}
+            >
+              Add at least{' '}
+              <span style={{ color: '#F5F0E8', fontStyle: 'normal', fontWeight: 700 }}>
+                5 photos
+              </span>{' '}
+              to unlock lore generation. More photos = richer story.
+            </p>
+          </div>
+
+          {/* Progress bar from zero */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span
+                className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
+                style={{ color: 'rgba(245,240,232,0.3)' }}
+              >
+                ARCHIVE PROGRESS
+              </span>
+              <span className="font-mono text-[7.5px]" style={{ color: 'rgba(245,240,232,0.3)' }}>
+                0 / 5
+              </span>
+            </div>
+            <div className="flex gap-1.5">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-1.5 rounded-full"
+                  style={{ background: 'rgba(245,240,232,0.08)' }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Best-photo tips */}
+          <div
+            className="px-5 py-4 rounded-2xl space-y-3"
+            style={{
+              background: 'rgba(245,240,232,0.02)',
+              border: '1px solid rgba(245,240,232,0.07)',
+            }}
+          >
+            <p
+              className="font-mono text-[8px] uppercase tracking-[0.45em]"
+              style={{ color: 'rgba(245,240,232,0.35)' }}
+            >
+              BEST PHOTOS TO UPLOAD
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: '👥', tip: 'Group shots' },
+                { icon: '😂', tip: 'Candid moments' },
+                { icon: '🌅', tip: 'Scenic locations' },
+                { icon: '🍜', tip: 'Food & drinks' },
+                { icon: '🎉', tip: 'Activities' },
+                { icon: '🌙', tip: 'Night moments' },
+              ].map(({ icon, tip }) => (
+                <div key={tip} className="flex items-center gap-2">
+                  <span className="text-sm">{icon}</span>
+                  <span
+                    className="font-mono text-[8px] uppercase tracking-wider"
+                    style={{ color: 'rgba(245,240,232,0.45)' }}
+                  >
+                    {tip}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Teaser: what they'll unlock */}
+          <div
+            className="px-5 py-4 rounded-2xl"
+            style={{
+              background: 'rgba(45,158,139,0.04)',
+              border: '1px solid rgba(45,158,139,0.12)',
+            }}
+          >
+            <p
+              className="font-mono text-[8px] uppercase tracking-[0.45em] mb-3"
+              style={{ color: 'rgba(45,158,139,0.6)' }}
+            >
+              ✦ WHAT YOU&apos;LL UNLOCK
+            </p>
+            <div className="space-y-1.5">
+              {[
+                'AI-written trip documentary',
+                'Character roles for each member',
+                'Chaos score & percentile ranking',
+                'Shareable story slides',
+              ].map(item => (
+                <div key={item} className="flex items-center gap-2">
+                  <div
+                    className="w-1 h-1 rounded-full flex-shrink-0"
+                    style={{ background: 'rgba(45,158,139,0.5)' }}
+                  />
+                  <p
+                    className="font-display italic text-[11px]"
+                    style={{ color: 'rgba(245,240,232,0.4)' }}
+                  >
+                    {item}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Central upload slot — this is the cinematic core */}
       <div className="relative flex flex-col items-center gap-8 mb-12 z-10">
@@ -1402,14 +1530,25 @@ function UploadState({
         </div>
       )}
 
-      {/* Progress toward lore generation */}
+      {/* Progress toward lore generation — updated dot bar with count */}
       {needed > 0 && photoCount > 0 && (
-        <div className="flex items-center gap-3 mb-8 z-10">
-          <div className="flex gap-1">
+        <div className="w-full max-w-md px-4 mb-8 z-10 space-y-2">
+          <div className="flex items-center justify-between">
+            <span
+              className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
+              style={{ color: 'rgba(245,240,232,0.3)' }}
+            >
+              ARCHIVE PROGRESS
+            </span>
+            <span className="font-mono text-[7.5px]" style={{ color: 'rgba(245,240,232,0.45)' }}>
+              {photoCount} / 5
+            </span>
+          </div>
+          <div className="flex gap-1.5">
             {[...Array(5)].map((_, i) => (
               <div
                 key={i}
-                className="w-6 h-1 rounded-full transition-all duration-500"
+                className="flex-1 h-1.5 rounded-full transition-all duration-500"
                 style={{
                   background: i < photoCount ? '#FF4D4D' : 'rgba(245,240,232,0.1)',
                   boxShadow: i < photoCount ? '0 0 4px rgba(255,77,77,0.4)' : 'none',
@@ -1417,12 +1556,12 @@ function UploadState({
               />
             ))}
           </div>
-          <span
-            className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
+          <p
+            className="font-mono text-[7.5px] uppercase tracking-[0.3em] text-center"
             style={{ color: 'rgba(245,240,232,0.55)' }}
           >
-            {needed} MORE TO UNLOCK LORE
-          </span>
+            {needed} more photo{needed !== 1 ? 's' : ''} to unlock lore generation
+          </p>
         </div>
       )}
 
