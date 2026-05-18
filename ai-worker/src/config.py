@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # Override via LORE_EVAL_SAMPLE_RATE env var on Render.
     LORE_EVAL_SAMPLE_RATE: float = 0.2
 
+    # Redis (Upstash) — cross-instance lore-generation cooldown coordination.
+    # When set, the /generate-lore cooldown uses a Redis SET NX EX check so that
+    # multiple worker replicas share the same cooldown window.
+    # If not set, falls back to the in-process _lore_last_triggered dict (single-instance only).
+    REDIS_URL: str = ""   # Upstash Redis REST URL  (e.g. https://xxx.upstash.io)
+    REDIS_TOKEN: str = "" # Upstash Redis REST token
+
     # Set to "true" ONLY in dev/staging — disables /debug-pipeline and /test-claude in prod
     DEBUG_ENABLED: str = "false"
 

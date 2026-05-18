@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from collections import defaultdict
 import asyncio
+import httpx
 import time
 import logging
 from datetime import datetime, timezone
@@ -199,8 +200,51 @@ app = FastAPI(
 
 # In-memory per-trip cooldown — prevents hammering a single trip through the HTTP trigger.
 # 5-minute window; resets on successful completion via mark_job_done.
+# Single-instance fallback when Redis is not configured.
 _lore_last_triggered: dict[str, float] = defaultdict(float)
 _LORE_COOLDOWN_SEC = 300
+
+
+def _check_memory_cooldown(trip_id: str, cooldown_seconds: int) -> bool:
+    """In-process cooldown check. Returns True if OK to proceed, False if in cooldown."""
+    now = time.time()
+    last = _lore_last_triggered[trip_id]
+    if last and now - last < cooldown_seconds:
+        return False
+    _lore_last_triggered[trip_id] = now
+    return True
+
+
+async def check_and_set_cooldown(trip_id: str, cooldown_seconds: int = _LORE_COOLDOWN_SEC) -> bool:
+    """Cross-instance cooldown using Redis SET NX EX via Upstash REST API.
+
+    Returns True if OK to proceed (no recent trigger from any instance),
+    False if already in cooldown window.
+
+    Falls back to in-memory check if Redis is not configured (single-instance mode).
+    """
+    redis_url = settings.REDIS_URL
+    redis_token = settings.REDIS_TOKEN
+
+    if not redis_url or not redis_token:
+        # No Redis configured — fall back to in-process dict (single instance only)
+        return _check_memory_cooldown(trip_id, cooldown_seconds)
+
+    key = f"lore_cooldown:{trip_id}"
+    # Upstash REST: POST /set/<key>/<value>/EX/<ttl>/NX
+    # Returns "OK" if the key was newly set (not in cooldown), or null if already existed.
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.post(
+                f"{redis_url}/set/{key}/1/EX/{cooldown_seconds}/NX",
+                headers={"Authorization": f"Bearer {redis_token}"},
+            )
+            result = resp.json()
+            return result == "OK"
+    except Exception as e:
+        # Redis unavailable — fall back to in-memory so generation isn't blocked
+        log.warning(f"[redis-cooldown] Redis check failed ({e!r}), falling back to in-memory")
+        return _check_memory_cooldown(trip_id, cooldown_seconds)
 
 
 def verify_auth(authorization: str = Header(...)):
@@ -240,6 +284,94 @@ class MemoryEchoRequest(BaseModel):
 class ImageGenRequest(BaseModel):
     trip_id: str
 
+class YearlyWrapRequest(BaseModel):
+    trip_ids: list[str]
+    user_id: str
+    year: int = 2025
+
+
+async def generate_yearly_wrap(trip_ids: list[str], user_id: str, year: int):
+    """Generate a yearly wrap summary for a user based on their trips from that year."""
+    from .clients import supabase, anthropic_client
+    from .config import settings
+    import json
+
+    log.info(f"[yearly-wrap] generating for user={user_id} year={year} trips={len(trip_ids)}")
+    try:
+        # Fetch trip lore data
+        trips_data = []
+        for tid in trip_ids:
+            row = supabase.table("trips").select("id, name, destination, chaos_score, lore_json").eq("id", tid).single().execute().data
+            if row:
+                trips_data.append(row)
+
+        if not trips_data:
+            log.warning(f"[yearly-wrap] no trip data found for user={user_id}")
+            return
+
+        avg_chaos = round(sum(t.get("chaos_score") or 0 for t in trips_data) / len(trips_data))
+        destinations = [t.get("destination") or "Unknown" for t in trips_data]
+
+        prompt = f"""You are Yaarlore's yearly wrap generator. Analyze these {len(trips_data)} trips from {year} and create a cinematic yearly wrap.
+
+Trips: {json.dumps([{"name": t["name"], "destination": t.get("destination"), "chaos_score": t.get("chaos_score")} for t in trips_data], indent=2)}
+
+Return a JSON object with these exact keys:
+- headline: string (e.g. "The Year You Lost Your Mind in 3 States")
+- chaos_average: number (average chaos score)
+- trip_count: number
+- top_destination: string (most chaotic or memorable)
+- year_verdict: string (1 cinematic sentence summarizing the year)
+- era_title: string (give this year a name, e.g. "The Unhinged Arc")
+- superlative: string (e.g. "Most Cooked Friend Group of {year}")
+- chaos_tier: string (one of: "Chill", "Simmering", "Cooked", "Certified Unhinged")
+
+Return only the JSON object, no markdown."""
+
+        resp = await anthropic_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=512,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        wrap_json = json.loads(resp.content[0].text)
+        wrap_json["chaos_average"] = avg_chaos
+        wrap_json["trip_count"] = len(trips_data)
+        wrap_json["destinations"] = destinations
+
+        # Upsert into yearly_wraps
+        supabase.table("yearly_wraps").upsert({
+            "user_id": user_id,
+            "year": year,
+            "trip_ids": trip_ids,
+            "wrap_json": wrap_json,
+            "status": "ready",
+        }, on_conflict="user_id,year").execute()
+        log.info(f"[yearly-wrap] done for user={user_id} year={year}")
+    except Exception as e:
+        log.exception(f"[yearly-wrap] failed for user={user_id} year={year}: {e}")
+        try:
+            supabase.table("yearly_wraps").upsert({
+                "user_id": user_id,
+                "year": year,
+                "trip_ids": trip_ids,
+                "wrap_json": None,
+                "status": "failed",
+            }, on_conflict="user_id,year").execute()
+        except Exception:
+            pass
+
+
+@app.post("/generate-yearly-wrap")
+async def generate_yearly_wrap_endpoint(
+    req: YearlyWrapRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
+    verify_auth(authorization)
+    bg.add_task(generate_yearly_wrap, req.trip_ids, req.user_id, req.year)
+    return {"status": "processing", "user_id": req.user_id, "year": req.year}
+
 
 @app.post("/generate-lore")
 async def generate_lore(
@@ -249,12 +381,12 @@ async def generate_lore(
     _hmac: None = Depends(verify_hmac_signature),
 ):
     verify_auth(authorization)
-    now = time.time()
-    last = _lore_last_triggered[req.trip_id]
-    if last and now - last < _LORE_COOLDOWN_SEC:
-        wait = int(_LORE_COOLDOWN_SEC - (now - last))
-        raise HTTPException(status_code=429, detail=f"Generation already triggered. Retry in {wait}s.")
-    _lore_last_triggered[req.trip_id] = now
+    ok = await check_and_set_cooldown(req.trip_id, _LORE_COOLDOWN_SEC)
+    if not ok:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Generation already triggered. Retry in {_LORE_COOLDOWN_SEC}s.",
+        )
     bg.add_task(LoreOrchestrator().run_full_pipeline, req.trip_id)
     return {"status": "queued", "trip_id": req.trip_id}
 
