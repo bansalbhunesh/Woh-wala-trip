@@ -415,7 +415,13 @@ if (!redis && process.env.NODE_ENV === 'production') {
 // Cache the Upstash ratelimiters to avoid recreating them on every call
 const upstashLimiters = new Map<string, Ratelimit>();
 
+const MAX_IP_BUCKETS = 10_000;
 const ipBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function evictOldestBucket(map: Map<string, unknown>) {
+  const firstKey = map.keys().next().value;
+  if (firstKey !== undefined) map.delete(firstKey);
+}
 
 /**
  * Distributed rate limiting using Upstash Redis, falling back to in-memory burst protection.
@@ -461,6 +467,10 @@ export async function checkRateLimit(
   const now = Date.now();
   const bucket = ipBuckets.get(key);
   if (!bucket || now > bucket.resetAt) {
+    // Evict the oldest entry before inserting a new key to cap memory usage (ARCH-04)
+    if (!bucket && ipBuckets.size >= MAX_IP_BUCKETS) {
+      evictOldestBucket(ipBuckets);
+    }
     ipBuckets.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
