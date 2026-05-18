@@ -503,6 +503,9 @@ class LoreOrchestrator:
 
     async def _analyze_one_batch(self, trip: dict, batch: list[dict], bn: int, total: int) -> dict:
         import httpx, base64 as _base64
+        # PERF-04: 8MB per-image cap — skip oversized images to prevent OOM on Render free tier.
+        _MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
         image_blocks = []
         for photo in batch:
             try:
@@ -533,9 +536,19 @@ class LoreOrchestrator:
                     log.error(f"[batch {bn}] empty signed URL for photo {photo.get('id')} path={path!r} — resp:{type(url_resp)}")
                     continue
 
+                # PERF-04: use httpx.AsyncClient directly — eliminates asyncio.to_thread overhead.
                 try:
-                    img_resp     = httpx.get(signed_url, timeout=15, follow_redirects=True)
+                    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+                        img_resp = await client.get(signed_url)
                     img_resp.raise_for_status()
+                    # PERF-04: size cap — skip images that would blow Render's 1GB RAM.
+                    if len(img_resp.content) > _MAX_IMAGE_BYTES:
+                        log.warning(
+                            f"[batch {bn}] skipping oversized image photo={photo.get('id')} "
+                            f"size={len(img_resp.content) // 1024}KB "
+                            f"(>{_MAX_IMAGE_BYTES // (1024 * 1024)}MB cap)"
+                        )
+                        continue
                     content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
                     if content_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
                         content_type = "image/jpeg"
