@@ -348,6 +348,9 @@ export default function GeneratingPage() {
               {Math.floor(progress)}% RECONSTRUCTED
             </p>
           </div>
+
+          {/* Skeleton preview — hints at what's being built */}
+          <GeneratingSkeleton stage={stage} />
         </div>
 
         {/* Timeout state — shown after 4 min if still processing */}
@@ -481,6 +484,76 @@ export default function GeneratingPage() {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
             filter: blur(0px);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERATING SKELETON — shimmer cards that suggest the content being built
+// ─────────────────────────────────────────────────────────────────────────────
+function GeneratingSkeleton({ stage }: { stage: number }) {
+  // Only show from stage 2+ so the initial screen stays clean
+  if (stage < 2) return null;
+
+  return (
+    <div
+      className="w-full max-w-xs mx-auto space-y-3 mt-2"
+      style={{
+        opacity: 0,
+        animation: 'fade-in 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both',
+      }}
+      aria-hidden="true"
+    >
+      {/* Title shimmer */}
+      <div
+        className="h-5 rounded"
+        style={{
+          width: '72%',
+          background: 'rgba(245,240,232,0.05)',
+          animation: 'shimmer 1.8s ease-in-out infinite',
+        }}
+      />
+      {/* Body line shimmers */}
+      <div
+        className="h-3 rounded"
+        style={{
+          width: '100%',
+          background: 'rgba(245,240,232,0.04)',
+          animation: 'shimmer 1.8s ease-in-out 0.15s infinite',
+        }}
+      />
+      <div
+        className="h-3 rounded"
+        style={{
+          width: '83%',
+          background: 'rgba(245,240,232,0.04)',
+          animation: 'shimmer 1.8s ease-in-out 0.3s infinite',
+        }}
+      />
+      {/* Card grid preview */}
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            className="h-16 rounded"
+            style={{
+              background: 'rgba(245,240,232,0.04)',
+              animation: `shimmer 1.8s ease-in-out ${0.1 * i}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+      <style jsx>{`
+        @keyframes shimmer {
+          0%,
+          100% {
+            opacity: 0.5;
+          }
+          50% {
+            opacity: 1;
           }
         }
       `}</style>
