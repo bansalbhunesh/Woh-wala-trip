@@ -28,7 +28,7 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
       const orderRes = await fetch('/api/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripId, tier: 'digital' }),
+        body: JSON.stringify({ tripId, tier: 'digital', plan: 'single' }),
       });
       if (!orderRes.ok) throw new Error(`Order failed: ${orderRes.status}`);
       const order = await orderRes.json();
@@ -65,6 +65,57 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
       rzp.open();
     } catch (err) {
       console.error('[upgrade] payment init failed:', err);
+      setError('Could not start payment. Try again.');
+    }
+  };
+
+  // MONETIZATION-02: Monthly subscription — ₹99/month, unlimited trips for the whole friend group
+  const paySubscription = async () => {
+    try {
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId, plan: 'monthly' }),
+      });
+      if (!orderRes.ok) throw new Error(`Order failed: ${orderRes.status}`);
+      const order = await orderRes.json();
+
+      if (order.amount == null) {
+        throw new Error('Server did not return a payment amount. Cannot proceed.');
+      }
+
+      const rzp = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency ?? 'INR',
+        name: 'Yaarlore',
+        description: 'Monthly subscription — unlimited trips',
+        order_id: order.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handler: async (response: any) => {
+          try {
+            // Subscription: upgrade the current trip to digital as part of activation,
+            // then redirect to trips home so the user can start generating immediately.
+            await upgradeTier.mutateAsync({
+              tripId,
+              tier: 'digital',
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              signature: response.razorpay_signature,
+            });
+            router.push('/trips');
+          } catch (err) {
+            console.error('[upgrade] subscription activation failed:', err);
+            setError(
+              'Payment received but subscription activation failed. Contact support at hello@yaarlore.app.'
+            );
+          }
+        },
+        theme: { color: '#FF4D4D' },
+      });
+      rzp.open();
+    } catch (err) {
+      console.error('[upgrade] subscription payment init failed:', err);
       setError('Could not start payment. Try again.');
     }
   };
@@ -128,9 +179,40 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
         </header>
 
         <div className="space-y-4">
+          {/* MONETIZATION-02: Subscription — framed as best value for friend groups */}
+          <Plan
+            name="Yaarlore+"
+            price="₹99/mo"
+            badge="Best Value"
+            subtext="Unlimited trips for your whole friend group"
+            valueNote="₹17/person for 6 friends"
+            features={[
+              'Unlimited lore generations every month',
+              'All trips permanently archived',
+              'No watermarks — ever',
+              'Anniversary drops + nostalgia emails',
+              'Battle challenges enabled',
+            ]}
+            onClick={paySubscription}
+            featured
+          />
+
+          {/* Divider with "or pay per trip" label */}
+          <div className="flex items-center gap-3 py-1">
+            <div className="flex-1 h-px" style={{ background: 'rgba(245,240,232,0.06)' }} />
+            <p
+              className="font-mono text-[8px] uppercase tracking-[0.4em] whitespace-nowrap"
+              style={{ color: 'rgba(245,240,232,0.18)' }}
+            >
+              or pay per trip
+            </p>
+            <div className="flex-1 h-px" style={{ background: 'rgba(245,240,232,0.06)' }} />
+          </div>
+
           <Plan
             name="Digital"
             price="₹399"
+            subtext="One-time, this trip only"
             features={[
               'Unlimited members + photos',
               'No watermark on share card',
@@ -139,7 +221,6 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
               'Missing person cards',
             ]}
             onClick={payDigital}
-            featured
           />
           <Plan
             name="Printed book"
@@ -165,12 +246,18 @@ function Plan({
   features,
   onClick,
   featured,
+  badge,
+  subtext,
+  valueNote,
 }: {
   name: string;
   price: string;
   features: string[];
   onClick: () => void;
   featured?: boolean;
+  badge?: string;
+  subtext?: string;
+  valueNote?: string;
 }) {
   return (
     <div
@@ -193,7 +280,7 @@ function Plan({
           : 'none';
       }}
     >
-      {featured && (
+      {(badge ?? featured) && (
         <div
           className="absolute top-5 right-5 font-mono text-[7px] uppercase tracking-[0.4em] px-3 py-1 rounded-full"
           style={{
@@ -202,11 +289,11 @@ function Plan({
             border: '1px solid rgba(255,77,77,0.2)',
           }}
         >
-          Best for Lore
+          {badge ?? 'Best for Lore'}
         </div>
       )}
 
-      <div className="flex justify-between items-baseline mb-6">
+      <div className="flex justify-between items-baseline mb-2">
         <h3 className="font-cinematic italic text-xl">{name}</h3>
         <p
           className="font-cinematic font-black text-3xl"
@@ -215,6 +302,27 @@ function Plan({
           {price}
         </p>
       </div>
+
+      {subtext && (
+        <p className="font-mono text-[9px] mb-2" style={{ color: 'rgba(245,240,232,0.3)' }}>
+          {subtext}
+        </p>
+      )}
+
+      {valueNote && (
+        <p
+          className="font-mono text-[9px] mb-5 px-3 py-1.5 rounded-full inline-block"
+          style={{
+            background: 'rgba(45,158,139,0.1)',
+            color: 'rgba(45,158,139,0.8)',
+            border: '1px solid rgba(45,158,139,0.2)',
+          }}
+        >
+          {valueNote}
+        </p>
+      )}
+
+      {!subtext && !valueNote && <div className="mb-4" />}
 
       <ul className="space-y-2.5 mb-8">
         {features.map((f, i) => (
@@ -247,7 +355,7 @@ function Plan({
           (e.currentTarget as HTMLButtonElement).style.opacity = '1';
         }}
       >
-        Choose {name}
+        {featured ? `Subscribe — ${price}` : `Choose ${name}`}
       </button>
     </div>
   );
