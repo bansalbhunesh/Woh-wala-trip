@@ -54,6 +54,8 @@ export const battlesRouter = router({
       }
 
       // Rate limit: max 3 battles per user (not per trip) in the last 24h
+      // ARCH-06: count battles where ANY of the user's trips appear on either side
+      // (trip_a_id OR trip_b_id) to prevent bypass via multi-trip ownership.
       const userTripsResult = await ctx.supabase
         .from('trips')
         .select('id')
@@ -61,11 +63,14 @@ export const battlesRouter = router({
 
       const ownedIds = ((userTripsResult.data || []) as TripIdRow[]).map(t => t.id);
 
+      const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const ownedList = ownedIds.join(',');
+
       const { count: recentBattles } = await ctx.supabase
         .from('trip_vs_trip' as never)
         .select('id', { count: 'exact', head: true })
-        .in('trip_a_id' as never, ownedIds)
-        .gte('created_at' as never, new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+        .or(`trip_a_id.in.(${ownedList}),trip_b_id.in.(${ownedList})` as never)
+        .gte('created_at' as never, cutoff);
 
       if ((recentBattles || 0) >= 3) {
         throw new TRPCError({
