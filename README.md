@@ -163,25 +163,32 @@ Auto-scheduled via SQL trigger the moment lore generation completes. Sent at 6am
 
 ---
 
-### Public Profiles — `/u/[username]`
+### 👤 Public Lore Profiles — `/u/[username]`
 
-Every user gets a public profile showing their trip archive and cross-trip chaos sparklines.
+A gorgeous, high-fidelity developer/explorer portfolio that serves as your personal **Hall of Adventures**.
+
+> [!NOTE]
+> **Share your legend.** Your public profile showcases your lifetime journey of trips and group events:
+> * **📈 Chaos Sparklines** — Sleek, client-side SVG sparklines tracking your collective delusion trajectory across different trips.
+> * **📂 The Lore Library** — A stunning grid of all your generated trip dossier covers, tags, and season titles.
+> * **🏷️ Role Archetypes** — Highlights the most recurrent role assigned to you by the AI across your adventures (e.g. the resident *Chaos Source* or *NPC*).
 
 ---
 
-### Auth — No Passwords, No Friction
+### 🔑 Zero-Friction Passwordless Authentication
 
-Email OTP. You enter, you're in.
+A secure, passwordless authentication loop designed to get you from landing page to lore generation in under 10 seconds.
 
 ```
-Enter email  →  Get 8-digit code  →  Enter code  →  You're home
+┌──────────────┐      ┌──────────────────┐      ┌─────────────┐      ┌─────────────┐
+│  Enter Email │ ───> │  Get 8-Digit OTP │ ───> │  Enter Code │ ───> │ You're Home │
+└──────────────┘      └──────────────────┘      └─────────────┘      └─────────────┘
 ```
 
-- Delivered via Resend
-- HMAC-SHA256 hashed before storage
-- Rate limited (5 attempts / 15 min)
-- Anti-spam middleware blocks abuse patterns
-- Profile auto-created on first login
+* **⚡ Lightning Delivery** — OTP codes delivered instantly to your inbox via high-deliverability **Resend** nodes.
+* **🛡️ Hardened Security** — All raw codes are hashed using a robust **HMAC-SHA256** mechanism with server-only salts before database writing.
+* **🛑 Anti-Spam Sentry** — Built-in rate limiting (hard cap of 5 attempts / 15 minutes) coupled with dynamic anti-spam middleware to block disposable domains and bots.
+* **✨ Instant Onboarding** — New accounts and user profiles are created dynamically on first login, with zero setup required.
 
 ---
 
