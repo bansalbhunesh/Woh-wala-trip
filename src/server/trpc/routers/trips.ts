@@ -821,27 +821,34 @@ export const tripsRouter = router({
       return cached.data;
     }
 
-    // ARCH-05: scope to trips where the calling user is a member to prevent cross-user data leak.
-    // trips has no RLS until Phase 1 lands, so we must filter explicitly here.
-    // After Phase 1 RLS is deployed, ctx.supabase will also enforce this automatically,
-    // but the explicit .in() filter below remains as defence-in-depth.
-    const { data: memberRows } = await ctx.supabase
-      .from('trip_members')
-      .select('trip_id')
-      .eq('user_id', ctx.user.id);
+    // PERF-03 / SCALABILITY: query chaos_distribution_cache materialized view instead of
+    // doing a full `trips` table scan.  The view is refreshed hourly by /api/cron/refresh-chaos.
+    // Fall back to the trips table if the view isn't populated yet (e.g. fresh deployment).
+    //
+    // ARCH-05: the materialized view contains ALL ready trips (not scoped to the user).
+    // We use it for the global percentile distribution (p50/p75/p90) which is intentionally
+    // anonymous — it tells a user where their trip ranks among all trips on the platform.
+    // No trip names or user IDs are exposed; chaos_score alone is returned.
+    // TYPE-02: chaos_distribution_cache not in generated types; use local cast.
+    type CacheRow = { chaos_score: number };
+    const { data: viewData, error: viewError } = await createSupabaseServiceClient()
+      .from('chaos_distribution_cache' as never)
+      .select('chaos_score');
 
-    const memberTripIds = ((memberRows || []) as { trip_id: string }[]).map(r => r.trip_id);
+    // If the view doesn't exist yet (pre-migration deployment), fall back to direct query.
+    const rawData: CacheRow[] =
+      !viewError && viewData
+        ? (viewData as unknown as CacheRow[])
+        : await (async () => {
+            const { data: fallback } = await ctx.supabase
+              .from('trips')
+              .select('chaos_score')
+              .eq('lore_status', 'ready')
+              .not('chaos_score', 'is', null);
+            return (fallback || []) as CacheRow[];
+          })();
 
-    if (memberTripIds.length === 0) return null;
-
-    const { data } = await ctx.supabase
-      .from('trips')
-      .select('chaos_score')
-      .in('id', memberTripIds)
-      .eq('lore_status', 'ready')
-      .not('chaos_score', 'is', null);
-
-    const scores = ((data || []) as { chaos_score: number }[])
+    const scores = rawData
       .map(r => r.chaos_score)
       .filter((s): s is number => s != null && s > 0)
       .sort((a, b) => a - b);
