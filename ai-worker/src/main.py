@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from collections import defaultdict
@@ -7,6 +7,7 @@ import time
 import logging
 from datetime import datetime, timezone
 
+from .auth import verify_hmac_signature
 from .lore.orchestrator import LoreOrchestrator
 from .thumbnails import generate_thumbnail
 from .config import settings
@@ -200,7 +201,12 @@ class ImageGenRequest(BaseModel):
 
 
 @app.post("/generate-lore")
-async def generate_lore(req: LoreRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def generate_lore(
+    req: LoreRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     now = time.time()
     last = _lore_last_triggered[req.trip_id]
@@ -213,28 +219,48 @@ async def generate_lore(req: LoreRequest, bg: BackgroundTasks, authorization: st
 
 
 @app.post("/generate-thumbnail")
-async def thumbnail(req: ThumbnailRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def thumbnail(
+    req: ThumbnailRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     bg.add_task(generate_thumbnail, req.photo_id)
     return {"status": "queued", "photo_id": req.photo_id}
 
 
 @app.post("/generate-missing-person-card")
-async def missing_person(req: MissingPersonRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def missing_person(
+    req: MissingPersonRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     bg.add_task(LoreOrchestrator().generate_missing_person, req.trip_id, req.absent_user_id)
     return {"status": "queued", "trip_id": req.trip_id, "user_id": req.absent_user_id}
 
 
 @app.post("/judge-battle")
-async def judge_battle(req: BattleRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def judge_battle(
+    req: BattleRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     bg.add_task(LoreOrchestrator().judge_battle, req.battle_id)
     return {"status": "queued", "battle_id": req.battle_id}
 
 
 @app.post("/embed-photo")
-async def embed_photo_endpoint(req: EmbedRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def embed_photo_endpoint(
+    req: EmbedRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     from .embeddings import embed_photo
     bg.add_task(embed_photo, req.photo_id)
@@ -242,7 +268,12 @@ async def embed_photo_endpoint(req: EmbedRequest, bg: BackgroundTasks, authoriza
 
 
 @app.post("/backfill-embeddings")
-async def backfill_embeddings(req: BackfillEmbedRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def backfill_embeddings(
+    req: BackfillEmbedRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     from .embeddings import backfill_trip_embeddings
     bg.add_task(backfill_trip_embeddings, req.trip_id)
@@ -266,7 +297,12 @@ async def memory_echo(req: MemoryEchoRequest, authorization: str = Header(...)):
 
 
 @app.post("/generate-trip-cover")
-async def gen_trip_cover(req: ImageGenRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def gen_trip_cover(
+    req: ImageGenRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     from .image_gen import generate_trip_cover
     bg.add_task(generate_trip_cover, req.trip_id, True)   # force=True bypasses idempotency
@@ -274,7 +310,12 @@ async def gen_trip_cover(req: ImageGenRequest, bg: BackgroundTasks, authorizatio
 
 
 @app.post("/generate-character-portraits")
-async def gen_portraits(req: ImageGenRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def gen_portraits(
+    req: ImageGenRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     from .image_gen import generate_character_portraits
     bg.add_task(generate_character_portraits, req.trip_id, True)
@@ -282,7 +323,12 @@ async def gen_portraits(req: ImageGenRequest, bg: BackgroundTasks, authorization
 
 
 @app.post("/generate-era-thumbnails")
-async def gen_era_thumbnails(req: ImageGenRequest, bg: BackgroundTasks, authorization: str = Header(...)):
+async def gen_era_thumbnails(
+    req: ImageGenRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
     verify_auth(authorization)
     from .image_gen import generate_era_thumbnails
     bg.add_task(generate_era_thumbnails, req.trip_id, True)

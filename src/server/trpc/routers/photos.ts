@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { signWorkerRequest } from '@/lib/worker-auth';
 
 // Shapes returned by RPCs that produce Json arrays
 interface SimilarPhotoRow {
@@ -192,24 +193,39 @@ export const photosRouter = router({
       // Fire-and-forget thumbnail + CLIP embedding — never block/fail the upload if worker is down
       const workerUrl = process.env.AI_WORKER_URL;
       if (workerUrl && !workerUrl.includes('localhost')) {
-        const workerHeaders = {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-        };
         const photoBody = JSON.stringify({ photo_id: data.id });
-        fetch(`${workerUrl}/generate-thumbnail`, {
-          method: 'POST',
-          headers: workerHeaders,
-          body: photoBody,
-          signal: AbortSignal.timeout(6000),
-        }).catch(e => console.warn('[thumbnail] worker unreachable:', (e as Error).message));
+        // Sign once — same body used for both thumbnail and embed calls
+        signWorkerRequest('POST', '/generate-thumbnail', photoBody)
+          .then(({ signature: thumbSig, timestamp: thumbTs }) => {
+            fetch(`${workerUrl}/generate-thumbnail`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+                'X-Timestamp': thumbTs,
+                'X-Signature': thumbSig,
+              },
+              body: photoBody,
+              signal: AbortSignal.timeout(6000),
+            }).catch(e => console.warn('[thumbnail] worker unreachable:', (e as Error).message));
+          })
+          .catch(e => console.warn('[thumbnail] HMAC signing failed:', (e as Error).message));
 
-        fetch(`${workerUrl}/embed-photo`, {
-          method: 'POST',
-          headers: workerHeaders,
-          body: photoBody,
-          signal: AbortSignal.timeout(6000),
-        }).catch(e => console.warn('[embed] worker unreachable:', (e as Error).message));
+        signWorkerRequest('POST', '/embed-photo', photoBody)
+          .then(({ signature: embedSig, timestamp: embedTs }) => {
+            fetch(`${workerUrl}/embed-photo`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+                'X-Timestamp': embedTs,
+                'X-Signature': embedSig,
+              },
+              body: photoBody,
+              signal: AbortSignal.timeout(6000),
+            }).catch(e => console.warn('[embed] worker unreachable:', (e as Error).message));
+          })
+          .catch(e => console.warn('[embed] HMAC signing failed:', (e as Error).message));
       }
 
       return { photoId: data.id };

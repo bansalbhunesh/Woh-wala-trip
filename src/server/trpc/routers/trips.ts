@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { langfuse } from '@/lib/langfuse';
 import crypto from 'crypto';
+import { signWorkerRequest } from '@/lib/worker-auth';
 
 // RPC return type shapes (RPCs return Json — cast to these after error checking)
 interface GetTripFullResult {
@@ -359,13 +360,17 @@ export const tripsRouter = router({
       });
 
       try {
+        const body = JSON.stringify({ trip_id: input.tripId });
+        const { signature, timestamp } = await signWorkerRequest('POST', '/generate-lore', body);
         const resp = await fetch(`${workerUrl}/generate-lore`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+            'X-Timestamp': timestamp,
+            'X-Signature': signature,
           },
-          body: JSON.stringify({ trip_id: input.tripId }),
+          body,
           signal: AbortSignal.timeout(8000), // 8s connection timeout
         });
         if (!resp.ok) throw new Error(`Worker returned ${resp.status}`);
@@ -458,14 +463,24 @@ export const tripsRouter = router({
         .eq('user_id', input.userId);
 
       // Fire-and-forget — don't block on worker, but log failures
-      fetch(`${process.env.AI_WORKER_URL ?? ''}/generate-missing-person-card`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-        },
-        body: JSON.stringify({ trip_id: input.tripId, absent_user_id: input.userId }),
-      }).catch(e => console.error('[markAbsent] worker call failed:', e.message));
+      const markAbsentBody = JSON.stringify({
+        trip_id: input.tripId,
+        absent_user_id: input.userId,
+      });
+      signWorkerRequest('POST', '/generate-missing-person-card', markAbsentBody)
+        .then(({ signature, timestamp }) => {
+          fetch(`${process.env.AI_WORKER_URL ?? ''}/generate-missing-person-card`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+              'X-Timestamp': timestamp,
+              'X-Signature': signature,
+            },
+            body: markAbsentBody,
+          }).catch(e => console.error('[markAbsent] worker call failed:', e.message));
+        })
+        .catch(e => console.error('[markAbsent] HMAC signing failed:', e.message));
 
       return { success: true };
     }),

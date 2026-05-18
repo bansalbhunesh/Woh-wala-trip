@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_ROLE_KEY: str
     AI_WORKER_SECRET: str
+    AI_WORKER_HMAC_SECRET: str = ""  # Required after rollout; empty = bearer-only mode (transition)
 
     # Optional: set if using a proxy (e.g. aicredits.in, openrouter, etc.)
     ANTHROPIC_BASE_URL: str = ""

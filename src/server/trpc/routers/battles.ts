@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
+import { signWorkerRequest } from '@/lib/worker-auth';
 
 // Columns read from the trips table — typed explicitly because the Supabase
 // select() generic doesn't narrow correctly for cross-table queries.
@@ -105,15 +106,22 @@ export const battlesRouter = router({
           message: error.message,
         });
 
-      fetch(`${process.env.AI_WORKER_URL ?? ''}/judge-battle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-        },
-        body: JSON.stringify({ battle_id: (battle as BattleRow).id }),
-        signal: AbortSignal.timeout(8000),
-      }).catch(e => console.error('[challenge] worker failed:', (e as Error).message));
+      const battleBody = JSON.stringify({ battle_id: (battle as BattleRow).id });
+      signWorkerRequest('POST', '/judge-battle', battleBody)
+        .then(({ signature, timestamp }) => {
+          fetch(`${process.env.AI_WORKER_URL ?? ''}/judge-battle`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+              'X-Timestamp': timestamp,
+              'X-Signature': signature,
+            },
+            body: battleBody,
+            signal: AbortSignal.timeout(8000),
+          }).catch(e => console.error('[challenge] worker failed:', (e as Error).message));
+        })
+        .catch(e => console.error('[challenge] HMAC signing failed:', e.message));
 
       return battle;
     }),
