@@ -1,3 +1,6 @@
+# TEST-04: CI pipeline runs tsc --noEmit, eslint, and vitest run on every PR.
+# Branch protection should require 'Lint & Type Check' and 'Unit & Integration Tests'
+# as required status checks so a PR with a type error or failing test cannot be merged.
 name: CI
 
 on:
@@ -34,7 +37,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run test:unit -- --coverage --coverage.thresholds.lines=60
+      # TEST-04: --run ensures vitest exits after one pass (no watch mode in CI)
+      - run: npm run test:unit -- --run --coverage --coverage.thresholds.lines=60
       - uses: actions/upload-artifact@v4
         if: always()
         with:
