@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 import { signWorkerRequest } from '@/lib/worker-auth';
 
 // Shapes returned by RPCs that produce Json arrays
@@ -277,9 +278,19 @@ export const photosRouter = router({
               },
               body: photoBody,
               signal: AbortSignal.timeout(6000),
-            }).catch(e => console.warn('[thumbnail] worker unreachable:', (e as Error).message));
+            }).catch(e =>
+              logger.warn(
+                { procedure: 'photos.confirmUpload', photoId: data.id, tripId: input.tripId },
+                `thumbnail worker unreachable: ${(e as Error).message}`
+              )
+            );
           })
-          .catch(e => console.warn('[thumbnail] HMAC signing failed:', (e as Error).message));
+          .catch(e =>
+            logger.warn(
+              { procedure: 'photos.confirmUpload', tripId: input.tripId },
+              `HMAC signing failed for thumbnail: ${(e as Error).message}`
+            )
+          );
       }
 
       // PERF-05: CLIP embedding moved from per-photo HTTP fire-and-forget to background_jobs queue.
@@ -302,9 +313,18 @@ export const photosRouter = router({
         .from('background_jobs')
         .insert(embedJob)
         .then(({ error: jobErr }) => {
-          if (jobErr) console.warn('[embed] failed to enqueue background job:', jobErr.message);
+          if (jobErr)
+            logger.warn(
+              { procedure: 'photos.confirmUpload', photoId: data.id, tripId: input.tripId },
+              `failed to enqueue embed_photo background job: ${jobErr.message}`
+            );
         })
-        .catch(e => console.warn('[embed] background job insert error:', (e as Error).message));
+        .catch(e =>
+          logger.warn(
+            { procedure: 'photos.confirmUpload', tripId: input.tripId },
+            `background job insert error: ${(e as Error).message}`
+          )
+        );
 
       return { photoId: data.id };
     }),

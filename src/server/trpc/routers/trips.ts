@@ -3,6 +3,7 @@ import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { langfuse } from '@/lib/langfuse';
+import { logger } from '@/lib/logger';
 import crypto from 'crypto';
 import { signWorkerRequest } from '@/lib/worker-auth';
 
@@ -125,7 +126,10 @@ export const tripsRouter = router({
       .single();
 
     if (error) {
-      console.error('trip create failed', error.message, error.code);
+      logger.error(
+        { procedure: 'trips.create', userId, errorCode: error.code },
+        `trip create failed: ${error.message}`
+      );
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: `Could not create season: ${error.message}`,
@@ -273,7 +277,11 @@ export const tripsRouter = router({
         };
         // Never expose raw RPC error strings — map to known errors or use generic fallback
         const knownError = errorMap[res.error];
-        if (!knownError) console.error('[joinByCode] unknown RPC error:', res.error);
+        if (!knownError)
+          logger.error(
+            { procedure: 'trips.joinByCode', userId: ctx.user.id, rpcError: res.error },
+            'unknown RPC error from join_trip_by_code'
+          );
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: knownError ?? 'Could not join trip. Check the code and try again.',
@@ -314,7 +322,10 @@ export const tripsRouter = router({
         }
       } catch (referralErr) {
         // Referral tracking must never break the join flow
-        console.error('[joinByCode] referral tracking failed:', referralErr);
+        logger.error(
+          { procedure: 'trips.joinByCode', userId: ctx.user.id, tripId },
+          `referral tracking failed: ${(referralErr as Error).message}`
+        );
       }
 
       return { tripId };
@@ -515,9 +526,9 @@ export const tripsRouter = router({
         await (admin as unknown as GenJobClient)
           .from('generation_jobs')
           .upsert({ trip_id: input.tripId, status: 'pending' }, { onConflict: 'trip_id' });
-        console.warn(
-          '[generateLore] worker unreachable, queued for polling:',
-          (err as Error).message
+        logger.warn(
+          { procedure: 'trips.generateLore', userId: ctx.user.id, tripId: input.tripId },
+          `worker unreachable, queued for polling: ${(err as Error).message}`
         );
         span.end({ output: { status: 'queued' }, usage: undefined });
         // Return normally — the generating page will receive the status update via Realtime
@@ -634,7 +645,10 @@ export const tripsRouter = router({
 
       if (jobError) {
         // Non-fatal: the member is already marked absent. Log so Langfuse/Render logs surface it.
-        console.error('[markAbsent] failed to enqueue background job:', jobError.message);
+        logger.error(
+          { procedure: 'trips.markAbsent', userId: ctx.user.id, tripId: input.tripId },
+          `failed to enqueue background job: ${jobError.message}`
+        );
       }
 
       return { success: true };
@@ -740,6 +754,52 @@ export const tripsRouter = router({
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
 
       return { success: true };
+    }),
+
+  // PROD-02: Allow trip creator to show/hide the public /t/[code]/story page.
+  // Only the trip creator can toggle this; members cannot hide someone else's story.
+  updateStoryVisibility: protectedProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        visible: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify caller is the trip creator before touching story_visible.
+      const { data: tripVisRaw } = await ctx.supabase
+        .from('trips')
+        .select('creator_id')
+        .eq('id', input.tripId)
+        .single();
+
+      const tripVisCheck = tripVisRaw as TripCreatorRow | null;
+      if (!tripVisCheck || tripVisCheck.creator_id !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the trip creator can change story visibility.',
+        });
+      }
+
+      // TYPE-02: story_visible added post-codegen; use local type override.
+      type StoryVisibilityUpdate = { story_visible: boolean };
+      type StoryVisibilityClient = {
+        from: (t: 'trips') => {
+          update: (d: StoryVisibilityUpdate) => {
+            eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
+          };
+        };
+      };
+      const adminVis = createSupabaseServiceClient();
+      const { error: visError } = await (adminVis as unknown as StoryVisibilityClient)
+        .from('trips')
+        .update({ story_visible: input.visible })
+        .eq('id', input.tripId);
+
+      if (visError)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: visError.message });
+
+      return { success: true, visible: input.visible };
     }),
 
   getChaosDistribution: protectedProcedure.query(async ({ ctx }) => {
