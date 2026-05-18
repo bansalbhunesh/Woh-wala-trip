@@ -65,12 +65,12 @@ test.describe('Trips list (authenticated)', () => {
   });
 
   test('empty state is shown gracefully when no trips', async ({ page }) => {
-    // Mock tRPC to return empty trip list
+    // Mock tRPC to return empty trip list (paginated shape: { trips, nextCursor })
     await page.route('**/api/trpc/trips.listMine**', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([{ result: { data: [] } }]),
+        body: JSON.stringify([{ result: { data: { trips: [], nextCursor: null } } }]),
       });
     });
     await page.goto('/trips');
@@ -112,30 +112,33 @@ test.describe('Trips list (authenticated)', () => {
         body: JSON.stringify([
           {
             result: {
-              data: [
-                {
-                  id: FAKE_ID,
-                  name: 'Goa 2024',
-                  destination: 'Goa',
-                  lore_status: 'ready',
-                  chaos_score: 72,
-                  member_count: 4,
-                  cover_photo_url: null,
-                  trip_start_date: '2024-01-01',
-                  trip_end_date: '2024-01-05',
-                },
-                {
-                  id: '11111111-1111-1111-1111-111111111111',
-                  name: 'Manali 2025',
-                  destination: 'Manali',
-                  lore_status: 'processing',
-                  chaos_score: 0,
-                  member_count: 3,
-                  cover_photo_url: null,
-                  trip_start_date: '2025-05-01',
-                  trip_end_date: '2025-05-04',
-                },
-              ],
+              data: {
+                trips: [
+                  {
+                    id: FAKE_ID,
+                    name: 'Goa 2024',
+                    destination: 'Goa',
+                    lore_status: 'ready',
+                    chaos_score: 72,
+                    member_count: 4,
+                    cover_photo_url: null,
+                    trip_start_date: '2024-01-01',
+                    trip_end_date: '2024-01-05',
+                  },
+                  {
+                    id: '11111111-1111-1111-1111-111111111111',
+                    name: 'Manali 2025',
+                    destination: 'Manali',
+                    lore_status: 'processing',
+                    chaos_score: 0,
+                    member_count: 3,
+                    cover_photo_url: null,
+                    trip_start_date: '2025-05-01',
+                    trip_end_date: '2025-05-04',
+                  },
+                ],
+                nextCursor: null,
+              },
             },
           },
         ]),
