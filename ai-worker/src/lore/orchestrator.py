@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
@@ -13,6 +14,36 @@ from ..clients import supabase, anthropic_client
 from ..config import settings
 from . import prompts
 from .validators import validate_lore_json, scan_forbidden_phrases
+
+
+# ---------------------------------------------------------------------------
+# Prompt injection defense
+# ---------------------------------------------------------------------------
+
+def sanitize_for_prompt(value: str, max_length: int = 200) -> str:
+    """Strip prompt injection attempts from user-supplied strings.
+
+    Applies four layers of defense:
+    1. Truncation to max_length.
+    2. XML/HTML tag stripping — prevents tag-based injection.
+    3. Instruction-like keyword removal — removes "ignore/override/system prompt" patterns.
+    4. Newline collapse — newlines can break prompt structure and introduce injected turns.
+    """
+    if not value:
+        return ""
+    # 1. Truncate
+    value = value[:max_length]
+    # 2. Remove XML/HTML tags that could escape prompt delimiters
+    value = re.sub(r'<\s*/?[a-zA-Z][^>]*>', '[removed]', value)
+    # 3. Remove instruction-like override patterns (case-insensitive)
+    value = re.sub(
+        r'(?i)\b(ignore|disregard|forget|override|system\s*prompt|jailbreak|bypass)\b',
+        '[removed]',
+        value,
+    )
+    # 4. Collapse newlines — these can inject new prompt "turns"
+    value = value.replace('\n', ' ').replace('\r', ' ')
+    return value.strip()
 
 log = logging.getLogger("wwt.lore")
 
@@ -212,10 +243,20 @@ class LoreOrchestrator:
                 trip["total_photos"] = len(photos)
                 trip["member_count"] = len(members)
 
-            if len(photos) < 5:
-                log.warning(f"[{trip_id}][{trace_id}] only {len(photos)} photos — need 5+")
+            photo_count = len(photos)
+            LOW_PHOTO_THRESHOLD = 8
+
+            if photo_count < 5:
+                log.warning(f"[{trip_id}][{trace_id}] only {photo_count} photos — need 5+")
                 supabase.table("trips").update({"lore_status": "failed"}).eq("id", trip_id).execute()
                 return
+
+            low_confidence = photo_count < LOW_PHOTO_THRESHOLD
+            if low_confidence:
+                log.info(
+                    f"[{trip_id}][{trace_id}] low-confidence mode: {photo_count} photos "
+                    f"(threshold={LOW_PHOTO_THRESHOLD})"
+                )
 
             # Step 2: structural signals + vision in parallel
             self._update_pipeline_state(trip_id, "vision", "running")
@@ -244,7 +285,7 @@ class LoreOrchestrator:
             self._update_pipeline_state(trip_id, "lore", "running")
             self._current_step = "lore"
             confessions = self._get_confessions(trip_id)
-            lore = await self._generate_lore_with_retry(trip, aggregated, confessions)
+            lore = await self._generate_lore_with_retry(trip, aggregated, confessions, low_confidence=low_confidence)
             lore, eval_result = await self._quality_gate(trip, aggregated, confessions, lore)
             self._update_pipeline_state(trip_id, "lore", "done")
 
@@ -440,6 +481,7 @@ class LoreOrchestrator:
         aggregated: dict,
         confessions: list[str],
         lore: dict,
+        low_confidence: bool = False,
     ) -> tuple[dict, dict]:
         """Evaluate lore quality. If overall < 0.55, retry once with dimension feedback.
 
@@ -464,9 +506,11 @@ class LoreOrchestrator:
 
         evaluator   = LoreEvaluator()
         eval_result = await evaluator.evaluate(trip["id"], lore)
-        overall     = eval_result.get("overall", 1.0)
+        overall     = eval_result.get("overall")  # None means evaluator itself failed
 
-        if overall < 0.55:
+        # Skip quality retry if evaluator failed (overall is None) to avoid masking
+        # the real error with a fabricated retry.
+        if overall is not None and overall < 0.55:
             weakest  = eval_result.get("weakest_dimension", "unknown")
             feedback = eval_result.get("feedback", "be more specific")
             log.warning(
@@ -478,14 +522,15 @@ class LoreOrchestrator:
                 f"Return ONLY raw JSON. Be highly specific to THIS trip's actual events and moments."
             )
             try:
-                lore2 = await self._generate_lore(trip, aggregated, confessions, quality_extra)
+                lore2 = await self._generate_lore(trip, aggregated, confessions, quality_extra, low_confidence=low_confidence)
                 validate_lore_json(lore2)
                 forbidden = scan_forbidden_phrases(lore2)
                 if forbidden:
                     raise ValueError(f"Forbidden phrases: {forbidden}")
                 lore        = lore2
                 eval_result = await evaluator.evaluate(trip["id"], lore)
-                log.info(f"[{trip['id']}] quality retry result: overall={eval_result.get('overall', '?'):.2f}")
+                retry_overall = eval_result.get("overall")
+                log.info(f"[{trip['id']}] quality retry result: overall={retry_overall}")
             except Exception as qe:
                 log.warning(f"[{trip['id']}] quality retry failed ({qe}) — keeping original lore")
 
@@ -501,10 +546,10 @@ class LoreOrchestrator:
         if not data:
             return {}
         trip = data[0]
-        # Sanitize user-provided fields to prevent XML prompt injection
-        def sanitize(s): return str(s).replace('<', '&lt;').replace('>', '&gt;') if s else s
-        trip["name"] = sanitize(trip.get("name"))
-        trip["destination"] = sanitize(trip.get("destination"))
+        # Sanitize user-supplied fields before they enter any prompt string.
+        # sanitize_for_prompt handles XML tags, instruction-injection patterns, and newlines.
+        trip["name"] = sanitize_for_prompt(trip.get("name") or "", max_length=80)
+        trip["destination"] = sanitize_for_prompt(trip.get("destination") or "", max_length=100)
         return trip
 
     def _get_photos(self, trip_id: str) -> list[dict]:
@@ -518,12 +563,15 @@ class LoreOrchestrator:
             .execute()
             .data
         )
-        def sanitize(s): return str(s).replace('<', '&lt;').replace('>', '&gt;') if s else s
         for member in (data or []):
             if member.get("profiles") and member["profiles"].get("display_name"):
-                member["profiles"]["display_name"] = sanitize(member["profiles"]["display_name"])
+                member["profiles"]["display_name"] = sanitize_for_prompt(
+                    member["profiles"]["display_name"], max_length=60
+                )
             if member.get("confession_text"):
-                member["confession_text"] = sanitize(member["confession_text"])
+                member["confession_text"] = sanitize_for_prompt(
+                    member["confession_text"], max_length=500
+                )
         return data
 
     def _get_confessions(self, trip_id: str) -> list[str]:
@@ -536,9 +584,11 @@ class LoreOrchestrator:
                 .execute()
                 .data
             )
-            # Sanitize to prevent XML prompt injection
-            def sanitize(s): return str(s).replace('<', '&lt;').replace('>', '&gt;')
-            return [sanitize(r["confession_text"]) for r in (rows or []) if r.get("confession_text")]
+            return [
+                sanitize_for_prompt(r["confession_text"], max_length=500)
+                for r in (rows or [])
+                if r.get("confession_text")
+            ]
         except Exception:
             return []
 
@@ -868,14 +918,20 @@ class LoreOrchestrator:
     # Core lore generation
     # -------------------------------------------------------------------------
 
-    async def _generate_lore_with_retry(self, trip: dict, aggregated: dict, confessions: list[str]) -> dict:
+    async def _generate_lore_with_retry(
+        self,
+        trip: dict,
+        aggregated: dict,
+        confessions: list[str],
+        low_confidence: bool = False,
+    ) -> dict:
         last_err = None
         for attempt in range(settings.MAX_LORE_RETRIES):
             try:
                 extra = ""
                 if attempt > 0:
                     extra = "\n\nYour last response was rejected. Return ONLY raw JSON. Be more specific and roasty. Avoid generic phrases."
-                lore     = await self._generate_lore(trip, aggregated, confessions, extra)
+                lore     = await self._generate_lore(trip, aggregated, confessions, extra, low_confidence=low_confidence)
                 validate_lore_json(lore)
                 forbidden = scan_forbidden_phrases(lore)
                 if forbidden:
@@ -886,8 +942,25 @@ class LoreOrchestrator:
                 last_err = e
         raise RuntimeError(f"Lore generation failed after {settings.MAX_LORE_RETRIES} retries: {last_err}")
 
-    async def _generate_lore(self, trip: dict, aggregated: dict, confessions: list[str], extra: str = "") -> dict:
-        system = prompts.LORE_GENERATION_SYSTEM + extra
+    async def _generate_lore(
+        self,
+        trip: dict,
+        aggregated: dict,
+        confessions: list[str],
+        extra: str = "",
+        low_confidence: bool = False,
+    ) -> dict:
+        system = prompts.LORE_GENERATION_SYSTEM
+
+        if low_confidence:
+            system = (
+                "Note: This trip has fewer than 8 photos. Generate lore that reflects genuine moments "
+                "without fabricating specific behavioral patterns. Use more universal friendship archetypes and "
+                "soften specific behavioral claims. Mark confidence as \"limited\".\n\n"
+                + system
+            )
+
+        system = system + extra
 
         hints              = aggregated.get("lore_writing_hints", {})
         lead_with          = hints.get("lead_with", "the group's collective chaos energy")
@@ -920,7 +993,16 @@ class LoreOrchestrator:
             cache_system=True,
             step="lore",
         )
-        return self._parse_json(response)
+        lore = self._parse_json(response)
+
+        # Annotate confidence level so downstream consumers and the UI can surface it.
+        if isinstance(lore, dict):
+            lore["confidence_level"] = "low" if low_confidence else "high"
+            # With fewer data points, clamp chaos score to a softer range (20–65).
+            if low_confidence and "cooked_level" in lore:
+                lore["cooked_level"] = max(20, min(65, lore["cooked_level"]))
+
+        return lore
 
     # -------------------------------------------------------------------------
     # Character roles
@@ -1307,6 +1389,24 @@ class LoreOrchestrator:
                 max_attempts, base_wait  = self._RETRY_CONFIG.get(reason, (2, 2.0))
                 attempt                 += 1
                 if attempt >= max_attempts:
+                    # Fallback: if Sonnet is overloaded and we are not already on the fallback
+                    # model, retry once with Haiku instead of failing the pipeline.
+                    if (
+                        reason == FailoverReason.OVERLOAD
+                        and chosen_model != settings.CLAUDE_FALLBACK_MODEL
+                    ):
+                        log.warning(
+                            f"[claude] step={step} Sonnet overloaded after {attempt} attempts — "
+                            f"falling back to {settings.CLAUDE_FALLBACK_MODEL}"
+                        )
+                        return await self._call_claude(
+                            system=system,
+                            messages=messages,
+                            max_tokens=max_tokens,
+                            cache_system=cache_system,
+                            model=settings.CLAUDE_FALLBACK_MODEL,
+                            step=step,
+                        )
                     log.error(f"[claude] step={step} giving up after {attempt} attempts: {reason} — {exc}")
                     raise LoreApiError(reason=reason, original=exc, step=step) from exc
                 wait = min(base_wait * (2 ** (attempt - 1)), 60.0)
