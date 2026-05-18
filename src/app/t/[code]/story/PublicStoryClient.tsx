@@ -7,6 +7,7 @@ import ReactionBar from '@/components/experience/ReactionBar';
 import { SlidePhotoBackground } from '@/components/experience/SlidePhotoBackground';
 import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { trpc } from '@/lib/trpc/client';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }
@@ -115,6 +116,96 @@ function CopyLinkButton({ storyUrl }: { storyUrl: string }) {
     >
       {copied ? '✓ Copied!' : 'Copy Link'}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOAT: "You Might Also Dig" — similar public trips using CLIP embeddings
+// ─────────────────────────────────────────────────────────────────────────────
+function SimilarTripsSection({ tripId }: { tripId: string }) {
+  const { data: similar, isLoading } = trpc.trips.getSimilarPublicTrips.useQuery({ tripId });
+
+  if (isLoading) return null;
+  if (!similar || similar.length === 0) return null;
+
+  return (
+    <div className="w-full space-y-3" onClick={e => e.stopPropagation()}>
+      <p
+        className="text-[8px] uppercase tracking-[0.45em] font-mono text-center"
+        style={{ color: 'rgba(255,77,77,0.6)' }}
+      >
+        ● YOU MIGHT ALSO DIG
+      </p>
+      <div className="space-y-2">
+        {similar.map(trip => (
+          <a
+            key={trip.tripId}
+            href={`/t/${trip.tripId}`}
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:opacity-90"
+            style={{
+              background: 'rgba(245,240,232,0.04)',
+              border: '1px solid rgba(245,240,232,0.10)',
+              textDecoration: 'none',
+            }}
+          >
+            {/* Thumbnail */}
+            <div
+              className="flex-shrink-0 rounded-xl overflow-hidden"
+              style={{ width: 44, height: 44 }}
+            >
+              {trip.thumbnailUrl ? (
+                <img
+                  src={trip.thumbnailUrl}
+                  alt={trip.destination}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(255,77,77,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <span style={{ color: 'rgba(255,77,77,0.4)', fontSize: 16 }}>◎</span>
+                </div>
+              )}
+            </div>
+            {/* Meta */}
+            <div className="flex-1 min-w-0">
+              <p
+                className="font-mono text-[9px] font-bold uppercase tracking-wide truncate"
+                style={{ color: 'rgba(245,240,232,0.8)' }}
+              >
+                {trip.destination}
+              </p>
+              {trip.tagline && (
+                <p
+                  className="font-display italic text-[10px] truncate mt-0.5"
+                  style={{ color: 'rgba(245,240,232,0.35)' }}
+                >
+                  &ldquo;{trip.tagline}&rdquo;
+                </p>
+              )}
+            </div>
+            {/* Chaos badge */}
+            <div
+              className="flex-shrink-0 px-2 py-1 rounded-full font-mono text-[8px] font-bold"
+              style={{
+                background: 'rgba(255,77,77,0.10)',
+                border: '1px solid rgba(255,77,77,0.2)',
+                color: 'rgba(255,77,77,0.8)',
+              }}
+            >
+              {trip.chaosScore}
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -634,6 +725,10 @@ function SlideContent({
           >
             ← Back to overview
           </a>
+          {/* MOAT: Similar trips discovery */}
+          <ErrorBoundary name="similar-trips">
+            <SimilarTripsSection tripId={tripId} />
+          </ErrorBoundary>
           {tier === 'free' && (
             <a
               href={`/trips/${tripId}/upgrade`}
