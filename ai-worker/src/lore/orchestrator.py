@@ -164,8 +164,14 @@ class LoreEvaluator:
                 result["overall"] = round(sum(scores.values()) / len(scores), 3)
             return result
         except Exception as e:
-            log.warning(f"[{trip_id}] lore eval failed (non-blocking): {e}")
-            return {"scores": {}, "overall": 0.7, "weakest_dimension": "unknown", "feedback": str(e)[:200]}
+            log.error(f"[{trip_id}] LoreEvaluator failed: {e}")
+            return {
+                "scores": {},
+                "overall": None,  # None = evaluator failed, not a real score
+                "sampled": False,
+                "error": str(e)[:200],
+                "evaluation_failed": True,
+            }
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +292,7 @@ class LoreOrchestrator:
             self._current_step = "lore"
             confessions = self._get_confessions(trip_id)
             lore = await self._generate_lore_with_retry(trip, aggregated, confessions, low_confidence=low_confidence)
-            lore, eval_result = await self._quality_gate(trip, aggregated, confessions, lore)
+            lore, eval_result = await self._quality_gate(trip, aggregated, confessions, lore, low_confidence=low_confidence)
             self._update_pipeline_state(trip_id, "lore", "done")
 
             # Steps 5-7: parallel enrichment
@@ -361,7 +367,12 @@ class LoreOrchestrator:
                     "step_durations": step_durations,
                 },
                 "lore_eval_json": eval_result,
-                "lore_needs_review": eval_result.get("overall", 1.0) < 0.55,
+                # overall=None means the evaluator itself crashed — don't flag for review,
+                # since we have no signal to act on.  Only flag when a real score is low.
+                "lore_needs_review": (
+                    eval_result.get("overall") is not None
+                    and eval_result["overall"] < 0.55
+                ),
             }
             if total_tokens > 0:
                 update_payload["generation_cost_tokens"] = total_tokens

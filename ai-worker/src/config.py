@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     CLAUDE_MODEL: str = "claude-sonnet-4-6"              # vision + fast, current
     CLAUDE_HAIKU_MODEL: str = "claude-haiku-4-5-20251001"  # thumbnails + cheap calls
+    CLAUDE_FALLBACK_MODEL: str = "claude-haiku-4-5-20251001"  # fallback when Sonnet overloaded
 
     MAX_PHOTOS_PER_VISION_CALL: int = 20
     MAX_VISION_BATCHES: int = 4       # hard cap: never send more than 4 batches to vision (80 photos max)
