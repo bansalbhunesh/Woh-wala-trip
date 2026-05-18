@@ -19,39 +19,80 @@ from ..src import image_gen as ig
 
 class TestBudgetGuard:
     def setup_method(self):
-        ig._fal_calls_today = 0
-        ig._budget_window_end = 0.0
+        self.budget_db = {}
+        
+        class MockFalBudgetTable:
+            def __init__(self, db_state):
+                self.db_state = db_state
+                self.selected_field = None
+                self.filter_date = None
+
+            def select(self, field):
+                self.selected_field = field
+                return self
+
+            def eq(self, field, value):
+                if field == "date":
+                    self.filter_date = value
+                return self
+
+            def execute(self):
+                class Resp:
+                    def __init__(self, data):
+                        self.data = data
+                row = self.db_state.get(self.filter_date)
+                if row is not None:
+                    return Resp([{"calls_count": row}])
+                return Resp([])
+
+            def upsert(self, data, on_conflict=None):
+                self.filter_date = data["date"]
+                self.db_state[data["date"]] = data["calls_count"]
+                return self
+
+        def mock_table(table_name):
+            if table_name == "fal_budget":
+                return MockFalBudgetTable(self.budget_db)
+            return MagicMock()
+
+        self.original_table = ig.supabase.table
+        ig.supabase.table = mock_table
+
+    def teardown_method(self):
+        ig.supabase.table = self.original_table
 
     @pytest.mark.fast
     def test_first_call_within_budget(self):
         with patch.object(ig, 'settings') as s:
             s.FAL_DAILY_BUDGET = 200
             assert ig._budget_ok() is True
-            assert ig._fal_calls_today == 1
+            today = ig._get_today_key()
+            assert self.budget_db.get(today) == 1
 
     @pytest.mark.fast
     def test_budget_exhausted_returns_false(self):
         with patch.object(ig, 'settings') as s:
             s.FAL_DAILY_BUDGET = 3
-            ig._budget_ok()
-            ig._budget_ok()
-            ig._budget_ok()
+            assert ig._budget_ok() is True
+            assert ig._budget_ok() is True
+            assert ig._budget_ok() is True
             result = ig._budget_ok()
         assert result is False
-        assert ig._fal_calls_today == 3
+        today = ig._get_today_key()
+        assert self.budget_db.get(today) == 3
 
     @pytest.mark.fast
     def test_budget_counter_resets_after_window_expires(self):
         with patch.object(ig, 'settings') as s:
             s.FAL_DAILY_BUDGET = 2
-            ig._budget_ok()
-            ig._budget_ok()
+            assert ig._budget_ok() is True
+            assert ig._budget_ok() is True
             assert ig._budget_ok() is False
 
             # Expire the 24h window
-            ig._budget_window_end = time.time() - 1
-            assert ig._budget_ok() is True
-            assert ig._fal_calls_today == 1
+            with patch.object(ig, '_get_today_key', return_value="2026-05-19"):
+                assert ig._budget_ok() is True
+                assert self.budget_db.get("2026-05-19") == 1
 
     @pytest.mark.fast
     def test_budget_guard_is_thread_safe(self):
@@ -72,7 +113,8 @@ class TestBudgetGuard:
         denied = sum(1 for r in results if r is False)
         assert approved == 50
         assert denied == 10
-        assert ig._fal_calls_today == 50
+        today = ig._get_today_key()
+        assert self.budget_db.get(today) == 50
 
     @pytest.mark.fast
     def test_budget_low_warning_logged(self, caplog):

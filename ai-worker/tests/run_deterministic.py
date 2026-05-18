@@ -43,6 +43,46 @@ sys.modules["src.config"] = _config_mod
 # Stub clients before nostalgia imports it
 _clients_mod = types.ModuleType("src.clients")
 _clients_mod.supabase = MagicMock()
+
+# Setup simulated database for fal_budget to survive in-process resets during testing
+budget_db = {}
+
+class MockFalBudgetTable:
+    def __init__(self, db_state):
+        self.db_state = db_state
+        self.selected_field = None
+        self.filter_date = None
+
+    def select(self, field):
+        self.selected_field = field
+        return self
+
+    def eq(self, field, value):
+        if field == "date":
+            self.filter_date = value
+        return self
+
+    def execute(self):
+        class Resp:
+            def __init__(self, data):
+                self.data = data
+        
+        row = self.db_state.get(self.filter_date)
+        if row is not None:
+            return Resp([{"calls_count": row}])
+        return Resp([])
+
+    def upsert(self, data, on_conflict=None):
+        self.filter_date = data["date"]
+        self.db_state[data["date"]] = data["calls_count"]
+        return self
+
+def mock_table(table_name):
+    if table_name == "fal_budget":
+        return MockFalBudgetTable(budget_db)
+    return MagicMock()
+
+_clients_mod.supabase.table = mock_table
 _clients_mod.anthropic_client = MagicMock()
 sys.modules["src.clients"] = _clients_mod
 
@@ -355,29 +395,35 @@ print("\n── Image Gen: Budget Guard ──")
 import time as _time
 
 def _reset_budget():
-    _ig._fal_calls_today = 0
-    _ig._budget_window_end = 0.0
+    budget_db.clear()
 
 def _test_budget_increments():
     _reset_budget()
     _ig.settings.FAL_DAILY_BUDGET = 200
-    _budget_ok()
-    assert _ig._fal_calls_today == 1
+    assert _budget_ok() is True
+    today = _ig._get_today_key()
+    assert budget_db.get(today) == 1
 
 def _test_budget_blocks_at_limit():
     _reset_budget()
     _ig.settings.FAL_DAILY_BUDGET = 3
-    _budget_ok(); _budget_ok(); _budget_ok()
-    assert _budget_ok() is False and _ig._fal_calls_today == 3
+    assert _budget_ok() is True
+    assert _budget_ok() is True
+    assert _budget_ok() is True
+    assert _budget_ok() is False
+    today = _ig._get_today_key()
+    assert budget_db.get(today) == 3
 
 def _test_budget_resets_after_window():
     _reset_budget()
     _ig.settings.FAL_DAILY_BUDGET = 2
-    _budget_ok(); _budget_ok()
-    assert _budget_ok() is False
-    _ig._budget_window_end = _time.time() - 1
     assert _budget_ok() is True
-    assert _ig._fal_calls_today == 1
+    assert _budget_ok() is True
+    assert _budget_ok() is False
+    
+    with patch("src.image_gen._get_today_key", return_value="2026-05-19"):
+        assert _budget_ok() is True
+        assert budget_db.get("2026-05-19") == 1
 
 check("budget increments on each call", _test_budget_increments)
 check("budget blocks at exact limit", _test_budget_blocks_at_limit)
