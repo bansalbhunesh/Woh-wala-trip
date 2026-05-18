@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  waitForElementToBeRemoved,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock heavy dependencies before importing the component
@@ -38,53 +44,87 @@ describe('NewTripPage', () => {
     });
   });
 
-  it('renders the form with all four fields', () => {
+  const runWizard = async (
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+    destination: string,
+    startDate: string,
+    endDate: string
+  ) => {
+    // Step 0: Welcome
+    const startBtn = screen.getByRole('button', { name: /INITIATE ARCHIVE LOGS/i });
+    await user.click(startBtn);
+
+    // Step 1: Title
+    const titleInput = await screen.findByRole('textbox');
+    await user.type(titleInput, name);
+    const continue1 = screen.getByRole('button', { name: /CONTINUE/i });
+    await user.click(continue1);
+
+    // Wait for Step 1 input to fade out
+    await waitForElementToBeRemoved(titleInput);
+
+    // Step 2: Destination
+    const destInput = await screen.findByRole('textbox');
+    await user.type(destInput, destination);
+    const continue2 = screen.getByRole('button', { name: /CONTINUE/i });
+    await user.click(continue2);
+
+    // Wait for Step 2 input to fade out
+    await waitForElementToBeRemoved(destInput);
+
+    // Step 3: Start Date
+    await screen.findByText('When did the descent start?');
+    const startInput = document.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(startInput, { target: { value: startDate } });
+    const continue3 = screen.getByRole('button', { name: /CONTINUE/i });
+    await user.click(continue3);
+
+    // Wait for Step 3 input to fade out
+    await waitForElementToBeRemoved(startInput);
+
+    // Step 4: End Date
+    await screen.findByText('When did the curtain fall?');
+    const endInput = document.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(endInput, { target: { value: endDate } });
+    const continue4 = screen.getByRole('button', { name: /REVIEW DETAILS/i });
+    await user.click(continue4);
+
+    // Wait for Step 5 to load
+    await screen.findByText('Confirm Dossier Details');
+  };
+
+  it('renders the initial welcome state', () => {
     render(<NewTripPage />);
-    // Labels are rendered (even if inputs use placeholder text)
+    expect(screen.getByText('LORE SYSTEM INITIALIZATION')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /INITIATE ARCHIVE LOGS/i })).toBeInTheDocument();
+  });
+
+  it('progresses through all steps to review summary', async () => {
+    const user = userEvent.setup();
+    render(<NewTripPage />);
+
+    await runWizard(user, 'Kasol Trip', 'Himachal Pradesh', '2024-03-15', '2024-03-17');
+
+    // Step 5: Summary
     expect(screen.getByText('SEASON TITLE')).toBeInTheDocument();
-    expect(screen.getByText('FILMING LOCATION')).toBeInTheDocument();
+    expect(screen.getByText('LOCATION')).toBeInTheDocument();
     expect(screen.getByText('PREMIERE DATE')).toBeInTheDocument();
     expect(screen.getByText('FINALE DATE')).toBeInTheDocument();
+    expect(screen.getByText('Kasol Trip')).toBeInTheDocument();
+    expect(screen.getByText('Himachal Pradesh')).toBeInTheDocument();
+    expect(screen.getByText('2024-03-15')).toBeInTheDocument();
+    expect(screen.getByText('2024-03-17')).toBeInTheDocument();
   });
 
-  it('renders the submit button as disabled initially', () => {
-    render(<NewTripPage />);
-    const btn = screen.getByRole('button', { name: /LAUNCH THE SEASON/i });
-    expect(btn).toBeDisabled();
-  });
-
-  it('enables submit button when name and dates are filled', async () => {
+  it('calls createTrip.mutate with correct fields on launch click', async () => {
     const user = userEvent.setup();
     render(<NewTripPage />);
 
-    const inputs = screen.getAllByRole('textbox');
-    // name is first textbox
-    await user.type(inputs[0], 'Kasol Trip');
+    await runWizard(user, 'Kasol Trip', 'Himachal Pradesh', '2024-03-15', '2024-03-17');
 
-    // date inputs (not textbox role — use type attribute)
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '2024-03-15' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2024-03-17' } });
-
-    const btn = screen.getByRole('button', { name: /LAUNCH THE SEASON/i });
-    await waitFor(() => expect(btn).not.toBeDisabled());
-  });
-
-  it('calls createTrip.mutate with correct fields on submit', async () => {
-    const user = userEvent.setup();
-    render(<NewTripPage />);
-
-    const inputs = screen.getAllByRole('textbox');
-    await user.type(inputs[0], 'Kasol Trip');
-    await user.type(inputs[1], 'Himachal Pradesh');
-
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '2024-03-15' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2024-03-17' } });
-
-    const btn = screen.getByRole('button', { name: /LAUNCH THE SEASON/i });
-    await waitFor(() => expect(btn).not.toBeDisabled());
-    await user.click(btn);
+    const launchBtn = screen.getByRole('button', { name: /LAUNCH THE SAGA/i });
+    await user.click(launchBtn);
 
     expect(mockMutate).toHaveBeenCalledWith({
       name: 'Kasol Trip',
@@ -94,37 +134,31 @@ describe('NewTripPage', () => {
     });
   });
 
-  it('shows pending state while mutation is in flight', () => {
+  it('shows pending state while mutation is in flight', async () => {
     (trpc.trips.create.useMutation as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockMutate,
       isPending: true,
       error: null,
     });
+    const user = userEvent.setup();
     render(<NewTripPage />);
-    expect(screen.getByText(/CREATING/i)).toBeInTheDocument();
+
+    await runWizard(user, 'Kasol Trip', 'Himachal Pradesh', '2024-03-15', '2024-03-17');
+
+    expect(screen.getByText(/CREATING PORTAL.../i)).toBeInTheDocument();
   });
 
-  it('shows error message when mutation fails', () => {
+  it('shows error message when mutation fails', async () => {
     (trpc.trips.create.useMutation as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockMutate,
       isPending: false,
       error: { message: 'Could not create season: network error' },
     });
-    render(<NewTripPage />);
-    expect(screen.getByText(/Could not create season/i)).toBeInTheDocument();
-  });
-
-  it('does not call mutate if name is empty', async () => {
     const user = userEvent.setup();
     render(<NewTripPage />);
 
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '2024-03-15' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2024-03-17' } });
+    await runWizard(user, 'Kasol Trip', 'Himachal Pradesh', '2024-03-15', '2024-03-17');
 
-    const btn = screen.getByRole('button', { name: /LAUNCH THE SEASON/i });
-    // Button is still disabled without name, so click should not fire
-    await user.click(btn);
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(screen.getByText(/Could not create season: network error/i)).toBeInTheDocument();
   });
 });

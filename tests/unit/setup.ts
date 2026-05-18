@@ -2,6 +2,12 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
+// Set up required environment variables for integration tests
+process.env.OTP_HMAC_SECRET = 'test-hmac-secret-1234567890abcdef';
+process.env.AI_WORKER_HMAC_SECRET = 'test-hmac-secret-1234567890abcdef';
+process.env.ADMIN_API_TOKEN = 'test-admin-api-token-1234567890';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key-1234567890';
+
 afterEach(() => {
   cleanup();
 });

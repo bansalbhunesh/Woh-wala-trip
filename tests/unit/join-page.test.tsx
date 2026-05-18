@@ -47,7 +47,7 @@ describe('JoinTripPage (JoinContent)', () => {
   it('renders the access button as disabled initially', async () => {
     render(<JoinTripPage />);
     await waitFor(() => {
-      const btn = screen.getByRole('button', { name: /ACCESS ARCHIVE/i });
+      const btn = screen.getByRole('button', { name: /JOIN THE SEASON/i });
       expect(btn).toBeDisabled();
     });
   });
@@ -73,7 +73,7 @@ describe('JoinTripPage (JoinContent)', () => {
     render(<JoinTripPage />);
     const input = await screen.findByPlaceholderText('TRIPCODE');
     await user.type(input, 'ABCD');
-    const btn = screen.getByRole('button', { name: /ACCESS ARCHIVE/i });
+    const btn = screen.getByRole('button', { name: /JOIN THE SEASON/i });
     await waitFor(() => expect(btn).not.toBeDisabled());
   });
 
@@ -82,7 +82,7 @@ describe('JoinTripPage (JoinContent)', () => {
     render(<JoinTripPage />);
     const input = await screen.findByPlaceholderText('TRIPCODE');
     await user.type(input, 'kasol1');
-    const btn = screen.getByRole('button', { name: /ACCESS ARCHIVE/i });
+    const btn = screen.getByRole('button', { name: /JOIN THE SEASON/i });
     await waitFor(() => expect(btn).not.toBeDisabled());
     await user.click(btn);
     expect(mockMutate).toHaveBeenCalledWith({ inviteCode: 'KASOL1' });
@@ -97,7 +97,7 @@ describe('JoinTripPage (JoinContent)', () => {
     expect(mockMutate).toHaveBeenCalled();
   });
 
-  it('shows DECRYPTING state while pending', async () => {
+  it('shows JOINING... state while pending', async () => {
     (trpc.trips.joinByCode.useMutation as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockMutate,
       isPending: true,
@@ -105,7 +105,7 @@ describe('JoinTripPage (JoinContent)', () => {
     });
     render(<JoinTripPage />);
     await waitFor(() => {
-      expect(screen.getByText(/DECRYPTING/i)).toBeInTheDocument();
+      expect(screen.getByText(/JOINING.../i)).toBeInTheDocument();
     });
   });
 
