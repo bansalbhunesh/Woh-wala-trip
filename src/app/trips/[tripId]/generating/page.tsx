@@ -30,6 +30,8 @@ export default function GeneratingPage() {
     { refetchOnMount: true }
   );
 
+  const resetStuckLore = trpc.trips.resetStuckLore.useMutation();
+
   // Supabase Realtime — push update when lore_status changes instead of polling
   useEffect(() => {
     let mounted = true;
@@ -362,7 +364,15 @@ export default function GeneratingPage() {
               Taking longer than expected
             </p>
             <button
-              onClick={() => router.push(`/trips/${tripId}`)}
+              onClick={async () => {
+                try {
+                  await resetStuckLore.mutateAsync({ tripId });
+                } catch {
+                  // Best-effort — even if reset fails (e.g. not creator, or race),
+                  // still route back so user sees the failed state and can try again
+                }
+                router.push(`/trips/${tripId}`);
+              }}
               className="font-mono text-[9px] uppercase tracking-[0.4em] px-4 py-2 rounded"
               style={{
                 border: '1px solid rgba(255,77,77,0.3)',

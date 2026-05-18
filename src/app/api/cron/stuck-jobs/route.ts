@@ -1,41 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServiceClient } from '@/lib/supabase/server';
 
-// Runs every 15 minutes via Vercel Cron.
-// Resets trips stuck in 'processing' for > 10 minutes back to 'failed'
-// so users can retry. Requires the `processing_started_at` column on the trips table
-// (see supabase/migrations/001_add_processing_started_at.sql).
+// REL-03: Stuck-pipeline recovery consolidated into the AI worker.
+// ai-worker/src/lore/orchestrator.py:reset_stuck_pipelines() runs every ~30 minutes
+// and uses a 30-minute cutoff (vs this cron's old 10-minute cutoff which could reset
+// actively-running pipelines on large trips).
+//
+// This route is kept alive to satisfy the vercel.json cron declaration — removing a
+// declared cron path causes a Vercel deployment error. The cron schedule (0 7 * * * —
+// once daily at 7am UTC) means it fires at most once per day and returns immediately.
+//
+// Fallback note: if the Render worker crashes, reset_stuck_pipelines() won't run until
+// the worker restarts (triggered by the next /generate-lore or poll event). On Render
+// free tier, the dyno restarts within ~15 minutes of the next request. Trips stuck for
+// longer than 30 min post-restart are recovered automatically. Acceptable pre-launch.
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (auth !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV !== 'development') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const supabase = createSupabaseServiceClient();
-  const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-
-  const { data: stuck, error } = await supabase
-    .from('trips')
-    .update({ lore_status: 'failed', processing_started_at: null } as never)
-    .eq('lore_status', 'processing')
-    .lt('processing_started_at' as never, cutoff)
-    .select('id, name');
-
-  if (error) {
-    console.error('[stuck-jobs] query error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const reset = (stuck as Array<{ id: string; name: string }> | null) ?? [];
-  if (reset.length > 0) {
-    console.log(
-      `[stuck-jobs] reset ${reset.length} stuck trips:`,
-      reset.map(t => t.name).join(', ')
-    );
-  }
-
-  return NextResponse.json({
-    reset: reset.length,
-    trips: reset.map(t => ({ id: t.id, name: t.name })),
-  });
+  return NextResponse.json({ noop: true, reason: 'consolidated_to_worker' });
 }

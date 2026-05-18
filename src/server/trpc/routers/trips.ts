@@ -462,27 +462,58 @@ export const tripsRouter = router({
         .eq('trip_id', input.tripId)
         .eq('user_id', input.userId);
 
-      // Fire-and-forget — don't block on worker, but log failures
-      const markAbsentBody = JSON.stringify({
+      // REL-01: durable queue — survives worker cold-starts on Render free tier.
+      // background_jobs.trip_id is NOT NULL so we use input.tripId.
+      // payload carries absent_user_id so the worker's generate_missing_person() call has it.
+      // Using service client because background_jobs has service-role-only RLS (Phase 1).
+      const admin = createSupabaseServiceClient();
+      const { error: jobError } = await admin.from('background_jobs' as never).insert({
         trip_id: input.tripId,
-        absent_user_id: input.userId,
-      });
-      signWorkerRequest('POST', '/generate-missing-person-card', markAbsentBody)
-        .then(({ signature, timestamp }) => {
-          fetch(`${process.env.AI_WORKER_URL ?? ''}/generate-missing-person-card`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
-              'X-Timestamp': timestamp,
-              'X-Signature': signature,
-            },
-            body: markAbsentBody,
-          }).catch(e => console.error('[markAbsent] worker call failed:', e.message));
-        })
-        .catch(e => console.error('[markAbsent] HMAC signing failed:', e.message));
+        job_type: 'missing_person_card',
+        status: 'pending',
+        payload: { absent_user_id: input.userId },
+      } as never);
+
+      if (jobError) {
+        // Non-fatal: the member is already marked absent. Log so Langfuse/Render logs surface it.
+        console.error('[markAbsent] failed to enqueue background job:', jobError.message);
+      }
 
       return { success: true };
+    }),
+
+  resetStuckLore: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // REL-04: reset lore_status from 'processing' → 'failed' so generateLore's
+      // .neq('lore_status', 'processing') guard passes on the next attempt.
+      // Only the trip creator can call this to prevent members from disrupting an
+      // in-flight pipeline.
+      const { data: tripRaw } = await ctx.supabase
+        .from('trips')
+        .select('creator_id, lore_status')
+        .eq('id', input.tripId)
+        .single();
+      const trip = tripRaw as { creator_id: string; lore_status: string } | null;
+
+      if (!trip || trip.creator_id !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      // Guard: only reset if the trip is actually stuck in processing.
+      // Returns {reset:false} for any other lore_status so the client can handle gracefully.
+      if (trip.lore_status !== 'processing') {
+        return { reset: false, reason: 'not_processing' as const };
+      }
+
+      const admin = createSupabaseServiceClient();
+      await admin
+        .from('trips')
+        .update({ lore_status: 'failed', processing_started_at: null } as never)
+        .eq('id', input.tripId)
+        .eq('lore_status' as never, 'processing'); // atomic guard against race with worker completing
+
+      return { reset: true };
     }),
 
   upgradeTier: protectedProcedure
