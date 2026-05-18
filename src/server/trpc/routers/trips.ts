@@ -622,6 +622,12 @@ export const tripsRouter = router({
     }),
 
   getChaosDistribution: protectedProcedure.query(async ({ ctx }) => {
+    // PERF-03: return cached distribution if within 10-minute TTL.
+    const cached = chaosDistCache.get('global');
+    if (cached && Date.now() < cached.expiry) {
+      return cached.data;
+    }
+
     // ARCH-05: scope to trips where the calling user is a member to prevent cross-user data leak.
     // trips has no RLS until Phase 1 lands, so we must filter explicitly here.
     // After Phase 1 RLS is deployed, ctx.supabase will also enforce this automatically,
@@ -647,11 +653,20 @@ export const tripsRouter = router({
       .filter((s): s is number => s != null && s > 0)
       .sort((a, b) => a - b);
 
-    if (scores.length < 10) return null;
+    if (scores.length < 10) {
+      // Cache the null result too to avoid hammering the DB on new installs
+      chaosDistCache.set('global', { data: null, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
+      return null;
+    }
 
     const at = (pct: number) =>
       scores[Math.min(Math.floor((scores.length * pct) / 100), scores.length - 1)];
-    return { p50: at(50), p75: at(75), p90: at(90), total: scores.length };
+    const result = { p50: at(50), p75: at(75), p90: at(90), total: scores.length };
+
+    // PERF-03: persist computed result with TTL.
+    chaosDistCache.set('global', { data: result, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
+
+    return result;
   }),
 
   // Warm up the AI worker before the user clicks "Generate Lore".
