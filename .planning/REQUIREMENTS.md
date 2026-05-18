@@ -62,17 +62,17 @@
 
 ### Testing
 
-- [ ] **TEST-01**: tRPC router unit tests added for at minimum: `trips.generateLore`, `trips.upgradeTier`, `photos.confirmUpload`, `battles.challenge`
-- [ ] **TEST-02**: Auth E2E tests (OTP send → verify → session) unblocked from CI-skip status
-- [ ] **TEST-03**: `lore-utils.test.ts` fixed to test actual source exports (not locally-redefined stubs)
-- [ ] **TEST-04**: CI pipeline runs `tsc --noEmit`, `eslint`, and `vitest run` on every PR
+- [x] **TEST-01**: tRPC router unit tests added for at minimum: `trips.generateLore`, `trips.upgradeTier`, `photos.confirmUpload`, `battles.challenge`
+- [x] **TEST-02**: Auth E2E tests (OTP send → verify → session) unblocked from CI-skip status
+- [x] **TEST-03**: `lore-utils.test.ts` fixed to test actual source exports (not locally-redefined stubs)
+- [x] **TEST-04**: CI pipeline runs `tsc --noEmit`, `eslint`, and `vitest run` on every PR
 
 ### Observability
 
-- [ ] **OBS-01**: Structured logging in Next.js tRPC routers replaces `console.log/error` with a structured logger (pino or similar)
-- [ ] **OBS-02**: AI pipeline step durations tracked in `lore_pipeline_state` JSONB per step (currently partial)
-- [ ] **OBS-03**: `scripts/prepare.mjs` audited for secrets or dangerous operations
-- [ ] **OBS-04**: Langfuse traces include token cost breakdown per pipeline step (leverages existing `generation_cost_by_step`)
+- [x] **OBS-01**: Structured logging in Next.js tRPC routers replaces `console.log/error` with a structured logger (pino or similar)
+- [x] **OBS-02**: AI pipeline step durations tracked in `lore_pipeline_state` JSONB per step (currently partial)
+- [x] **OBS-03**: `scripts/prepare.mjs` audited for secrets or dangerous operations
+- [x] **OBS-04**: Langfuse traces include token cost breakdown per pipeline step (leverages existing `generation_cost_by_step`)
 
 ### Product
 
@@ -113,17 +113,17 @@
 
 ## Traceability
 
-| Requirement             | Phase   | Status  |
-| ----------------------- | ------- | ------- |
-| SEC-01 through SEC-09   | Phase 1 | Pending |
-| REL-01 through REL-07   | Phase 2 | Pending |
-| COST-01 through COST-05 | Phase 3 | Pending |
-| PERF-01 through PERF-05 | Phase 4 | Pending |
-| TYPE-01 through TYPE-03 | Phase 4 | Pending |
-| ARCH-01 through ARCH-06 | Phase 5 | Pending |
-| TEST-01 through TEST-04 | Phase 6 | Pending |
-| OBS-01 through OBS-04   | Phase 6 | Pending |
-| PROD-01 through PROD-03 | Phase 7 | Pending |
+| Requirement             | Phase   | Status   |
+| ----------------------- | ------- | -------- |
+| SEC-01 through SEC-09   | Phase 1 | Pending  |
+| REL-01 through REL-07   | Phase 2 | Pending  |
+| COST-01 through COST-05 | Phase 3 | Pending  |
+| PERF-01 through PERF-05 | Phase 4 | Pending  |
+| TYPE-01 through TYPE-03 | Phase 4 | Pending  |
+| ARCH-01 through ARCH-06 | Phase 5 | Pending  |
+| TEST-01 through TEST-04 | Phase 6 | Complete |
+| OBS-01 through OBS-04   | Phase 6 | Complete |
+| PROD-01 through PROD-03 | Phase 7 | Pending  |
 
 **Coverage:**
 
