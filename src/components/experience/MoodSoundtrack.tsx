@@ -1,6 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+
+// Module-level AudioContext singleton — reuse across all MoodSoundtrack instances
+// to avoid hitting the browser limit of ~6 simultaneous AudioContexts.
+let _moodAudioCtx: AudioContext | null = null;
+function getMoodAudioContext(): AudioContext {
+  if (!_moodAudioCtx || _moodAudioCtx.state === 'closed') {
+    _moodAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return _moodAudioCtx;
+}
 import {
   Volume2,
   VolumeX,
@@ -349,10 +359,8 @@ export function MoodSoundtrack({
           voicesRef.current = [];
           gainNodesRef.current = [];
 
-          try {
-            ctx.close();
-          } catch (_) {}
-
+          // Do NOT close the shared singleton context — just disconnect our nodes.
+          // Closing would invalidate the context for future playback sessions.
           ctxRef.current = null;
           masterGainRef.current = null;
           delayNodeRef.current = null;
@@ -362,8 +370,11 @@ export function MoodSoundtrack({
       return;
     }
 
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    const ctx = new AudioContextClass();
+    const ctx = getMoodAudioContext();
+    // Resume if suspended (e.g. after user leaves tab and returns)
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
     ctxRef.current = ctx;
 
     const masterGain = ctx.createGain();
