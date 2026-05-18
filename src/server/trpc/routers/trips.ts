@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../init';
+import { router, protectedProcedure, publicProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { langfuse } from '@/lib/langfuse';
@@ -879,5 +879,25 @@ export const tripsRouter = router({
     } catch {
       return { ok: false, cached: false };
     }
+  }),
+
+  // VIRAL-01: Public showcase feed for the landing page — no auth required.
+  // Returns anonymised top-chaos trips so visitors see real social proof.
+  getPublicShowcase: publicProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseServiceClient();
+    const { data } = await admin
+      .from('trips')
+      .select('id, name, destination, chaos_score, lore_json')
+      .eq('lore_status', 'ready')
+      .eq('story_visible', true)
+      .order('chaos_score', { ascending: false })
+      .limit(6);
+
+    return (data ?? []).map((t: any) => ({
+      id: t.id as string,
+      destination: (t.destination as string | null) ?? 'Unknown',
+      chaosScore: (t.chaos_score as number | null) ?? 0,
+      tagline: (t.lore_json as any)?.tagline ?? null,
+    }));
   }),
 });

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { trpc } from '@/lib/trpc/client';
 import ParticleUniverse from './ParticleUniverse';
 
 const ARCHETYPES = [
@@ -87,7 +88,13 @@ export default function CinematicLanding() {
   const [titleChars, setTitleChars] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [showLiveLore, setShowLiveLore] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  // VIRAL-03: Public showcase feed
+  const { data: showcaseTrips } = trpc.trips.getPublicShowcase.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5-minute client-side cache
+  });
 
   // Animation refs — never trigger React re-renders
   const tickRef = useRef(0);
@@ -442,6 +449,32 @@ export default function CinematicLanding() {
               />
               <span className="relative z-10">FEATURES</span>
             </button>
+            {/* VIRAL-03: Live Lore CTA */}
+            <button
+              onClick={() => setShowLiveLore(true)}
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
+              style={{
+                background: 'transparent',
+                border: `1.5px solid ${ghostBorder}`,
+                color: ghostText,
+                transition:
+                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.transform = 'translate3d(0,-2px,0)';
+                el.style.borderColor = '#FF4D4D';
+                el.style.color = '#FF4D4D';
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.transform = 'translate3d(0,0,0)';
+                el.style.borderColor = ghostBorder;
+                el.style.color = ghostText;
+              }}
+            >
+              <span className="relative z-10">LIVE LORE</span>
+            </button>
           </div>
 
           {/* Meta line */}
@@ -640,6 +673,103 @@ export default function CinematicLanding() {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* VIRAL-03: Live Lore Overlay — real public trips feed */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12 pointer-events-none"
+        style={{
+          opacity: showLiveLore ? 1 : 0,
+          pointerEvents: showLiveLore ? 'auto' : 'none',
+          backdropFilter: 'blur(16px)',
+          background: D ? 'rgba(6,6,4,0.88)' : 'rgba(245,240,232,0.88)',
+          transition: 'opacity 0.4s cubic-bezier(0.16,1,0.3,1)',
+        }}
+      >
+        <div
+          className="relative max-w-2xl w-full p-10 md:p-14 rounded-[2rem]"
+          style={{
+            background: D ? '#0E0E0C' : '#fff',
+            border: `1px solid ${borderColor}`,
+            transform: showLiveLore ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.98)',
+            transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+            boxShadow: D ? '0 24px 64px rgba(0,0,0,0.5)' : '0 24px 64px rgba(0,0,0,0.1)',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+          }}
+        >
+          <button
+            onClick={() => setShowLiveLore(false)}
+            className="absolute top-8 right-8 p-2 text-[10px] font-mono uppercase tracking-widest hover:opacity-60 transition-opacity"
+            style={{ color: textMuted }}
+          >
+            ✕ CLOSE
+          </button>
+
+          <p
+            className="font-mono text-[9px] uppercase tracking-[0.5em]"
+            style={{ color: '#FF4D4D' }}
+          >
+            ● LIVE FEED
+          </p>
+          <h2
+            className="font-display font-black text-3xl md:text-4xl uppercase mt-4 mb-2"
+            style={{ color: textMain }}
+          >
+            Live from Yaarlore
+          </h2>
+          <p className="font-data text-sm mb-8" style={{ color: textMuted }}>
+            Real trips. Real chaos. Real mythology.
+          </p>
+
+          {!showcaseTrips || showcaseTrips.length === 0 ? (
+            <div
+              className="text-center py-12 font-mono text-[10px] uppercase tracking-widest"
+              style={{ color: textFaint }}
+            >
+              No public trips yet — be the first.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {showcaseTrips.map(trip => (
+                <div
+                  key={trip.id}
+                  className="rounded-xl p-4 space-y-2 border transition-colors"
+                  style={{
+                    background: D ? 'rgba(255,255,255,0.03)' : 'oklch(95% 0.008 70)',
+                    borderColor: D ? 'rgba(255,255,255,0.06)' : 'oklch(88% 0.015 72)',
+                  }}
+                >
+                  <div
+                    className="text-[8px] font-mono uppercase tracking-[0.3em] truncate"
+                    style={{ color: textFaint }}
+                  >
+                    {trip.destination}
+                  </div>
+                  {trip.tagline && (
+                    <div
+                      className="text-[11px] font-cinematic leading-snug line-clamp-2"
+                      style={{ color: textMuted }}
+                    >
+                      &ldquo;{trip.tagline}&rdquo;
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-display font-black text-xl" style={{ color: '#FF4D4D' }}>
+                      {trip.chaosScore}
+                    </span>
+                    <span
+                      className="font-mono text-[7px] uppercase tracking-wider"
+                      style={{ color: 'rgba(255,77,77,0.5)' }}
+                    >
+                      /100 cooked
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
