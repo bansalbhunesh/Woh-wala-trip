@@ -164,6 +164,9 @@ class LoreOrchestrator:
 
     def __init__(self):
         self._step_tokens: dict[str, int] = {}
+        # OBS-02: per-step start/end timestamps for pipeline duration tracking.
+        # Populated by _update_pipeline_state and written to lore_pipeline_state at completion.
+        self._step_timings: dict[str, dict[str, str]] = {}
         self._rate_limiter = _GLOBAL_RATE_LIMITER
         self._budget: PipelineBudget | None = None
         self._current_step: str = "init"
@@ -201,6 +204,7 @@ class LoreOrchestrator:
                 _asyncio.to_thread(self._get_photos, trip_id),
                 _asyncio.to_thread(self._get_members, trip_id),
             )
+            self._update_pipeline_state(trip_id, "fetch", "done")
             log.info(f"[{trip_id}][{trace_id}] fetched: {len(photos)} photos, {len(members)} members")
 
             if trip and len(photos) != trip.get("total_photos", 0):
@@ -219,6 +223,7 @@ class LoreOrchestrator:
             signals_task = _asyncio.to_thread(self._compute_trip_signals, trip, photos, members)
             vision_task  = self._analyze_photo_batches(trip, photos)
             trip_signals, batch_signals = await _asyncio.gather(signals_task, vision_task)
+            self._update_pipeline_state(trip_id, "vision", "done")
 
             try:
                 supabase.table("trips").update({"trip_signals": trip_signals}).eq("id", trip_id).execute()
@@ -233,6 +238,7 @@ class LoreOrchestrator:
             self._update_pipeline_state(trip_id, "aggregate", "running")
             self._current_step = "aggregate"
             aggregated = await self._aggregate_signals(trip, batch_signals, members, trip_signals)
+            self._update_pipeline_state(trip_id, "aggregate", "done")
 
             # Step 4: core lore + quality gate
             self._update_pipeline_state(trip_id, "lore", "running")
@@ -240,6 +246,7 @@ class LoreOrchestrator:
             confessions = self._get_confessions(trip_id)
             lore = await self._generate_lore_with_retry(trip, aggregated, confessions)
             lore, eval_result = await self._quality_gate(trip, aggregated, confessions, lore)
+            self._update_pipeline_state(trip_id, "lore", "done")
 
             # Steps 5-7: parallel enrichment
             self._update_pipeline_state(trip_id, "enrichment", "running")
@@ -252,6 +259,7 @@ class LoreOrchestrator:
                 roles_task, stats_task, superlatives_task,
                 return_exceptions=True,
             )
+            self._update_pipeline_state(trip_id, "enrichment", "done")
 
             if isinstance(superlatives, list):
                 lore["superlatives"] = superlatives
@@ -269,18 +277,58 @@ class LoreOrchestrator:
             if not isinstance(stats, Exception):
                 self._save_stats(trip_id, stats.get("receipt_stats", []) if isinstance(stats, dict) else [])
 
+            # Mark persist step done before final write
+            persist_end = datetime.now(timezone.utc).isoformat()
+            if "persist" in self._step_timings:
+                self._step_timings["persist"]["end_time"] = persist_end
+
             total_tokens = sum(self._step_tokens.values())
+
+            # OBS-02: build per-step duration summary for lore_pipeline_state.
+            # Each step entry has start_time, end_time, and duration_seconds.
+            step_durations: dict[str, Any] = {}
+            for sname, timing in self._step_timings.items():
+                entry: dict[str, Any] = {"start_time": timing.get("start_time")}
+                end_t = timing.get("end_time")
+                if end_t:
+                    entry["end_time"] = end_t
+                    try:
+                        from datetime import datetime as _dt
+                        start_dt = _dt.fromisoformat(timing["start_time"].replace("Z", "+00:00"))
+                        end_dt   = _dt.fromisoformat(end_t.replace("Z", "+00:00"))
+                        entry["duration_seconds"] = round((end_dt - start_dt).total_seconds(), 2)
+                    except Exception:
+                        pass
+                step_durations[sname] = entry
+
+            # OBS-04: generation_cost_by_step already holds token counts per step;
+            # merge them into step_durations so Langfuse traces surface both
+            # timing and token cost in a single JSONB column.
+            for sname, tokens in self._step_tokens.items():
+                if sname in step_durations:
+                    step_durations[sname]["tokens"] = tokens
+                else:
+                    step_durations[sname] = {"tokens": tokens}
+
             update_payload: dict[str, Any] = {
                 "lore_status": "ready",
                 "generation_cost_by_step": self._step_tokens,
-                "lore_pipeline_state": {"step": "complete", "status": "done", "trace_id": trace_id},
+                "lore_pipeline_state": {
+                    "step": "complete",
+                    "status": "done",
+                    "trace_id": trace_id,
+                    "step_durations": step_durations,
+                },
                 "lore_eval_json": eval_result,
                 "lore_needs_review": eval_result.get("overall", 1.0) < 0.55,
             }
             if total_tokens > 0:
                 update_payload["generation_cost_tokens"] = total_tokens
             supabase.table("trips").update(update_payload).eq("id", trip_id).execute()
-            log.info(f"[{trip_id}][{trace_id}] pipeline complete — tokens={total_tokens} by_step={self._step_tokens}")
+            log.info(
+                f"[{trip_id}][{trace_id}] pipeline complete — tokens={total_tokens} "
+                f"by_step={self._step_tokens} durations={step_durations}"
+            )
 
             # Phase 2: durable image generation job (no fire-and-forget asyncio.create_task)
             self._enqueue_image_job(trip_id, trace_id)
@@ -303,16 +351,32 @@ class LoreOrchestrator:
             raise
 
     # -------------------------------------------------------------------------
-    # Phase 1: Pipeline state tracking
+    # Phase 1 / OBS-02: Pipeline state tracking with per-step timestamps
     # -------------------------------------------------------------------------
 
     def _update_pipeline_state(self, trip_id: str, step: str, status: str):
+        """Update lore_pipeline_state for real-time UI polling and step duration tracking.
+
+        OBS-02: records start_time when status='running' and end_time when
+        status='done' or 'failed', storing both in self._step_timings so
+        the final lore_pipeline_state write at pipeline completion includes
+        full per-step duration data.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+
+        if status == "running":
+            self._step_timings[step] = {"start_time": now}
+        elif status in ("done", "failed"):
+            timing = self._step_timings.get(step, {})
+            timing["end_time"] = now
+            self._step_timings[step] = timing
+
         try:
             supabase.table("trips").update({
                 "lore_pipeline_state": {
                     "step": step,
                     "status": status,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": now,
                 },
             }).eq("id", trip_id).execute()
         except Exception as upd_err:
