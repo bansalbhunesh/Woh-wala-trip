@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -43,4 +45,13 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Suppresses source map upload logs during build
+  silent: true,
+  // Disable automatic tree-shaking of Sentry internals — avoids edge-case build failures
+  disableLogger: true,
+  // Tunnel Sentry requests through /api/monitoring to avoid ad-blockers
+  tunnelRoute: '/api/monitoring',
+  // Only upload source maps for production builds
+  hideSourceMaps: true,
+});
