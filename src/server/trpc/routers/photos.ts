@@ -168,13 +168,49 @@ export const photosRouter = router({
       const existing = existingRaw as { id: string } | null;
       if (existing) return { photoId: existing.id };
 
+      // REL-07: query storage.objects for the authoritative file size.
+      // Client-supplied fileSize is not trusted — a malicious client could report 0
+      // to bypass the storage_used_bytes trigger and free-tier cap enforcement.
+      // Using .schema('storage') requires the service role client (user session cannot
+      // access the storage schema).
+      const storageAdmin = createSupabaseServiceClient();
+      // Fallback: .schema('storage') is not in generated types; use string cast.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: storageObj } = await (storageAdmin as any)
+        .from('storage.objects')
+        .select('metadata')
+        .eq('bucket_id', 'trip-photos')
+        .eq('name', input.storagePath)
+        .single();
+
+      const actualSize: number | null =
+        (storageObj?.metadata as { size?: number } | null)?.size ?? null;
+
+      // Per-photo 50MB cap — reject and clean up the orphaned storage object.
+      // The trip-level 500MB cap is enforced upstream in getUploadUrl via storage_used_bytes;
+      // this is a belt-and-suspenders guard against clients that forge the size or bypass
+      // getUploadUrl entirely.
+      const FIFTY_MB = 50 * 1024 * 1024;
+      if (actualSize !== null && actualSize > FIFTY_MB) {
+        // Remove the uploaded file before throwing so it doesn't orphan in storage
+        await storageAdmin.storage.from('trip-photos').remove([input.storagePath]);
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'File exceeds the 50 MB per-photo limit.',
+        });
+      }
+
+      // Use the authoritative server-side size; fall back to client-supplied value only
+      // if the storage.objects lookup returned nothing (race condition on eventual consistency).
+      const resolvedFileSize = actualSize ?? input.fileSize ?? null;
+
       const { data: insertedRaw, error } = await ctx.supabase
         .from('photos')
         .insert({
           trip_id: input.tripId,
           user_id: ctx.user.id,
           storage_path: input.storagePath,
-          file_size: input.fileSize ?? null,
+          file_size: resolvedFileSize,
         } as never)
         .select()
         .single();

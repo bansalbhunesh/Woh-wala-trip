@@ -73,7 +73,7 @@ function createLangfuseClient(): TraceClient {
       const startTime = new Date().toISOString();
       let meta: Record<string, unknown> = {};
 
-      sendToLangfuse({
+      void sendToLangfuse({
         batch: [
           {
             id: crypto.randomUUID(),
@@ -92,7 +92,7 @@ function createLangfuseClient(): TraceClient {
 
       return {
         end(endOpts) {
-          sendToLangfuse({
+          void sendToLangfuse({
             batch: [
               {
                 id: crypto.randomUUID(),
@@ -116,7 +116,7 @@ function createLangfuseClient(): TraceClient {
     },
 
     event(name: string, metadata?: Record<string, unknown>, traceId?: string) {
-      sendToLangfuse({
+      void sendToLangfuse({
         batch: [
           {
             id: crypto.randomUUID(),

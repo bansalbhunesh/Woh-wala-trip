@@ -98,24 +98,16 @@ export async function GET(req: NextRequest) {
       : new Date().getFullYear() - 1;
 
     try {
-      // Claim row before sending to prevent duplicate sends if process crashes mid-loop
-      const { error: claimError } = await supabase
-        .from('scheduled_emails' as never)
-        .update({ sent_at: new Date().toISOString() } as never)
-        .eq('id' as never, (row as any).id)
-        .is('sent_at' as never, null);
-
-      // Another process already claimed this row — skip
-      if (claimError) {
-        console.log(`[anniversary] row ${(row as any).id} already claimed, skipping`);
-        continue;
-      }
-
       if (process.env.RESEND_API_KEY) {
         const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
         const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
 
+        // REL-06: send FIRST, then mark sent — so a Resend failure leaves sent_at=null
+        // and the next cron run will retry. Accepted tradeoff: if the process crashes
+        // between successful send and the UPDATE below, the email may be sent twice on
+        // the next run (within the 25-hour window). Duplicate send is preferred over
+        // silent email loss.
         await resend.emails.send({
           from: `Yaarlore <${from}>`,
           to: profile.email,
@@ -167,6 +159,20 @@ export async function GET(req: NextRequest) {
 </body>
 </html>`,
         });
+
+        // Only mark sent AFTER confirmed delivery from Resend
+        const { error: claimError } = await supabase
+          .from('scheduled_emails' as never)
+          .update({ sent_at: new Date().toISOString() } as never)
+          .eq('id' as never, (row as any).id)
+          .is('sent_at' as never, null);
+
+        if (claimError) {
+          console.log(
+            `[anniversary] row ${(row as any).id} claim failed after send (duplicate possible):`,
+            claimError.message
+          );
+        }
       } else {
         console.log(`[anniversary] Would send to ${profile.email} for trip: ${trip.name}`);
       }
@@ -174,6 +180,7 @@ export async function GET(req: NextRequest) {
       sent++;
     } catch (err) {
       console.error(`[anniversary] failed for ${profile.email}:`, err);
+      // sent_at is NOT set — next cron run will retry within the 25-hour window
     }
   }
 
