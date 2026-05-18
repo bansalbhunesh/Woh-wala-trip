@@ -20,7 +20,7 @@ Yaarlore has a working product with real emotional magic — the AI storytelling
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Security Foundation** - Fix all CRITICAL/HIGH security vulnerabilities before any production traffic
-- [ ] **Phase 2: Reliability Engineering** - Replace fire-and-forget patterns with durable queues; fix stuck-pipeline recovery
+- [x] **Phase 2: Reliability Engineering** - Replace fire-and-forget patterns with durable queues; fix stuck-pipeline recovery
 - [ ] **Phase 3: Cost Controls** - Add circuit breakers to stop unbounded AI spend before viral growth
 - [ ] **Phase 4: Performance and Type Safety** - Fix hot-path N+1s, drop unused vector columns, eliminate as-any debt
 - [ ] **Phase 5: Architecture Cleanup** - Remove dead code, fix data leaks, cap unbounded memory, correct scoping bugs
