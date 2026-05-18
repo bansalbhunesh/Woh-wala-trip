@@ -14,6 +14,7 @@ import asyncio
 import logging
 import time
 import threading
+from datetime import date
 
 import httpx
 
@@ -35,36 +36,67 @@ _SQUARE = "square_hd"
 
 
 # ---------------------------------------------------------------------------
-# Abuse guards — all in-process, thread-safe via a single lock
+# Abuse guards — daily budget persisted to Supabase fal_budget table
+# (COST-02: survives worker restarts on Render free tier)
 # ---------------------------------------------------------------------------
 
+# In-process lock guards concurrent threads calling _budget_ok simultaneously.
+# The Supabase upsert is the authoritative counter; the in-process state is
+# only used to avoid redundant DB reads within the same process wake-up.
 _budget_lock = threading.Lock()
-_fal_calls_today: int = 0
-_budget_window_end: float = 0.0             # Unix timestamp when the 24h window resets
 
-# trip_id -> (call_count, window_end_ts)
+# trip_id -> (call_count, window_end_ts) — still in-process; trips restart less often
 _trip_window: dict[str, tuple[int, float]] = {}
 
 
+def _get_today_key() -> str:
+    """Return today's date string (UTC) as the fal_budget primary key."""
+    return date.today().isoformat()
+
+
 def _budget_ok() -> bool:
-    """Claim one slot from the global daily fal.ai budget. Thread-safe."""
-    global _fal_calls_today, _budget_window_end
+    """Claim one slot from the global daily fal.ai budget.
+
+    Reads and increments the persistent counter in Supabase fal_budget.
+    Thread-safe via _budget_lock.  Returns False if budget is exhausted.
+    """
     with _budget_lock:
-        now = time.time()
-        if now > _budget_window_end:
-            _fal_calls_today = 0
-            _budget_window_end = now + 86_400
-        if _fal_calls_today >= settings.FAL_DAILY_BUDGET:
-            log.warning(
-                f"[image_gen] daily budget exhausted "
-                f"({settings.FAL_DAILY_BUDGET} calls) — skipping"
+        today = _get_today_key()
+        try:
+            # Atomically increment the counter for today using an upsert that
+            # adds 1 to calls_count, then read back the new value.
+            # Strategy: read first, then conditionally increment so we can
+            # check the cap before writing.
+            resp = supabase.table("fal_budget").select("calls_count").eq("date", today).execute()
+            rows = resp.data or []
+            current_count: int = rows[0]["calls_count"] if rows else 0
+
+            if current_count >= settings.FAL_DAILY_BUDGET:
+                log.warning(
+                    f"[image_gen] daily budget exhausted "
+                    f"({settings.FAL_DAILY_BUDGET} calls) — skipping"
+                )
+                return False
+
+            # Increment — upsert handles first call of the day (insert) and
+            # subsequent calls (update) atomically via ON CONFLICT DO UPDATE.
+            supabase.table("fal_budget").upsert(
+                {"date": today, "calls_count": current_count + 1},
+                on_conflict="date",
+            ).execute()
+
+            remaining = settings.FAL_DAILY_BUDGET - (current_count + 1)
+            if remaining <= 10:
+                log.warning(f"[image_gen] fal.ai budget low: {remaining} calls left today")
+            return True
+
+        except Exception as e:
+            # Budget DB unavailable — fail open with a warning rather than
+            # blocking all image generation.  Log prominently so it surfaces.
+            log.error(
+                f"[image_gen] fal_budget DB check failed (failing open): {e}"
             )
-            return False
-        _fal_calls_today += 1
-        remaining = settings.FAL_DAILY_BUDGET - _fal_calls_today
-        if remaining <= 10:
-            log.warning(f"[image_gen] fal.ai budget low: {remaining} calls left today")
-        return True
+            return True
 
 
 def _trip_quota_ok(trip_id: str) -> bool:
