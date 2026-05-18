@@ -404,6 +404,14 @@ const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
+if (!redis && process.env.NODE_ENV === 'production') {
+  console.error(
+    '[FATAL] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not set. ' +
+      'Rate limiting will throw on the first call in production. ' +
+      'Set these environment variables before deploying.'
+  );
+}
+
 // Cache the Upstash ratelimiters to avoid recreating them on every call
 const upstashLimiters = new Map<string, Ratelimit>();
 
@@ -417,6 +425,15 @@ export async function checkRateLimit(
   maxRequests: number,
   windowMs: number
 ): Promise<boolean> {
+  // Fail hard in production: in-memory rate limiting is useless in serverless (no persistent state).
+  // UPSTASH_REDIS_REST_URL must be set before deploying.
+  if (!redis && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[anti-spam] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production. ' +
+        'Rate limiting cannot be safely enforced without Redis in a serverless environment.'
+    );
+  }
+
   if (redis) {
     try {
       // Create a cache key for the ratelimiter instance config
