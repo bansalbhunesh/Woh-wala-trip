@@ -28,6 +28,7 @@ create or replace view photo_view_stats as
 
 alter table photo_views enable row level security;
 
+drop policy if exists "authenticated members can insert their own views" on photo_views;
 create policy "authenticated members can insert their own views"
   on photo_views for insert
   to authenticated
@@ -40,8 +41,10 @@ create policy "authenticated members can insert their own views"
     )
   );
 
+drop policy if exists "service role full access on photo_views" on photo_views;
 create policy "service role full access on photo_views"
   on photo_views for all
   to service_role
   using (true)
   with check (true);
+

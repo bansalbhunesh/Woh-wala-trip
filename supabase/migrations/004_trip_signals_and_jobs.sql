@@ -49,6 +49,7 @@ $$;
 -- RLS: only service role touches job queue
 alter table generation_jobs enable row level security;
 
+drop policy if exists "service role full access on generation_jobs" on generation_jobs;
 create policy "service role full access on generation_jobs"
   on generation_jobs for all
   to service_role
