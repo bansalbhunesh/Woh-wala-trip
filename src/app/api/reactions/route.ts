@@ -41,7 +41,21 @@ export async function POST(req: NextRequest) {
 
     const admin = createSupabaseServiceClient();
 
-    // Read real cookies so session is respected for logged-in users
+    // Validate trip exists and check is_public before accepting any reaction.
+    // Uses admin (service role) because after RLS is enabled, a user-scoped client
+    // cannot read trips the current (possibly anonymous) user is not a member of.
+    const { data: tripData } = await admin
+      .from('trips' as never)
+      .select('is_public')
+      .eq('id' as never, tripId)
+      .single();
+
+    if (!tripData) {
+      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    }
+
+    // Resolve user session before the public-trip guard so that authenticated
+    // trip members can still react on private trips.
     const cookieStore = await cookies();
     const { createServerClient } = await import('@supabase/ssr');
     const supabaseSSR = createServerClient(
@@ -60,8 +74,13 @@ export async function POST(req: NextRequest) {
       data: { user },
     } = await supabaseSSR.auth.getUser();
 
+    // Anonymous users can only react on public trips
+    if (!user && !(tripData as { is_public: boolean }).is_public) {
+      return NextResponse.json({ error: 'This trip is not public' }, { status: 403 });
+    }
+
     if (user) {
-      // Auth'd users: upsert to deduplicate per slide
+      // Auth'd users: upsert to deduplicate per slide (existing logic unchanged)
       await admin.from('lore_reactions' as never).upsert(
         {
           trip_id: tripId,
@@ -73,7 +92,7 @@ export async function POST(req: NextRequest) {
         { onConflict: 'trip_id,user_id,slide_type,slide_idx' } as never
       );
     } else {
-      // Anonymous: just insert (can't deduplicate without user identity)
+      // Anonymous: insert (existing logic unchanged)
       await admin.from('lore_reactions' as never).insert({
         trip_id: tripId,
         user_id: null,

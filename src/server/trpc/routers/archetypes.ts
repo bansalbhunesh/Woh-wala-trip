@@ -72,7 +72,7 @@ export const archetypesRouter = router({
       const { data: profile } = await admin
         .from('profiles' as never)
         .select('id')
-        .ilike('username' as never, input.username) // case-insensitive — usernames may be mixed case in DB
+        .eq('username' as never, input.username.trim().toLowerCase())
         .single();
       if (!profile) return [];
       const { data } = await admin
