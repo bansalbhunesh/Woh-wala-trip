@@ -4,6 +4,141 @@ import { trpc } from '@/lib/trpc/client';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FIRST-TIME WELCOME MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
+  const steps = [
+    { icon: '📸', label: 'Upload photos', desc: 'Drop in your recovered memories from the trip' },
+    { icon: '🤖', label: 'AI generates lore', desc: 'Our engine writes your trip documentary' },
+    {
+      icon: '🎬',
+      label: 'Share your documentary',
+      desc: 'Send the chaos-scored story to your crew',
+    },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(6,6,4,0.88)', backdropFilter: 'blur(12px)' }}
+      onClick={e => {
+        if (e.target === e.currentTarget) onDismiss();
+      }}
+    >
+      <div
+        className="relative w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: '#0C0B09',
+          border: '1px solid rgba(245,240,232,0.12)',
+          boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+          animation: 'welcome-rise 0.55s cubic-bezier(0.16,1,0.3,1) both',
+        }}
+      >
+        {/* Red accent stripe */}
+        <div
+          className="h-1 w-full"
+          style={{ background: 'linear-gradient(90deg,#FF4D4D,#FF4D4D55)' }}
+        />
+
+        <div className="px-8 pt-8 pb-6 space-y-6">
+          {/* Header */}
+          <div className="space-y-2">
+            <p
+              className="font-mono text-[8px] uppercase tracking-[0.55em]"
+              style={{ color: '#FF4D4D' }}
+            >
+              ● FIRST MISSION
+            </p>
+            <h2
+              className="font-display font-black uppercase tracking-tighter leading-none"
+              style={{ fontSize: 'clamp(28px,7vw,36px)', color: '#F5F0E8' }}
+            >
+              Welcome to
+              <br />
+              <em className="italic" style={{ color: '#FF4D4D' }}>
+                Yaarlore
+              </em>
+            </h2>
+            <p
+              className="font-display italic text-sm leading-relaxed"
+              style={{ color: 'rgba(245,240,232,0.5)' }}
+            >
+              Your friend group&apos;s trips become mythology. Upload photos &rarr; AI generates
+              your documentary.
+            </p>
+          </div>
+
+          {/* 3-step visual */}
+          <div className="space-y-3">
+            {steps.map((step, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-4 px-4 py-3 rounded-2xl"
+                style={{
+                  background: 'rgba(245,240,232,0.03)',
+                  border: '1px solid rgba(245,240,232,0.07)',
+                  animationDelay: `${0.2 + i * 0.1}s`,
+                }}
+              >
+                <span className="text-xl flex-shrink-0 mt-0.5">{step.icon}</span>
+                <div>
+                  <p
+                    className="font-mono text-[10px] font-bold uppercase tracking-widest"
+                    style={{ color: '#F5F0E8' }}
+                  >
+                    {step.label}
+                  </p>
+                  <p
+                    className="font-display italic text-[11px] mt-0.5"
+                    style={{ color: 'rgba(245,240,232,0.45)' }}
+                  >
+                    {step.desc}
+                  </p>
+                </div>
+                {i < steps.length - 1 && <div className="absolute left-[2.65rem]" />}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <Link
+            href="/trips/new"
+            className="block w-full py-4 rounded-full text-center font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{ background: '#F5F0E8', color: '#060604' }}
+            onClick={onDismiss}
+          >
+            Create your first trip &rarr;
+          </Link>
+
+          <button
+            onClick={onDismiss}
+            className="block w-full text-center font-mono text-[8px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+            style={{ color: 'rgba(245,240,232,0.3)' }}
+          >
+            Maybe later
+          </button>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes welcome-rise {
+          from {
+            opacity: 0;
+            transform: translate3d(0, 32px, 0) scale(0.96);
+            filter: blur(4px);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+            filter: blur(0);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 const SEASON_ACCENTS = ['#FF4D4D', '#2D9E8B', '#7C6AFF', '#D49E2D', '#C94B9E', '#2D6E9E'];
 
 function hashName(name: string): number {
@@ -128,17 +263,34 @@ function NostalgiaStrip() {
 }
 
 export default function TripsPage() {
-  const { data: trips, isLoading } = trpc.trips.listMine.useQuery();
+  const { data: tripsData, isLoading } = trpc.trips.listMine.useQuery({});
+  const trips = tripsData?.trips;
   const { data: chaosDist } = trpc.trips.getChaosDistribution.useQuery();
   const [revealed, setRevealed] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setRevealed(true), 120);
     return () => clearTimeout(t);
   }, []);
 
+  // Show welcome modal once for brand-new users who have no trips yet
+  useEffect(() => {
+    if (isLoading) return;
+    const hasSeenWelcome = localStorage.getItem('yaarlore_welcomed');
+    if (!hasSeenWelcome && (trips?.length ?? 0) === 0) {
+      setShowWelcome(true);
+    }
+  }, [trips, isLoading]);
+
+  const handleDismissWelcome = () => {
+    setShowWelcome(false);
+    localStorage.setItem('yaarlore_welcomed', '1');
+  };
+
   return (
     <div className="min-h-screen" style={{ background: '#060604', color: '#F5F0E8' }}>
+      {showWelcome && <WelcomeModal onDismiss={handleDismissWelcome} />}
       <div className="film-grain pointer-events-none" />
 
       {/* Header */}
