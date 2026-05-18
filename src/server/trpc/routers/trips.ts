@@ -331,41 +331,77 @@ export const tripsRouter = router({
       return { tripId };
     }),
 
-  listMine: protectedProcedure.query(async ({ ctx }) => {
-    const { data, error } = await ctx.supabase
-      .from('trip_members')
-      .select(
+  listMine: protectedProcedure
+    .input(
+      z.object({
+        // ISO timestamp cursor: fetch trips created strictly before this timestamp.
+        cursor: z.string().datetime().optional(),
+        limit: z.number().min(1).max(50).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Supabase PostgREST does not support filtering on columns of embedded foreign-table
+      // selects via the JS client (e.g. `.lt('trips.created_at', cursor)` is not valid).
+      // Instead, we fetch the user's trip_member rows (capped at 200 — a user who genuinely
+      // has 200+ trips is an edge case that can be addressed with a dedicated RPC later),
+      // sort by the nested trip's created_at descending in application code, then apply
+      // the cursor filter and page slice.  For the typical user (5–20 trips) this is
+      // indistinguishable from a DB-side cursor.
+      const { data, error } = await ctx.supabase
+        .from('trip_members')
+        .select(
+          `
+          trip_id,
+          status,
+          trips:trip_id (
+            id,
+            name,
+            destination,
+            trip_start_date,
+            trip_end_date,
+            lore_status,
+            lore_json,
+            chaos_score,
+            member_count,
+            total_photos,
+            tier,
+            created_at
+          )
         `
-        trip_id,
-        status,
-        trips:trip_id (
-          id,
-          name,
-          destination,
-          trip_start_date,
-          trip_end_date,
-          lore_status,
-          lore_json,
-          chaos_score,
-          member_count,
-          total_photos,
-          tier,
-          created_at
         )
-      `
-      )
-      .eq('user_id', ctx.user.id);
+        .eq('user_id', ctx.user.id)
+        .limit(200); // hard upper bound to prevent runaway queries on pathological accounts
 
-    if (error)
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error.message,
-      });
+      if (error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message,
+        });
 
-    return (data || [])
-      .map(row => (row as unknown as { trips: TripSummary | null }).trips)
-      .filter((t): t is TripSummary => t !== null);
-  }),
+      // Flatten, drop nulls, sort newest-first
+      const allTrips = (data || [])
+        .map(row => (row as unknown as { trips: TripSummary | null }).trips)
+        .filter((t): t is TripSummary => t !== null)
+        .sort((a, b) => {
+          const ta = a.created_at ?? '';
+          const tb = b.created_at ?? '';
+          return tb.localeCompare(ta); // descending
+        });
+
+      // Apply cursor: skip all trips created at or after the cursor timestamp
+      const afterCursor = input.cursor
+        ? allTrips.filter(t => (t.created_at ?? '') < input.cursor!)
+        : allTrips;
+
+      // Page slice
+      const page = afterCursor.slice(0, input.limit);
+
+      // Next cursor = created_at of the last trip on this page (undefined if last page)
+      const nextCursor =
+        page.length === input.limit ? (page[page.length - 1].created_at ?? undefined) : undefined;
+
+      return { trips: page, nextCursor };
+    }),
 
   generateLore: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
@@ -911,6 +947,186 @@ export const tripsRouter = router({
       return { ok: false, cached: false };
     }
   }),
+
+  // ONBOARDING: Cross-trip "On This Day" nostalgia feed.
+  // Returns photos from trips taken around the same time in prior years.
+  // Delegates to the get_nostalgia_moments RPC (defined in 005_photo_embeddings.sql).
+  getNostalgiaFeed: protectedProcedure.query(async ({ ctx }) => {
+    // TYPE-02: get_nostalgia_moments RPC not in generated types (added post-codegen).
+    type NostalgiaRpcClient = {
+      rpc: (
+        fn: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
+    };
+    const { data, error } = await (ctx.supabase as unknown as NostalgiaRpcClient).rpc(
+      'get_nostalgia_moments',
+      {
+        p_user_id: ctx.user.id,
+        p_limit: 4,
+      }
+    );
+    if (error) {
+      // Non-fatal: return empty list rather than surfacing a 500 to the trips dashboard
+      logger.warn(
+        { procedure: 'trips.getNostalgiaFeed', userId: ctx.user.id },
+        `get_nostalgia_moments RPC failed: ${error.message}`
+      );
+      return [];
+    }
+    const rows =
+      (data as unknown as Array<{
+        photo_id: string;
+        trip_id: string;
+        trip_name: string;
+        trip_year: number;
+        destination: string | null;
+        storage_path: string;
+        thumbnail_path: string | null;
+        chaos_score: number | null;
+        years_ago: number;
+        lore_tagline: string | null;
+      }> | null) ?? [];
+    if (rows.length === 0) return [];
+
+    // Generate signed URLs so thumbnails render client-side
+    const adminSupabase = createSupabaseServiceClient();
+    const paths = rows.flatMap(r => [r.storage_path, r.thumbnail_path].filter(Boolean)) as string[];
+    const { data: signed } = await adminSupabase.storage
+      .from('trip-photos')
+      .createSignedUrls(paths, 3600);
+    const urlByPath = new Map<string, string>();
+    (signed ?? []).forEach(u => {
+      if (u.signedUrl && u.path) urlByPath.set(u.path, u.signedUrl);
+    });
+
+    return rows.map(r => ({
+      ...r,
+      url: urlByPath.get(r.storage_path) ?? null,
+      thumbnailUrl: r.thumbnail_path ? (urlByPath.get(r.thumbnail_path) ?? null) : null,
+    }));
+  }),
+
+  // MOAT: Similar public trips discovery using CLIP embeddings.
+  // Finds public trips with visually similar photos to a given trip.
+  getSimilarPublicTrips: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const adminSupabase = createSupabaseServiceClient();
+
+      // Get a representative photo from this trip — first one with a completed embedding
+      const { data: photos } = await adminSupabase
+        .from('photos')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('embedding_status', 'complete')
+        .limit(1);
+
+      if (!photos?.[0]) return [];
+
+      // Find visually similar photos (RPC filters to trips the user is a member of).
+      // We use the service client here so we also discover public trips outside the
+      // user's membership — the RLS bypass is intentional for this discovery surface.
+      type SimilarRpcClient = {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data: similarPhotos, error: rpcError } = await (
+        adminSupabase as unknown as SimilarRpcClient
+      ).rpc('find_similar_photos', {
+        p_photo_id: photos[0].id,
+        p_user_id: ctx.user.id,
+        p_limit: 10, // over-fetch to allow for public-trip filtering
+      });
+
+      if (rpcError) {
+        logger.warn(
+          { procedure: 'trips.getSimilarPublicTrips', userId: ctx.user.id, tripId: input.tripId },
+          `find_similar_photos RPC failed: ${rpcError.message}`
+        );
+        return [];
+      }
+
+      const rows =
+        (similarPhotos as unknown as Array<{
+          photo_id: string;
+          trip_id: string;
+          trip_name: string;
+          storage_path: string;
+          thumbnail_path: string | null;
+          similarity: number;
+          trip_year: number;
+          destination: string | null;
+        }> | null) ?? [];
+
+      // Deduplicate by trip_id, exclude the source trip
+      const seen = new Set<string>([input.tripId]);
+      const unique = rows.filter(r => {
+        if (seen.has(r.trip_id)) return false;
+        seen.add(r.trip_id);
+        return true;
+      });
+
+      if (unique.length === 0) return [];
+
+      // Fetch trip metadata — only return public, ready trips with a visible story
+      const tripIds = unique.map(r => r.trip_id);
+      const { data: tripMeta } = await adminSupabase
+        .from('trips')
+        .select('id, name, destination, chaos_score, lore_json')
+        .in('id', tripIds)
+        .eq('lore_status', 'ready')
+        .eq('story_visible', true);
+
+      if (!tripMeta || tripMeta.length === 0) return [];
+
+      const metaById = new Map(
+        (
+          tripMeta as Array<{
+            id: string;
+            name: string;
+            destination: string | null;
+            chaos_score: number | null;
+            lore_json: unknown;
+          }>
+        ).map(t => [t.id, t])
+      );
+
+      // Generate thumbnail signed URLs for the representative photos
+      const repPhotos = unique.slice(0, 3);
+      const thumbPaths = repPhotos.flatMap(r =>
+        [r.thumbnail_path, r.storage_path].filter(Boolean)
+      ) as string[];
+      const { data: signed } = await adminSupabase.storage
+        .from('trip-photos')
+        .createSignedUrls(thumbPaths, 3600);
+      const urlByPath = new Map<string, string>();
+      (signed ?? []).forEach(u => {
+        if (u.signedUrl && u.path) urlByPath.set(u.path, u.signedUrl);
+      });
+
+      return repPhotos
+        .map(r => {
+          const meta = metaById.get(r.trip_id);
+          if (!meta) return null;
+          return {
+            tripId: r.trip_id,
+            tripName: meta.name,
+            destination: meta.destination ?? 'Unknown',
+            chaosScore: meta.chaos_score ?? 0,
+            tagline: (meta.lore_json as any)?.tagline ?? null,
+            thumbnailUrl:
+              (r.thumbnail_path ? urlByPath.get(r.thumbnail_path) : null) ??
+              urlByPath.get(r.storage_path) ??
+              null,
+            similarity: r.similarity,
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+        .slice(0, 3);
+    }),
 
   // VIRAL-01: Public showcase feed for the landing page — no auth required.
   // Returns anonymised top-chaos trips so visitors see real social proof.
