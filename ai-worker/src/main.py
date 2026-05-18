@@ -87,7 +87,7 @@ async def poll_background_jobs():
                 lambda: supabase.table("background_jobs")
                     .select("id, trip_id, job_type, payload, trace_id")
                     .eq("status", "pending")
-                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle"])
+                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle", "embed_photo"])
                     .order("created_at")
                     .limit(1)
                     .execute()
@@ -131,6 +131,15 @@ async def poll_background_jobs():
                                 "judge_battle job missing battle_id in payload"
                             )
                         await LoreOrchestrator().judge_battle(battle_id)
+
+                    elif job_type == "embed_photo":
+                        # PERF-05: queued by confirmUpload instead of HTTP fire-and-forget.
+                        # Prevents 40 rapid-fire HTTP requests on a 20-photo bulk upload.
+                        photo_id = payload.get("photo_id")
+                        if not photo_id:
+                            raise ValueError("embed_photo job missing photo_id in payload")
+                        from .embeddings import embed_photo
+                        await embed_photo(photo_id)
 
                     else:
                         # Unknown job type — mark failed so it doesn't block the queue
