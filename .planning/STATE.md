@@ -23,25 +23,36 @@ See: `.planning/PROJECT.md` (updated 2026-05-18)
 | config.json     | ✓ Created (YOLO, standard granularity, parallel, quality models) |
 | REQUIREMENTS.md | ✓ Created (37 v1 requirements across 9 categories)               |
 | ROADMAP.md      | ✓ Created (7 phases, 37/37 requirements mapped)                  |
-| Phase 1         | ⬜ Not started                                                   |
-| Phase 2         | ⬜ Blocked on Phase 1                                            |
+| Phase 1         | ✅ Complete — 5/5 plans, 9/9 requirements (2026-05-18)           |
+| Phase 2         | ⬜ Ready to start                                                |
 | Phase 3         | ⬜ Blocked on Phase 2                                            |
 | Phase 4         | ⬜ Blocked on Phase 2                                            |
 | Phase 5         | ⬜ Blocked on Phase 2                                            |
 | Phase 6         | ⬜ Blocked on Phase 4                                            |
-| Phase 7         | ⬜ Can start after Phase 1                                       |
+| Phase 7         | ⬜ Ready to start (only needs Phase 1)                           |
 
 ---
 
-## Critical Issues (from codebase audit)
+## Phase 1 Completion (2026-05-18)
 
-**Must fix before production traffic:**
+**5 plans, 5 commits, 9 requirements closed:**
 
-1. 🔴 `trips` and `trip_eras` have NO RLS — any authenticated user can read/write all trip data
-2. 🔴 `scheduled_emails`, `otp_codes`, `trip_stats`, `trip_vs_trip` have no RLS
-3. 🔴 No Content-Security-Policy header
-4. 🔴 Rate limiting silently falls back to in-memory (ineffective on serverless)
-5. 🔴 No monthly token cap → runaway AI costs possible at viral scale
+- ✅ SEC-01/02: RLS on trips, trip_eras, scheduled_emails, otp_codes, trip_stats, trip_vs_trip (`20260519_security_rls_hardening.sql`)
+- ✅ SEC-03: background_jobs service-role policy
+- ✅ SEC-04: Content-Security-Policy header in next.config.mjs
+- ✅ SEC-05: Rate limiting fails hard in production (no silent in-memory fallback)
+- ✅ SEC-06: archetypes ilike → eq
+- ✅ SEC-07: Anonymous reactions validate trips.is_public (403 for private trips)
+- ✅ SEC-08: HMAC-SHA256 signing on all AI worker calls (src/lib/worker-auth.ts + ai-worker/src/auth.py)
+- ✅ SEC-09: otp_codes PK changed from email → UUID
+
+**Pre-existing test failures (not introduced by Phase 1):** 8 failures in join-page.test.tsx, otp-route.test.ts, api-contracts.test.ts
+
+## Remaining Critical Issues
+
+1. 🟡 No monthly token cap → runaway AI costs possible at viral scale (Phase 3)
+2. 🟡 markAbsent + battles.challenge are fire-and-forget (Phase 2)
+3. 🟡 stuck-jobs cron runs daily not every 15 min (Phase 2)
 
 ---
 
@@ -59,11 +70,12 @@ See: `.planning/PROJECT.md` (updated 2026-05-18)
 ## Next Action
 
 ```
-/gsd:plan-phase 1
+/gsd:plan-phase 2
 ```
 
-Phase 1 — Security Foundation: 9 requirements (SEC-01 through SEC-09). Covers RLS, CSP, rate limiting, OTP PK, HMAC signing.
+Phase 2 — Reliability Engineering: 7 requirements (REL-01 through REL-07). Covers durable queues for markAbsent + battles, stuck-job recovery consolidation, generating-page retry fix, Langfuse non-blocking, anniversary email ordering.
 
 ---
 
 _State initialized: 2026-05-18 from /gsd:new-project audit_
+_Phase 1 complete: 2026-05-18_
