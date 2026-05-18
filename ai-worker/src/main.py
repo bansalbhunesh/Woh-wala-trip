@@ -75,18 +75,19 @@ async def poll_job_queue():
 
 
 async def poll_background_jobs():
-    """Poll background_jobs every 60s for pending image generation tasks.
-    Phase 2: image gen is durable — survives worker restarts."""
+    """Poll background_jobs every 60s for pending jobs.
+    REL-01/REL-02: extended to handle missing_person_card and judge_battle in addition to image_generation.
+    Survives worker cold-starts — jobs inserted while worker was down are claimed on next poll tick."""
     from .clients import supabase
     await asyncio.sleep(15)  # offset from main queue poll
     while True:
         try:
-            # Claim one pending image_generation job
+            # Claim one pending job of any supported type (FIFO by created_at)
             result = await asyncio.to_thread(
                 lambda: supabase.table("background_jobs")
-                    .select("id, trip_id, trace_id")
+                    .select("id, trip_id, job_type, payload, trace_id")
                     .eq("status", "pending")
-                    .eq("job_type", "image_generation")
+                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle"])
                     .order("created_at")
                     .limit(1)
                     .execute()
@@ -94,27 +95,57 @@ async def poll_background_jobs():
             rows = result.data or []
             if rows:
                 job = rows[0]
-                jid, trip_id = job["id"], job["trip_id"]
-                # Claim it
+                jid = job["id"]
+                trip_id = job["trip_id"]
+                job_type = job["job_type"]
+                payload = job.get("payload") or {}
+
+                # Atomic claim — only proceeds if still pending (guard against duplicate workers)
                 await asyncio.to_thread(
                     lambda: supabase.table("background_jobs").update({
                         "status":     "claimed",
                         "claimed_at": datetime.now(timezone.utc).isoformat(),
                     }).eq("id", jid).eq("status", "pending").execute()
                 )
-                log.info(f"[bg-jobs] claimed image_generation job {jid} for trip {trip_id}")
+                log.info(f"[bg-jobs] claimed {job_type} job {jid} for trip {trip_id}")
+
                 try:
-                    from .image_gen import generate_all_images
-                    await generate_all_images(trip_id)
+                    if job_type == "image_generation":
+                        from .image_gen import generate_all_images
+                        await generate_all_images(trip_id)
+
+                    elif job_type == "missing_person_card":
+                        # REL-01: payload.absent_user_id inserted by trips.markAbsent
+                        absent_user_id = payload.get("absent_user_id")
+                        if not absent_user_id:
+                            raise ValueError(
+                                "missing_person_card job missing absent_user_id in payload"
+                            )
+                        await LoreOrchestrator().generate_missing_person(trip_id, absent_user_id)
+
+                    elif job_type == "judge_battle":
+                        # REL-02: payload.battle_id inserted by battles.challenge
+                        battle_id = payload.get("battle_id")
+                        if not battle_id:
+                            raise ValueError(
+                                "judge_battle job missing battle_id in payload"
+                            )
+                        await LoreOrchestrator().judge_battle(battle_id)
+
+                    else:
+                        # Unknown job type — mark failed so it doesn't block the queue
+                        raise ValueError(f"Unknown job_type: {job_type!r}")
+
                     await asyncio.to_thread(
                         lambda: supabase.table("background_jobs").update({
                             "status":       "done",
                             "completed_at": datetime.now(timezone.utc).isoformat(),
                         }).eq("id", jid).execute()
                     )
-                    log.info(f"[bg-jobs] image generation done for trip {trip_id}")
+                    log.info(f"[bg-jobs] {job_type} done for trip {trip_id}")
+
                 except Exception as e:
-                    log.error(f"[bg-jobs] image generation failed for trip {trip_id}: {e}")
+                    log.error(f"[bg-jobs] {job_type} failed for {trip_id}: {e}")
                     await asyncio.to_thread(
                         lambda: supabase.table("background_jobs").update({
                             "status":       "failed",
@@ -122,6 +153,7 @@ async def poll_background_jobs():
                             "completed_at": datetime.now(timezone.utc).isoformat(),
                         }).eq("id", jid).execute()
                     )
+
         except asyncio.CancelledError:
             break
         except Exception as e:
