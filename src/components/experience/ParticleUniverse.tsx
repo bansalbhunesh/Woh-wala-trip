@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useRef } from 'react';
 
 interface Props {
@@ -25,7 +26,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { alpha: false })!;
 
     let W = window.innerWidth;
     let H = window.innerHeight;
@@ -36,73 +37,114 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     const onResize = () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        W = window.innerWidth; H = window.innerHeight;
-        canvas.width = W; canvas.height = H;
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width = W;
+        canvas.height = H;
         initParticles();
       }, 200);
     };
     window.addEventListener('resize', onResize);
 
+    // Interactive Shockwave Mesh
+    let shockwaveX = 0;
+    let shockwaveY = 0;
+    let shockwaveR = 0;
+    let shockwaveActive = false;
+
+    const onWindowClick = (e: MouseEvent) => {
+      shockwaveX = e.clientX;
+      shockwaveY = e.clientY;
+      shockwaveR = 0;
+      shockwaveActive = true;
+    };
+    window.addEventListener('click', onWindowClick);
+
     interface Particle {
-      x: number; y: number; z: number;
-      vx: number; vy: number; vz: number;
+      x: number;
+      y: number;
+      z: number;
+      vx: number;
+      vy: number;
+      vz: number;
       size: number;
-      hue: number; // 0-60 warm, 180-200 cool
-      life: number; // 0-1
+      hue: number;
+      life: number;
       maxLife: number;
       type: 'dust' | 'fragment' | 'star';
+      angle: number;
+      orbitRadius: number;
     }
 
     let particles: Particle[] = [];
 
     function initParticles() {
       particles = [];
-      // Dust layer — reduced from 600 for 60fps on mobile
-      for (let i = 0; i < 300; i++) {
+      const cx = W / 2;
+      const cy = H / 2;
+
+      // Dust layer (highly detailed, batched dynamically)
+      for (let i = 0; i < 400; i++) {
+        const px = Math.random() * W;
+        const py = Math.random() * H;
+        const dx = px - cx;
+        const dy = py - cy;
         particles.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
+          x: px,
+          y: py,
           z: Math.random(),
-          vx: (Math.random() - 0.5) * 0.15,
-          vy: (Math.random() - 0.5) * 0.15,
+          vx: (Math.random() - 0.5) * 0.2,
+          vy: (Math.random() - 0.5) * 0.2,
           vz: (Math.random() - 0.5) * 0.002,
-          size: Math.random() * 1.5 + 0.3,
-          hue: Math.random() * 40 + 20, // warm orange/amber
+          size: Math.random() * 1.6 + 0.3,
+          hue: Math.random() * 45 + 15, // warm firefly amber
           life: Math.random(),
           maxLife: 0.6 + Math.random() * 0.4,
           type: 'dust',
+          angle: Math.atan2(dy, dx),
+          orbitRadius: Math.sqrt(dx * dx + dy * dy),
         });
       }
-      // Fragment layer — reduced from 80
-      for (let i = 0; i < 40; i++) {
+
+      // Fragments (large high-fidelity spatial bodies)
+      for (let i = 0; i < 45; i++) {
+        const px = Math.random() * W;
+        const py = Math.random() * H;
+        const dx = px - cx;
+        const dy = py - cy;
         particles.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          z: Math.random() * 0.5 + 0.5,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
+          x: px,
+          y: py,
+          z: Math.random() * 0.4 + 0.6,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
           vz: 0,
-          size: Math.random() * 3 + 1.5,
-          hue: Math.random() > 0.5 ? 30 : 195, // warm or teal
+          size: Math.random() * 3.2 + 1.8,
+          hue: Math.random() > 0.55 ? 28 : 190, // Cyberpunk Amber vs Hyper-teal
           life: Math.random(),
           maxLife: 0.5 + Math.random() * 0.5,
           type: 'fragment',
+          angle: Math.atan2(dy, dx),
+          orbitRadius: Math.sqrt(dx * dx + dy * dy),
         });
       }
-      // Stars — reduced from 200
-      for (let i = 0; i < 100; i++) {
+
+      // Stars (deep background grid)
+      for (let i = 0; i < 150; i++) {
         particles.push({
           x: Math.random() * W,
           y: Math.random() * H,
-          z: Math.random() * 0.3,
+          z: Math.random() * 0.35,
           vx: 0,
-          vy: (Math.random() - 0.5) * 0.05,
+          vy: (Math.random() - 0.5) * 0.04,
           vz: 0,
           size: Math.random() * 0.8 + 0.2,
           hue: 0,
           life: Math.random(),
-          maxLife: 1,
+          maxLife: 1.0,
           type: 'star',
+          angle: 0,
+          orbitRadius: 0,
         });
       }
     }
@@ -117,112 +159,179 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
       const { phase: p, mouseX: mx, mouseY: my } = stateRef.current;
 
-      // Phase-based opacity for the canvas background fill
-      const bgAlpha = p >= 2 ? 0.85 : 0.92;
-      ctx.fillStyle = `rgba(6,6,4,${bgAlpha})`;
+      // Premium motion-blur accumulation buffer (creates light-trails elegantly)
+      const fadeAlpha = p >= 3 ? 0.15 : 0.08;
+      ctx.fillStyle = `rgba(6, 6, 4, ${fadeAlpha})`;
       ctx.fillRect(0, 0, W, H);
 
-      // Central vortex origin (follows mouse slightly)
-      const cx = W / 2 + (mx - 0.5) * W * 0.05;
-      const cy = H / 2 + (my - 0.5) * H * 0.05;
+      const cx = W / 2 + (mx - 0.5) * W * 0.06;
+      const cy = H / 2 + (my - 0.5) * H * 0.06;
 
-      // Phase-driven intensity multiplier
-      const intensity = [0.15, 0.4, 0.85, 1.0, 1.2][Math.min(p, 4)];
+      const intensity = [0.15, 0.45, 0.85, 1.1, 1.45][Math.min(p, 4)];
 
-      particles.forEach((par) => {
-        // Update life
-        par.life += 0.003;
-        if (par.life > par.maxLife) par.life = 0;
-        const lifeAlpha = Math.sin((par.life / par.maxLife) * Math.PI);
-
-        // Mouse magnetic repulsion
-        const dx = par.x - cx;
-        const dy = par.y - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const repel = Math.max(0, 1 - dist / 200);
-        par.vx += (dx / (dist + 1)) * repel * 0.08;
-        par.vy += (dy / (dist + 1)) * repel * 0.08;
-
-        // In phase 4 (portal) — pull toward center
-        if (p === 4) {
-          par.vx += (cx - par.x) * 0.0008;
-          par.vy += (cy - par.y) * 0.0008;
+      // Advance shockwave propagation
+      if (shockwaveActive) {
+        shockwaveR += 14;
+        if (shockwaveR > Math.max(W, H) * 1.2) {
+          shockwaveActive = false;
         }
+      }
 
-        // Vortex rotation (gentle spiral)
-        const angle = Math.atan2(dy, dx);
-        const vortexStrength = p >= 2 ? 0.0003 * intensity : 0;
-        par.vx += Math.cos(angle + Math.PI / 2) * vortexStrength;
-        par.vy += Math.sin(angle + Math.PI / 2) * vortexStrength;
+      // Particle update loop (Vector force manipulation)
+      particles.forEach(par => {
+        par.life += 0.0025;
+        if (par.life > par.maxLife) par.life = 0;
 
-        // Damping
-        par.vx *= 0.985;
-        par.vy *= 0.985;
-
+        // Apply physical fluid dragging
         par.x += par.vx;
         par.y += par.vy;
+        par.vx *= 0.982;
+        par.vy *= 0.982;
 
-        // Wrap edges
-        if (par.x < -10) par.x = W + 10;
-        if (par.x > W + 10) par.x = -10;
-        if (par.y < -10) par.y = H + 10;
-        if (par.y > H + 10) par.y = -10;
+        const dx = par.x - cx;
+        const dy = par.y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-        // Perspective scale from z
+        // Interactive shockwave front collision
+        if (shockwaveActive) {
+          const sDx = par.x - shockwaveX;
+          const sDy = par.y - shockwaveY;
+          const sDist = Math.sqrt(sDx * sDx + sDy * sDy) || 1;
+          const diff = Math.abs(sDist - shockwaveR);
+          if (diff < 50) {
+            const push = (1 - diff / 50) * 6.5;
+            const angle = Math.atan2(sDy, sDx);
+            par.vx += Math.cos(angle) * push;
+            par.vy += Math.sin(angle) * push;
+          }
+        }
+
+        // Magnetic hover repulsion
+        const repel = Math.max(0, 1 - dist / 220);
+        par.vx += (dx / dist) * repel * 0.07;
+        par.vy += (dy / dist) * repel * 0.07;
+
+        // Cinematic vortex physics (Orbital Gravity models)
+        if (p >= 2) {
+          const speed = (0.004 + par.z * 0.004) * intensity;
+          par.angle += speed;
+          // Spiral slowly inwards based on phase depth
+          const spiralStrength = p === 4 ? 0.995 : 0.998;
+          par.orbitRadius *= spiralStrength;
+          if (par.orbitRadius < 5) {
+            par.orbitRadius = Math.max(W, H) * (0.3 + Math.random() * 0.6);
+          }
+
+          const targetX = cx + Math.cos(par.angle) * par.orbitRadius;
+          const targetY = cy + Math.sin(par.angle) * par.orbitRadius;
+          par.vx += (targetX - par.x) * 0.035;
+          par.vy += (targetY - par.y) * 0.035;
+        }
+
+        // Warp screen margins
+        if (par.x < -20) par.x = W + 20;
+        if (par.x > W + 20) par.x = -20;
+        if (par.y < -20) par.y = H + 20;
+        if (par.y > H + 20) par.y = -20;
+      });
+
+      // --- Batch drawing optimization: Stars ---
+      ctx.fillStyle = `rgba(245, 240, 232, ${0.4 * intensity})`;
+      ctx.beginPath();
+      particles.forEach(par => {
+        if (par.type !== 'star') return;
         const scale = 0.5 + par.z * 0.5;
         const pSize = par.size * scale;
+        ctx.moveTo(par.x + pSize, par.y);
+        ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
+      });
+      ctx.fill();
+
+      // --- Batch drawing optimization: Dust (Amber glow) ---
+      ctx.fillStyle = `rgba(255, 120, 60, ${0.45 * intensity})`;
+      ctx.beginPath();
+      particles.forEach(par => {
+        if (par.type !== 'dust') return;
+        const scale = 0.5 + par.z * 0.5;
+        const pSize = par.size * scale;
+        ctx.moveTo(par.x + pSize, par.y);
+        ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
+      });
+      ctx.fill();
+
+      // --- Draw High-Fidelity Interactive Fragments ---
+      particles.forEach(par => {
+        if (par.type !== 'fragment') return;
+
+        const scale = 0.5 + par.z * 0.5;
+        const pSize = par.size * scale;
+        const lifeAlpha = Math.sin((par.life / par.maxLife) * Math.PI);
         const alpha = lifeAlpha * intensity * scale;
 
-        if (alpha < 0.01) return;
+        if (alpha < 0.02) return;
 
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        if (par.type === 'star') {
-          ctx.fillStyle = `rgba(245,240,232,${alpha})`;
-          ctx.beginPath();
-          ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (par.type === 'fragment') {
-          // Glowing fragment with halo
-          const grd = ctx.createRadialGradient(par.x, par.y, 0, par.x, par.y, pSize * 4);
-          if (par.hue < 60) {
-            grd.addColorStop(0, `rgba(255,100,50,${alpha * 0.9})`);
-            grd.addColorStop(0.4, `rgba(255,60,20,${alpha * 0.3})`);
-            grd.addColorStop(1, 'rgba(255,60,20,0)');
-          } else {
-            grd.addColorStop(0, `rgba(45,158,139,${alpha * 0.9})`);
-            grd.addColorStop(0.4, `rgba(45,158,139,${alpha * 0.3})`);
-            grd.addColorStop(1, 'rgba(45,158,139,0)');
-          }
-          ctx.fillStyle = grd;
-          ctx.beginPath();
-          ctx.arc(par.x, par.y, pSize * 4, 0, Math.PI * 2);
-          ctx.fill();
-          // Core
-          ctx.fillStyle = par.hue < 60 ? `rgba(255,160,80,${alpha})` : `rgba(80,220,200,${alpha})`;
-          ctx.beginPath();
-          ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
-          ctx.fill();
+        // Glowing orbital aura
+        const grd = ctx.createRadialGradient(par.x, par.y, 0, par.x, par.y, pSize * 4.5);
+        if (par.hue < 60) {
+          grd.addColorStop(0, `rgba(255, 90, 40, ${alpha * 0.85})`);
+          grd.addColorStop(0.4, `rgba(255, 50, 15, ${alpha * 0.28})`);
+          grd.addColorStop(1, 'rgba(255, 50, 15, 0)');
         } else {
-          // Dust
-          ctx.fillStyle = `hsla(${par.hue},60%,70%,${alpha * 0.7})`;
-          ctx.beginPath();
-          ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
-          ctx.fill();
+          grd.addColorStop(0, `rgba(40, 180, 160, ${alpha * 0.85})`);
+          grd.addColorStop(0.4, `rgba(30, 140, 130, ${alpha * 0.28})`);
+          grd.addColorStop(1, 'rgba(30, 140, 130, 0)');
         }
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(par.x, par.y, pSize * 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spatial solid core
+        ctx.fillStyle =
+          par.hue < 60 ? `rgba(255, 175, 90, ${alpha})` : `rgba(100, 240, 220, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
       });
 
-      // Pulse ring from center (phase 1+)
+      // Constellation proximity mesh between fragments (Highly Optimized O(N) connections)
+      ctx.save();
+      ctx.lineWidth = 0.5;
+      const fragments = particles.filter(p => p.type === 'fragment');
+      for (let i = 0; i < fragments.length; i++) {
+        for (let j = i + 1; j < fragments.length; j++) {
+          const f1 = fragments[i];
+          const f2 = fragments[j];
+          const fDx = f1.x - f2.x;
+          const fDy = f1.y - f2.y;
+          const fDist = Math.sqrt(fDx * fDx + fDy * fDy);
+
+          if (fDist < 95) {
+            const meshAlpha = (1 - fDist / 95) * 0.065 * intensity;
+            ctx.strokeStyle =
+              f1.hue < 60 ? `rgba(255, 100, 50, ${meshAlpha})` : `rgba(50, 220, 190, ${meshAlpha})`;
+            ctx.beginPath();
+            ctx.moveTo(f1.x, f1.y);
+            ctx.lineTo(f2.x, f2.y);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+
+      // Pulsing electromagnetic scanning rings (Phase 1+)
       if (p >= 1) {
-        const pulseR = ((t * 120) % 400);
-        const pulseA = Math.max(0, 0.06 - pulseR / 6000) * intensity;
+        const pulseR = (t * 135) % 450;
+        const pulseA = Math.max(0, 0.075 - pulseR / 6000) * intensity;
         if (pulseA > 0) {
           ctx.save();
-          ctx.strokeStyle = `rgba(255,77,77,${pulseA})`;
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = `rgba(255, 77, 77, ${pulseA})`;
+          ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
           ctx.stroke();
@@ -230,15 +339,29 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         }
       }
 
-      // Film grain overlay
+      // Interactive shockwave ring visualization
+      if (shockwaveActive) {
+        const swA = Math.max(0, 0.18 - shockwaveR / 3000) * intensity;
+        if (swA > 0) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 90, 90, ${swA})`;
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(shockwaveX, shockwaveY, shockwaveR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // Analog cathode screen-grain noise (Phase 0–2)
       if (p <= 2) {
         ctx.save();
-        ctx.globalAlpha = 0.025;
-        for (let i = 0; i < 300; i++) {
+        ctx.globalAlpha = 0.02;
+        for (let i = 0; i < 200; i++) {
           const gx = Math.random() * W;
           const gy = Math.random() * H;
-          const gs = Math.random() * 2;
-          ctx.fillStyle = `rgba(245,240,232,${Math.random() * 0.8})`;
+          const gs = Math.random() * 2.2;
+          ctx.fillStyle = `rgba(245, 240, 232, ${Math.random() * 0.75})`;
           ctx.fillRect(gx, gy, gs, gs);
         }
         ctx.restore();
@@ -250,14 +373,9 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     return () => {
       cancelAnimationFrame(stateRef.current.animId);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('click', onWindowClick);
     };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 w-full h-full"
-      style={{ zIndex: 0 }}
-    />
-  );
+  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }} />;
 }
