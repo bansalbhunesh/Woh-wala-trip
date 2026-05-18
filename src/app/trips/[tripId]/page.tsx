@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { trpc } from '@/lib/trpc/client';
 import { FilmGrain } from '@/components/ui/atoms';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RecurringIdentityWidget } from '@/components/experience/RecurringIdentityWidget';
 import { ConfessionInput } from '@/components/experience/ConfessionInput';
 import {
@@ -152,7 +153,11 @@ export default function TripRoomPage() {
   return (
     <div className="min-h-screen selection:bg-cooked-accent selection:text-white font-cinematic overflow-x-hidden transition-colors duration-300 bg-[#060604] text-[#F5F0E8]">
       <AnimatePresence>
-        {showWrapped && isReady && <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />}
+        {showWrapped && isReady && (
+          <ErrorBoundary name="lore-wrapped">
+            <LoreWrapped trip={trip} onFinish={handleFinishWrapped} />
+          </ErrorBoundary>
+        )}
       </AnimatePresence>
 
       <FilmGrain />
@@ -186,7 +191,9 @@ export default function TripRoomPage() {
               {activeTab === 'hub' && (
                 <div className="space-y-8">
                   {/* ① Delusion Index — giant emotional beat acts as hook */}
-                  <CookedLevelReveal trip={trip} />
+                  <ErrorBoundary name="cooked-level-reveal">
+                    <CookedLevelReveal trip={trip} />
+                  </ErrorBoundary>
 
                   {/* Visual Scene Selection Shelf */}
                   <div className="space-y-4 pt-4 border-t border-white/5">
@@ -329,8 +336,16 @@ export default function TripRoomPage() {
                         sub="AI Findings · Cross-referenced · 0 appeals accepted"
                         accent="#FF4D4D"
                       />
-                      <EmotionalDamageScan members={members} />
-                      <FriendshipExpose members={members} />
+                      <ErrorBoundary name="emotional-damage-scan">
+                        <EmotionalDamageScan members={members} />
+                      </ErrorBoundary>
+                      <ErrorBoundary name="friendship-expose">
+                        <FriendshipExpose
+                          members={members}
+                          tripId={tripId}
+                          creatorId={trip.creator_id}
+                        />
+                      </ErrorBoundary>
                     </section>
                   )}
 
@@ -373,12 +388,14 @@ export default function TripRoomPage() {
                   {/* Evidence Board */}
                   {(mvp || villain || insideJoke) && (
                     <section className="py-2">
-                      <EvidenceBoard
-                        mvp={mvp}
-                        villain={villain}
-                        insideJoke={insideJoke}
-                        lore={lore}
-                      />
+                      <ErrorBoundary name="evidence-board">
+                        <EvidenceBoard
+                          mvp={mvp}
+                          villain={villain}
+                          insideJoke={insideJoke}
+                          lore={lore}
+                        />
+                      </ErrorBoundary>
                     </section>
                   )}
 
@@ -532,7 +549,9 @@ export default function TripRoomPage() {
                   {/* AI Psychological Profile */}
                   {lore && (
                     <section className="py-2">
-                      <FriendshipVerdict lore={lore} />
+                      <ErrorBoundary name="friendship-verdict">
+                        <FriendshipVerdict lore={lore} />
+                      </ErrorBoundary>
                     </section>
                   )}
 
@@ -560,7 +579,11 @@ export default function TripRoomPage() {
                   )}
 
                   {/* Final verdict */}
-                  {lore && <ClosingVerdict lore={lore} />}
+                  {lore && (
+                    <ErrorBoundary name="closing-verdict">
+                      <ClosingVerdict lore={lore} />
+                    </ErrorBoundary>
+                  )}
 
                   {/* Navigation footer */}
                   <div className="pt-6 border-t border-white/5 flex justify-between items-center">
@@ -711,6 +734,7 @@ function EmotionalDamageScan({ members }: { members: any[] }) {
           }}
         />
         <p
+          aria-live="polite"
           className="font-mono text-[8px] uppercase tracking-[0.45em]"
           style={{ color: scanComplete ? 'rgba(255,77,77,0.6)' : 'rgba(255,77,77,0.35)' }}
         >
@@ -1377,6 +1401,11 @@ function UploadState({
 
       {/* Lore engine CTA */}
       <div className="z-10">
+        {canGenerate && photoCount < 8 && (
+          <div className="text-xs text-amber-400/80 mb-2 font-mono uppercase tracking-wider text-center">
+            ⚠ Add {8 - photoCount} more photos for richer lore
+          </div>
+        )}
         <button
           onClick={() => generateLore.mutate({ tripId })}
           disabled={!canGenerate || generateLore.isPending || isActive}
