@@ -421,35 +421,47 @@ export const tripsRouter = router({
         });
       }
 
+      // FREEMIUM-01: First trip generation is always free — skip the monthly token cap check.
+      // Count trips where lore_status = 'ready' for this user (completed generations).
+      const admin = createSupabaseServiceClient();
+      const { count: completedTrips } = await admin
+        .from('trips')
+        .select('id', { count: 'exact', head: true })
+        .eq('creator_id', ctx.user.id)
+        .eq('lore_status', 'ready');
+
+      const isFirstGeneration = (completedTrips ?? 0) === 0;
+
       // COST-01: Monthly token cap per user.
       // Configurable via MONTHLY_TOKEN_CAP_PER_USER env var (default 500,000 tokens
       // ≈ 8 full pipeline runs at ~60k tokens each).  The profiles trigger
       // (trg_increment_user_token_usage) keeps generation_tokens_used_this_month
       // current without requiring an extra write here.
-      const monthlyCap = parseInt(process.env.MONTHLY_TOKEN_CAP_PER_USER ?? '500000', 10);
-      const admin = createSupabaseServiceClient();
-      const { data: profileRaw } = await admin
-        .from('profiles')
-        .select('generation_tokens_used_this_month, generation_tokens_month')
-        .eq('id', ctx.user.id)
-        .single();
-      const profile = profileRaw as {
-        generation_tokens_used_this_month: number | null;
-        generation_tokens_month: string | null;
-      } | null;
+      if (!isFirstGeneration) {
+        const monthlyCap = parseInt(process.env.MONTHLY_TOKEN_CAP_PER_USER ?? '500000', 10);
+        const { data: profileRaw } = await admin
+          .from('profiles')
+          .select('generation_tokens_used_this_month, generation_tokens_month')
+          .eq('id', ctx.user.id)
+          .single();
+        const profile = profileRaw as {
+          generation_tokens_used_this_month: number | null;
+          generation_tokens_month: string | null;
+        } | null;
 
-      if (profile) {
-        // Reset counter if it's from a previous month
-        const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-        const profileMonth = profile.generation_tokens_month?.slice(0, 7) ?? null;
-        const tokensThisMonth =
-          profileMonth === thisMonth ? (profile.generation_tokens_used_this_month ?? 0) : 0;
+        if (profile) {
+          // Reset counter if it's from a previous month
+          const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+          const profileMonth = profile.generation_tokens_month?.slice(0, 7) ?? null;
+          const tokensThisMonth =
+            profileMonth === thisMonth ? (profile.generation_tokens_used_this_month ?? 0) : 0;
 
-        if (tokensThisMonth >= monthlyCap) {
-          throw new TRPCError({
-            code: 'TOO_MANY_REQUESTS',
-            message: `Monthly generation limit reached (${tokensThisMonth.toLocaleString()} / ${monthlyCap.toLocaleString()} tokens). Resets next month.`,
-          });
+          if (tokensThisMonth >= monthlyCap) {
+            throw new TRPCError({
+              code: 'TOO_MANY_REQUESTS',
+              message: `Monthly generation limit reached (${tokensThisMonth.toLocaleString()} / ${monthlyCap.toLocaleString()} tokens). Resets next month.`,
+            });
+          }
         }
       }
 
@@ -510,7 +522,7 @@ export const tripsRouter = router({
         });
         if (!resp.ok) throw new Error(`Worker returned ${resp.status}`);
         span.end({ output: { status: 'processing' } });
-        return { status: 'processing' as const };
+        return { status: 'processing' as const, isFirstTrip: isFirstGeneration };
       } catch (err) {
         // HTTP trigger failed — queue the job so the worker's polling loop picks it up
         // within 60 seconds. Don't reset lore_status to 'pending': it stays 'processing'
@@ -532,7 +544,7 @@ export const tripsRouter = router({
         );
         span.end({ output: { status: 'queued' }, usage: undefined });
         // Return normally — the generating page will receive the status update via Realtime
-        return { status: 'queued' as const };
+        return { status: 'queued' as const, isFirstTrip: isFirstGeneration };
       }
     }),
 
@@ -848,6 +860,18 @@ export const tripsRouter = router({
     chaosDistCache.set('global', { data: result, expiry: Date.now() + CHAOS_CACHE_TTL_MS });
 
     return result;
+  }),
+
+  // FREEMIUM-01: Let the generating page check whether this is the user's first completed trip.
+  // Used to show "Your first trip is on us" messaging during generation.
+  isFirstGeneration: protectedProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseServiceClient();
+    const { count: completedTrips } = await admin
+      .from('trips')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', ctx.user.id)
+      .eq('lore_status', 'ready');
+    return { isFirstTrip: (completedTrips ?? 0) === 0 };
   }),
 
   // Warm up the AI worker before the user clicks "Generate Lore".

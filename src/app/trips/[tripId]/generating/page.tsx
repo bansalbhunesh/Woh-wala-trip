@@ -30,6 +30,11 @@ export default function GeneratingPage() {
     { refetchOnMount: true }
   );
 
+  // FREEMIUM-01: check if this is the user's first generation to show the "on us" banner
+  const { data: freemiumData } = trpc.trips.isFirstGeneration.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+
   const resetStuckLore = trpc.trips.resetStuckLore.useMutation();
 
   // Supabase Realtime — push update when lore_status changes instead of polling
@@ -244,6 +249,25 @@ export default function GeneratingPage() {
         >
           yaarlore
         </p>
+
+        {/* FREEMIUM-01: first trip free banner */}
+        {freemiumData?.isFirstTrip && (
+          <div
+            className="absolute top-16 left-0 right-0 flex justify-center"
+            style={{ animation: 'fade-in 1s ease 1s both', opacity: 0 }}
+          >
+            <div
+              className="font-mono text-[9px] uppercase tracking-[0.4em] px-4 py-2 rounded-full"
+              style={{
+                background: 'rgba(45,158,139,0.1)',
+                border: '1px solid rgba(45,158,139,0.3)',
+                color: 'rgba(45,158,139,0.8)',
+              }}
+            >
+              Your first trip is on us
+            </div>
+          </div>
+        )}
 
         {/* Stage display */}
         <div
