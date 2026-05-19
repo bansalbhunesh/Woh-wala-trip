@@ -65,16 +65,17 @@ function WhatsAppShareButton({
   tripName,
   storyUrl,
   chaosScore,
+  whatsappCaption,
 }: {
   tripName: string;
   storyUrl: string;
   chaosScore: number;
+  whatsappCaption?: string | null;
 }) {
   // Use AI-generated whatsapp_caption if available — it's specifically written
   // to create group chat chaos. Fall back to generic only if absent.
-  const aiCaption = (lore as any)?.whatsapp_caption as string | null;
-  const shareText = aiCaption
-    ? `${aiCaption}\n\n${storyUrl}`
+  const shareText = whatsappCaption
+    ? `${whatsappCaption}\n\n${storyUrl}`
     : `"${tripName}" just got immortalized. Chaos Score: ${chaosScore}/100\n\n${storyUrl}`;
   const message = encodeURIComponent(shareText);
   const waUrl = `https://wa.me/?text=${message}`;
@@ -375,6 +376,7 @@ export default function PublicStoryClient({
             tier={tier}
             tripName={(lore as any).trip_title || 'This Trip'}
             chaosScore={cookedScore}
+            whatsappCaption={(lore as any).whatsapp_caption ?? null}
           />
         </ErrorBoundary>
       </div>
@@ -491,6 +493,7 @@ function SlideContent({
   tier,
   tripName,
   chaosScore,
+  whatsappCaption,
 }: {
   slide: Slide;
   slamActive: boolean;
@@ -500,6 +503,7 @@ function SlideContent({
   tier: string;
   tripName: string;
   chaosScore: number;
+  whatsappCaption?: string | null;
 }) {
   switch (slide.type) {
     case 'title':
@@ -723,7 +727,12 @@ function SlideContent({
           </a>
           {/* VIRAL-01: WhatsApp one-tap share + copy link */}
           <div className="space-y-2 w-full">
-            <WhatsAppShareButton tripName={tripName} storyUrl={storyUrl} chaosScore={chaosScore} />
+            <WhatsAppShareButton
+              tripName={tripName}
+              storyUrl={storyUrl}
+              chaosScore={chaosScore}
+              whatsappCaption={whatsappCaption}
+            />
             <CopyLinkButton storyUrl={storyUrl} />
           </div>
           <a

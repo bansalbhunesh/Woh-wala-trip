@@ -693,21 +693,37 @@ export default function TripRoomPage() {
 
               {/* WhatsApp-first share — primary action for India */}
               {lore && trip?.invite_code && (
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `${lore.whatsapp_caption ?? lore.tagline ?? trip.name}\n\nhttps://${typeof window !== 'undefined' ? window.location.host : 'yaarlore.app'}/t/${trip.invite_code}/story`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-mono font-black text-[9px] uppercase tracking-[0.35em] transition-all hover:scale-[1.02] active:scale-95"
-                  style={{
-                    background: 'rgba(37,211,102,0.1)',
-                    border: '1px solid rgba(37,211,102,0.3)',
-                    color: 'rgba(37,211,102,0.9)',
-                  }}
-                >
-                  &#9654; Share in WhatsApp
-                </a>
+                <div className="space-y-2">
+                  {/* Primary: WhatsApp with AI-generated caption — highest virality */}
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `${(lore as any).whatsapp_caption ?? lore.tagline ?? trip.name}\n\nhttps://${typeof window !== 'undefined' ? window.location.host : 'yaarlore.app'}/t/${trip.invite_code}/story`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-mono font-black text-[9px] uppercase tracking-[0.35em] transition-all hover:scale-[1.02] active:scale-95"
+                    style={{
+                      background: 'rgba(37,211,102,0.1)',
+                      border: '1px solid rgba(37,211,102,0.3)',
+                      color: 'rgba(37,211,102,0.9)',
+                    }}
+                  >
+                    &#9654; Share in WhatsApp
+                  </a>
+                  {/* Instagram Story portrait card — for reels/stories sharing */}
+                  <a
+                    href={`/api/card/story/${trip.id}`}
+                    download={`yaarlore-${trip.invite_code}-story.png`}
+                    className="flex items-center justify-center w-full py-3 rounded-2xl font-mono font-black text-[8px] uppercase tracking-[0.35em] transition-all hover:scale-[1.02] active:scale-95"
+                    style={{
+                      background: 'rgba(124,106,255,0.08)',
+                      border: '1px solid rgba(124,106,255,0.2)',
+                      color: 'rgba(124,106,255,0.7)',
+                    }}
+                  >
+                    ↓ Instagram Story Card
+                  </a>
+                </div>
               )}
 
               {/* PROD-02: Story visibility toggle — only shown to the trip creator */}

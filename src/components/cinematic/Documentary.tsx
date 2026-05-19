@@ -226,14 +226,16 @@ export function CookedLevelReveal({ trip }: { trip: TripWithLore }) {
 // VIRAL-02: Download character card PNG for a trip member.
 async function downloadCharacterCard(tripId: string, userId: string, displayName: string) {
   try {
-    const cardUrl = `/api/card/character/${tripId}/${userId}`;
+    // Use the new portrait archetype card (1080x1920) — Instagram Story format.
+    // Falls back to the old landscape character card if the new endpoint fails.
+    const cardUrl = `/api/card/archetype/${tripId}/${userId}`;
     const response = await fetch(cardUrl);
-    if (!response.ok) throw new Error('Card fetch failed');
+    if (!response.ok) throw new Error('Archetype card fetch failed');
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(displayName || 'member').replace(/\s+/g, '-').toLowerCase()}-yaarlore-card.png`;
+    a.download = `${(displayName || 'member').replace(/\s+/g, '-').toLowerCase()}-yaarlore.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
