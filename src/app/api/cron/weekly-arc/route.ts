@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { logger } from '@/lib/logger';
 
 // Runs every Monday — generates character arc updates for active users
 // (users who have 2+ trips documented in user_identity_snapshots).
@@ -25,8 +26,8 @@ export async function GET(req: NextRequest) {
   const weekOf = monday.toISOString().slice(0, 10);
 
   // Find users with 2+ identity snapshots who don't have an arc update this week
-  const { data: eligibleUsers } = await supabase
-    .from('user_identity_snapshots' as never)
+  const { data: eligibleUsers } = await (supabase as any)
+    .from('user_identity_snapshots')
     .select('user_id')
     .order('user_id');
 
@@ -44,11 +45,11 @@ export async function GET(req: NextRequest) {
     .map(([uid]) => uid);
 
   // Skip users who already have an arc for this week
-  const { data: existingArcs } = await supabase
-    .from('character_arc_updates' as never)
+  const { data: existingArcs } = await (supabase as any)
+    .from('character_arc_updates')
     .select('user_id')
     .eq('week_of', weekOf)
-    .in('user_id' as never, activeUsers);
+    .in('user_id', activeUsers);
 
   const existingSet = new Set(((existingArcs as any[]) ?? []).map((a: any) => a.user_id));
   const toProcess = activeUsers.filter(uid => !existingSet.has(uid)).slice(0, 100); // cap at 100/run
@@ -58,8 +59,8 @@ export async function GET(req: NextRequest) {
   for (const userId of toProcess) {
     try {
       // Fetch snapshots
-      const { data: snaps } = await supabase
-        .from('user_identity_snapshots' as never)
+      const { data: snaps } = await (supabase as any)
+        .from('user_identity_snapshots')
         .select('archetype, chaos_rating, role_title, snapshot_at')
         .eq('user_id', userId)
         .order('snapshot_at', { ascending: true });
@@ -126,7 +127,7 @@ Write in second person, conversational, slightly roasty but affectionate. Intern
       const narrative = (msg.content[0] as any).text as string;
 
       // Store arc update
-      await supabase.from('character_arc_updates' as never).upsert(
+      await (supabase as any).from('character_arc_updates').upsert(
         {
           user_id: userId,
           week_of: weekOf,
@@ -136,13 +137,13 @@ Write in second person, conversational, slightly roasty but affectionate. Intern
           chaos_delta: chaosDelta,
           trip_count: snapList.length,
           arc_pct: arcPct,
-        } as never,
+        },
         { onConflict: 'user_id,week_of' }
       );
 
       // Emit pulse event for this user (self-visible only — personal update)
-      await supabase.from('group_pulse_events' as never).insert({
-        trip_id: null as never, // system event, no specific trip
+      await (supabase as any).from('group_pulse_events').insert({
+        trip_id: null, // system event, no specific trip
         event_type: 'lore_generated',
         actor_user_id: null,
         payload: {
@@ -153,14 +154,18 @@ Write in second person, conversational, slightly roasty but affectionate. Intern
           preview: narrative.slice(0, 80),
         },
         visible_to: [userId],
-      } as never);
+      });
 
       processed++;
     } catch (e) {
       // Non-fatal — continue to next user
-      console.error(`[weekly-arc] failed for ${userId}:`, e);
+      logger.error({ userId, err: (e as Error).message }, 'weekly-arc failed for user');
     }
   }
 
+  logger.info(
+    { processed, weekOf, total_eligible: toProcess.length },
+    'weekly-arc cron run completed'
+  );
   return NextResponse.json({ processed, weekOf, total_eligible: toProcess.length });
 }

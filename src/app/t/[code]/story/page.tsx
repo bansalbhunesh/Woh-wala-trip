@@ -74,7 +74,7 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
     );
   }
 
-  // Fetch members for character slides (public — display names only)
+  // Fetch members for character slides (public — display displays only)
   const { data: members } = await supabase
     .from('trip_members')
     .select(
@@ -90,6 +90,75 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
     display_name: m.profiles?.display_name || 'Member',
   }));
 
+  // Fetch, sign, and cache public photos for blurred background slides
+  const { data: photosData } = await supabase
+    .from('photos')
+    .select('id, storage_path, thumbnail_path, signed_url, thumb_signed_url, url_expires_at')
+    .eq('trip_id', trip.id)
+    .neq('is_private', true);
+
+  const photos = (photosData || []) as any[];
+  const tenMinFromNow = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const needsRefresh = photos.filter(p => !p.url_expires_at || p.url_expires_at < tenMinFromNow);
+  const hasValidCache = photos.filter(p => p.url_expires_at && p.url_expires_at >= tenMinFromNow);
+
+  const urlByPath = new Map<string, string>();
+  const thumbUrlByPath = new Map<string, string>();
+
+  for (const p of hasValidCache) {
+    if (p.signed_url) urlByPath.set(p.storage_path, p.signed_url);
+    if (p.thumb_signed_url && p.thumbnail_path)
+      thumbUrlByPath.set(p.thumbnail_path, p.thumb_signed_url);
+  }
+
+  if (needsRefresh.length > 0) {
+    const photoPaths = needsRefresh.map(p => p.storage_path);
+    const thumbPaths = needsRefresh
+      .filter(p => p.thumbnail_path)
+      .map(p => p.thumbnail_path as string);
+
+    try {
+      const [photoUrls, thumbUrls] = await Promise.all([
+        supabase.storage.from('trip-photos').createSignedUrls(photoPaths, 3600),
+        thumbPaths.length > 0
+          ? supabase.storage.from('trip-photos').createSignedUrls(thumbPaths, 3600)
+          : Promise.resolve({ data: [] as any }),
+      ]);
+
+      (photoUrls.data || []).forEach((u: any) => {
+        if (u.signedUrl && u.path) urlByPath.set(u.path, u.signedUrl);
+      });
+      (thumbUrls.data || []).forEach((u: any) => {
+        if (u.signedUrl && u.path) thumbUrlByPath.set(u.path, u.signedUrl);
+      });
+
+      const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+      const urlsToUpsert = needsRefresh
+        .filter(p => urlByPath.has(p.storage_path))
+        .map(p => ({
+          id: p.id,
+          signed_url: urlByPath.get(p.storage_path)!,
+          thumb_signed_url: p.thumbnail_path
+            ? (thumbUrlByPath.get(p.thumbnail_path) ?? null)
+            : null,
+          url_expires_at: expiresAt,
+        }));
+
+      if (urlsToUpsert.length > 0) {
+        await supabase.from('photos').upsert(urlsToUpsert as never, { onConflict: 'id' });
+      }
+    } catch (e) {
+      console.error('Failed to sign public URLs:', e);
+    }
+  }
+
+  const finalPhotos = photos.map(p => ({
+    url: urlByPath.get(p.storage_path) ?? p.signed_url ?? null,
+    thumbnailUrl: p.thumbnail_path
+      ? (thumbUrlByPath.get(p.thumbnail_path) ?? p.thumb_signed_url ?? null)
+      : null,
+  }));
+
   return (
     <PublicStoryClient
       tripId={trip.id}
@@ -97,6 +166,7 @@ export default async function PublicStoryPage({ params }: { params: Promise<{ co
       lore={trip.lore_json as LoreJson}
       members={membersClean}
       tier={trip.tier ?? 'free'}
+      photos={finalPhotos}
     />
   );
 }

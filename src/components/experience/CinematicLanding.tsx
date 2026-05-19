@@ -116,6 +116,16 @@ export default function CinematicLanding() {
 
   useEffect(() => {
     const t1 = setTimeout(() => setRevealed(true), 80);
+
+    // VIRAL-02: Capture referral code
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) {
+        localStorage.setItem('yaarlore_referrer', ref);
+      }
+    }
+
     return () => clearTimeout(t1);
   }, []);
 

@@ -108,6 +108,8 @@ type ChaosDist = { p50: number; p75: number; p90: number; total: number };
 
 // Module-level in-memory fallback — used ONLY when Redis is not configured (dev only).
 const _chaosDistMemCache = new Map<'global', { data: ChaosDist | null; expiry: number }>();
+const _publicShowcaseMemCache = new Map<'global', { data: any[]; expiry: number }>();
+const _similarPublicTripsMemCache = new Map<string, { data: any[]; expiry: number }>();
 
 const TripCreateInput = z.object({
   name: z.string().min(2).max(80),
@@ -951,6 +953,111 @@ export const tripsRouter = router({
       return { success: true, visible: input.visible };
     }),
 
+  setStoryVisible: protectedProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        visible: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify caller is the trip creator before touching story_visible.
+      const { data: tripVisRaw } = await ctx.supabase
+        .from('trips')
+        .select('creator_id')
+        .eq('id', input.tripId)
+        .single();
+
+      const tripVisCheck = tripVisRaw as TripCreatorRow | null;
+      if (!tripVisCheck || tripVisCheck.creator_id !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the trip creator can change story visibility.',
+        });
+      }
+
+      type StoryVisibilityUpdateClient = {
+        from: (t: 'trips') => {
+          update: (d: StoryVisibilityUpdate) => {
+            eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
+          };
+        };
+      };
+      const adminVis = createSupabaseServiceClient();
+      const { error: visError } = await (adminVis as unknown as StoryVisibilityUpdateClient)
+        .from('trips')
+        .update({ story_visible: input.visible })
+        .eq('id', input.tripId);
+
+      if (visError)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: visError.message });
+
+      return { success: true, visible: input.visible };
+    }),
+
+  exportArchive: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data: member } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+
+      if (!member) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this trip',
+        });
+      }
+
+      const { data: trip } = await ctx.supabase
+        .from('trips')
+        .select('name, destination, lore_json, invite_code, tier, chaos_score')
+        .eq('id', input.tripId)
+        .single();
+
+      if (!trip) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Trip not found',
+        });
+      }
+
+      const { data: photos } = await ctx.supabase
+        .from('photos')
+        .select('storage_path, created_at')
+        .eq('trip_id', input.tripId);
+
+      const adminSupabase = createSupabaseServiceClient();
+      const photoPaths = ((photos || []) as any[]).map(p => p.storage_path);
+      let signedPhotos: { path: string; signedUrl: string }[] = [];
+
+      if (photoPaths.length > 0) {
+        const { data: signed } = await adminSupabase.storage
+          .from('trip-photos')
+          .createSignedUrls(photoPaths, 86400);
+        signedPhotos = (signed || []).map(s => ({
+          path: s.path ?? '',
+          signedUrl: s.signedUrl ?? '',
+        }));
+      }
+
+      const t = trip as any;
+      return {
+        trip: {
+          name: t.name,
+          destination: t.destination,
+          lore_json: t.lore_json,
+          invite_code: t.invite_code,
+          tier: t.tier,
+          chaos_score: t.chaos_score,
+        },
+        photos: signedPhotos,
+      };
+    }),
+
   getChaosDistribution: protectedProcedure.query(async ({ ctx }) => {
     // PERF-03: check Redis cache first (shared across all Vercel instances).
     // Falls back to the module-level in-memory Map only in dev when Redis is absent.
@@ -1143,6 +1250,26 @@ export const tripsRouter = router({
   getSimilarPublicTrips: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      const cacheKey = `similar_trips:${input.tripId}:${ctx.user.id}`;
+      if (chaosCacheRedis) {
+        try {
+          const cached = await chaosCacheRedis.get<any[] | null>(cacheKey);
+          if (cached !== null) {
+            return cached;
+          }
+        } catch (redisErr) {
+          logger.warn(
+            { procedure: 'trips.getSimilarPublicTrips', userId: ctx.user.id, tripId: input.tripId },
+            `Redis GET failed, recomputing from DB: ${(redisErr as Error).message}`
+          );
+        }
+      } else {
+        const memCached = _similarPublicTripsMemCache.get(cacheKey);
+        if (memCached && Date.now() < memCached.expiry) {
+          return memCached.data;
+        }
+      }
+
       const adminSupabase = createSupabaseServiceClient();
 
       // Get a representative photo from this trip — first one with a completed embedding
@@ -1224,7 +1351,7 @@ export const tripsRouter = router({
         if (u.signedUrl && u.path) urlByPath.set(u.path, u.signedUrl);
       });
 
-      return repPhotos
+      const result = repPhotos
         .map(r => {
           const meta = metaById.get(r.trip_id);
           if (!meta) return null;
@@ -1243,6 +1370,26 @@ export const tripsRouter = router({
         })
         .filter((r): r is NonNullable<typeof r> => r !== null)
         .slice(0, 3);
+
+      if (chaosCacheRedis) {
+        try {
+          await chaosCacheRedis.set(cacheKey, JSON.stringify(result), {
+            ex: CHAOS_CACHE_TTL_S,
+          });
+        } catch (e) {
+          logger.warn(
+            { procedure: 'trips.getSimilarPublicTrips', userId: ctx.user.id, tripId: input.tripId },
+            `Redis SET failed: ${(e as Error).message}`
+          );
+        }
+      } else {
+        _similarPublicTripsMemCache.set(cacheKey, {
+          data: result,
+          expiry: Date.now() + CHAOS_CACHE_TTL_MS,
+        });
+      }
+
+      return result;
     }),
 
   // FEAT-V2-01: Generate a yearly wrap for the calling user.
@@ -1437,6 +1584,26 @@ export const tripsRouter = router({
   // VIRAL-01: Public showcase feed for the landing page — no auth required.
   // Returns anonymised top-chaos trips so visitors see real social proof.
   getPublicShowcase: publicProcedure.query(async ({ ctx }) => {
+    const cacheKey = 'public_showcase:global';
+    if (chaosCacheRedis) {
+      try {
+        const cached = await chaosCacheRedis.get<any[] | null>(cacheKey);
+        if (cached !== null) {
+          return cached;
+        }
+      } catch (redisErr) {
+        logger.warn(
+          { procedure: 'trips.getPublicShowcase' },
+          `Redis GET failed, recomputing from DB: ${(redisErr as Error).message}`
+        );
+      }
+    } else {
+      const memCached = _publicShowcaseMemCache.get('global');
+      if (memCached && Date.now() < memCached.expiry) {
+        return memCached.data;
+      }
+    }
+
     const admin = createSupabaseServiceClient();
     const { data } = await admin
       .from('trips')
@@ -1446,12 +1613,32 @@ export const tripsRouter = router({
       .order('chaos_score', { ascending: false })
       .limit(6);
 
-    return (data ?? []).map((t: any) => ({
+    const result = (data ?? []).map((t: any) => ({
       id: t.id as string,
       destination: (t.destination as string | null) ?? 'Unknown',
       chaosScore: (t.chaos_score as number | null) ?? 0,
       tagline: (t.lore_json as LoreJson | null)?.tagline ?? null,
     }));
+
+    if (chaosCacheRedis) {
+      try {
+        await chaosCacheRedis.set(cacheKey, JSON.stringify(result), {
+          ex: CHAOS_CACHE_TTL_S,
+        });
+      } catch (e) {
+        logger.warn(
+          { procedure: 'trips.getPublicShowcase' },
+          `Redis SET failed: ${(e as Error).message}`
+        );
+      }
+    } else {
+      _publicShowcaseMemCache.set('global', {
+        data: result,
+        expiry: Date.now() + CHAOS_CACHE_TTL_MS,
+      });
+    }
+
+    return result;
   }),
 
   // ── RETENTION MACHINE ──────────────────────────────────────────────────────

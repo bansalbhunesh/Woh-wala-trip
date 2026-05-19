@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import type { LoreJson } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 // Runs monthly on the 1st at 10am UTC via Vercel Cron.
 // For each user, finds trips generated 30–365 days ago and sends a "Remember when..." email.
@@ -20,8 +21,8 @@ export async function GET(req: NextRequest) {
 
   // Find all ready trips with story_visible=true created in the nostalgia window.
   // Join trip_members to get user emails via profiles.
-  const { data: candidates, error } = await supabase
-    .from('trips' as never)
+  const { data: candidates, error } = await (supabase as any)
+    .from('trips')
     .select(
       `
       id, name, destination, lore_json, chaos_score, invite_code, trip_start_date, created_at,
@@ -31,13 +32,13 @@ export async function GET(req: NextRequest) {
       )
     `
     )
-    .eq('lore_status' as never, 'ready')
-    .eq('story_visible' as never, true)
-    .gte('created_at' as never, oneYearAgo)
-    .lte('created_at' as never, thirtyDaysAgo);
+    .eq('lore_status', 'ready')
+    .eq('story_visible', true)
+    .gte('created_at', oneYearAgo)
+    .lte('created_at', thirtyDaysAgo);
 
   if (error) {
-    console.error('[cron/nostalgia-drops] query error:', error.message);
+    logger.error({ error: error.message }, 'nostalgia-drops query error');
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -63,24 +64,24 @@ export async function GET(req: NextRequest) {
   // Deduplicate check: find pairs that already received a nostalgia_drop this month
   // to avoid re-sending if cron runs more than once (safety net).
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const { data: alreadySent } = await supabase
-    .from('scheduled_emails' as never)
+  const { data: alreadySent } = await (supabase as any)
+    .from('scheduled_emails')
     .select('user_id, trip_id')
-    .eq('email_type' as never, 'nostalgia_drop')
-    .not('sent_at' as never, 'is', null)
-    .gte('sent_at' as never, monthStart);
+    .eq('email_type', 'nostalgia_drop')
+    .not('sent_at', 'is', null)
+    .gte('sent_at', monthStart);
 
   const sentKeys = new Set<string>(
     ((alreadySent as unknown as any[]) || []).map((r: any) => `${r.user_id}:${r.trip_id}`)
   );
 
   // Push fatigue: max 1 nostalgia email per user this month regardless of trip
-  const { data: recentNostalgia } = await supabase
-    .from('scheduled_emails' as never)
+  const { data: recentNostalgia } = await (supabase as any)
+    .from('scheduled_emails')
     .select('user_id')
-    .eq('email_type' as never, 'nostalgia_drop')
-    .not('sent_at' as never, 'is', null)
-    .gte('sent_at' as never, monthStart);
+    .eq('email_type', 'nostalgia_drop')
+    .not('sent_at', 'is', null)
+    .gte('sent_at', monthStart);
 
   const usersEmailedThisMonth = new Set<string>(
     ((recentNostalgia as unknown as any[]) || []).map((r: any) => r.user_id)
@@ -125,30 +126,30 @@ export async function GET(req: NextRequest) {
 
     try {
       if (process.env.RESEND_API_KEY) {
-        const { Resend } = await import('resend');
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
-
         // Insert scheduled_emails row BEFORE sending so we have a record even on crash.
         // sent_at is set AFTER successful send — mirrors the anniversary cron pattern.
-        const { data: emailRow, error: insertErr } = await supabase
-          .from('scheduled_emails' as never)
+        const { data: emailRow, error: insertErr } = await (supabase as any)
+          .from('scheduled_emails')
           .insert({
             trip_id: trip.id,
             user_id: userId,
             email_type: 'nostalgia_drop',
             send_at: now.toISOString(),
-          } as never)
+          })
           .select('id')
           .single();
 
         if (insertErr) {
-          console.warn(
-            `[nostalgia-drops] insert row failed for ${profile.email}:`,
-            insertErr.message
+          logger.warn(
+            { email: profile.email, error: insertErr.message },
+            'nostalgia-drops insert row failed'
           );
           continue;
         }
+
+        const { Resend } = await import('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
 
         await resend.emails.send({
           from: `Yaarlore <${from}>`,
@@ -203,29 +204,35 @@ export async function GET(req: NextRequest) {
         });
 
         // Mark sent only after confirmed delivery
-        const { error: claimError } = await supabase
-          .from('scheduled_emails' as never)
-          .update({ sent_at: new Date().toISOString() } as never)
-          .eq('id' as never, (emailRow as any).id)
-          .is('sent_at' as never, null);
+        const { error: claimError } = await (supabase as any)
+          .from('scheduled_emails')
+          .update({ sent_at: new Date().toISOString() })
+          .eq('id', (emailRow as any).id)
+          .is('sent_at', null);
 
         if (claimError) {
-          console.warn(
-            `[nostalgia-drops] claim failed after send for row ${(emailRow as any).id}:`,
-            claimError.message
+          logger.warn(
+            { rowId: (emailRow as any).id, error: claimError.message },
+            'nostalgia-drops claim failed after send'
           );
         }
       } else {
-        console.log(`[nostalgia-drops] Would send to ${profile.email} for trip: ${trip.name}`);
+        logger.info(
+          { email: profile.email, tripName: trip.name },
+          'Dry run: Would send nostalgia email'
+        );
       }
 
       sent++;
     } catch (err) {
-      console.error(`[nostalgia-drops] failed for ${profile.email}:`, err);
+      logger.error(
+        { email: profile.email, err: (err as Error).message },
+        'nostalgia drop email sending failed'
+      );
       // sent_at remains null — next month's run will retry if trip still in window
     }
   }
 
-  console.log(`[cron/nostalgia-drops] Sent ${sent}/${toSend.length} nostalgia emails`);
+  logger.info({ sent, total: toSend.length }, 'nostalgia-drops cron run completed');
   return NextResponse.json({ sent, total: toSend.length });
 }

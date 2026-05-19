@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LoreJson } from '@/lib/types';
 import ReactionBar from '@/components/experience/ReactionBar';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { SlidePhotoBackground } from '@/components/experience/SlidePhotoBackground';
 import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -223,6 +222,7 @@ interface Props {
   lore: LoreJson;
   members: any[];
   tier?: string;
+  photos: { url?: string | null; thumbnailUrl?: string | null }[];
 }
 
 export default function PublicStoryClient({
@@ -231,6 +231,7 @@ export default function PublicStoryClient({
   lore,
   members,
   tier = 'free',
+  photos,
 }: Props) {
   const router = useRouter();
   const [idx, setIdx] = useState(0);
@@ -288,6 +289,9 @@ export default function PublicStoryClient({
         touchStart.current = null;
       }}
     >
+      {/* Blurred background photo */}
+      <SlidePhotoBackground photos={photos} slideIdx={idx} />
+
       {/* Accessible tap zones — keyboard + screen-reader navigable */}
       <button
         aria-label="Previous slide"

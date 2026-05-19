@@ -66,11 +66,11 @@ export const battlesRouter = router({
       const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const ownedList = ownedIds.join(',');
 
-      const { count: recentBattles } = await ctx.supabase
-        .from('trip_vs_trip' as never)
+      const { count: recentBattles } = await (ctx.supabase as any)
+        .from('trip_vs_trip')
         .select('id', { count: 'exact', head: true })
-        .or(`trip_a_id.in.(${ownedList}),trip_b_id.in.(${ownedList})` as never)
-        .gte('created_at' as never, cutoff);
+        .or(`trip_a_id.in.(${ownedList}),trip_b_id.in.(${ownedList})`)
+        .gte('created_at', cutoff);
 
       if ((recentBattles || 0) >= 3) {
         throw new TRPCError({
@@ -94,14 +94,14 @@ export const battlesRouter = router({
         });
       }
 
-      const { data: battle, error } = await ctx.supabase
-        .from('trip_vs_trip' as never)
+      const { data: battle, error } = await (ctx.supabase as any)
+        .from('trip_vs_trip')
         .insert({
           trip_a_id: input.myTripId,
           trip_b_id: input.opponentTripId,
           status: 'pending',
           voting_ends_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
-        } as never)
+        })
         .select()
         .single();
 
@@ -116,12 +116,12 @@ export const battlesRouter = router({
       // payload carries battle_id so the worker's judge_battle() call has it.
       // Must use service client — background_jobs has service-role-only RLS.
       const battleAdmin = createSupabaseServiceClient();
-      const { error: battleJobError } = await battleAdmin.from('background_jobs' as never).insert({
+      const { error: battleJobError } = await battleAdmin.from('background_jobs').insert({
         trip_id: input.myTripId,
         job_type: 'judge_battle',
         status: 'pending',
-        payload: { battle_id: (battle as BattleRow).id },
-      } as never);
+        payload: { battle_id: (battle as BattleRow).id } as any,
+      });
 
       if (battleJobError) {
         console.error('[challenge] failed to enqueue judge_battle job:', battleJobError.message);
@@ -138,30 +138,30 @@ export const battlesRouter = router({
         interface ChallengerTrip {
           name: string;
         }
-        const { data: opponentData } = await battleAdmin
-          .from('trips' as never)
+        const { data: opponentData } = await (battleAdmin as any)
+          .from('trips')
           .select('creator_id, name, profiles!inner(email, display_name)')
-          .eq('id' as never, input.opponentTripId)
+          .eq('id', input.opponentTripId)
           .single();
 
-        const { data: challengerData } = await battleAdmin
-          .from('trips' as never)
+        const { data: challengerData } = await (battleAdmin as any)
+          .from('trips')
           .select('name')
-          .eq('id' as never, input.myTripId)
+          .eq('id', input.myTripId)
           .single();
 
         const opponent = opponentData as unknown as TripWithProfile | null;
         const challenger = challengerData as unknown as ChallengerTrip | null;
 
         if (opponent?.creator_id && challenger?.name) {
-          const { error: notifErr } = await battleAdmin.from('scheduled_emails' as never).insert({
+          const { error: notifErr } = await battleAdmin.from('scheduled_emails').insert({
             trip_id: input.opponentTripId,
             user_id: opponent.creator_id,
             email_type: 'battle_challenge',
             send_at: new Date().toISOString(),
             // Store challenger trip name in a note field for the email cron to use.
             // We embed it in the trip reference — the cron will query it from the battle row.
-          } as never);
+          });
 
           if (notifErr) {
             console.error(
@@ -187,13 +187,13 @@ export const battlesRouter = router({
         ];
 
         if (allMemberIds.length > 0) {
-          await battleAdmin.from('group_pulse_events' as never).insert({
+          await (battleAdmin as any).from('group_pulse_events').insert({
             trip_id: input.myTripId,
             event_type: 'battle_started',
             actor_user_id: ctx.user.id,
             payload: { battle_id: (battle as any).id, opponent_trip_id: input.opponentTripId },
             visible_to: allMemberIds,
-          } as never);
+          });
         }
       } catch (pulseErr) {
         // Non-fatal — battle creation must always succeed even if pulse fails
@@ -206,8 +206,8 @@ export const battlesRouter = router({
   get: publicProcedure
     .input(z.object({ battleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
-        .from('trip_vs_trip' as never)
+      const { data, error } = await (ctx.supabase as any)
+        .from('trip_vs_trip')
         .select(
           `
           *,
@@ -215,7 +215,7 @@ export const battlesRouter = router({
           trip_b:trip_b_id (id, name, destination, chaos_score, lore_json, total_photos)
         `
         )
-        .eq('id' as never, input.battleId)
+        .eq('id', input.battleId)
         .single();
 
       if (error || !data) {
@@ -236,14 +236,11 @@ export const battlesRouter = router({
       // Use server-authoritative user ID as the deduplication key.
       // Client-supplied fingerprints are not accepted for authenticated sessions —
       // they can be faked to bypass deduplication.
-      const { data, error } = await ctx.supabase.rpc(
-        'cast_vs_vote' as never,
-        {
-          p_battle_id: input.battleId,
-          p_voted_for_trip_id: input.votedForTripId,
-          p_fingerprint: ctx.user.id,
-        } as never
-      );
+      const { data, error } = await (ctx.supabase as any).rpc('cast_vs_vote', {
+        p_battle_id: input.battleId,
+        p_voted_for_trip_id: input.votedForTripId,
+        p_fingerprint: ctx.user.id,
+      });
 
       const res = data as unknown as BattleVoteResult | null;
       if (error || res?.error) {

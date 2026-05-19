@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 // Processes scheduled_emails rows of type 'battle_challenge' and sends them via Resend.
 // Runs every 5 minutes so challengers get near-instant notifications.
@@ -15,8 +16,8 @@ export async function GET(req: NextRequest) {
   const now = new Date();
 
   // Fetch all unsent battle_challenge emails due now (or overdue)
-  const { data: due, error } = await supabase
-    .from('scheduled_emails' as never)
+  const { data: due, error } = await (supabase as any)
+    .from('scheduled_emails')
     .select(
       `
       id, trip_id, user_id, email_type,
@@ -24,12 +25,12 @@ export async function GET(req: NextRequest) {
       profiles:user_id(email, display_name)
     `
     )
-    .eq('email_type' as never, 'battle_challenge')
-    .is('sent_at' as never, null)
-    .lte('send_at' as never, now.toISOString());
+    .eq('email_type', 'battle_challenge')
+    .is('sent_at', null)
+    .lte('send_at', now.toISOString());
 
   if (error) {
-    console.error('[cron/battle-notifications] query error:', error.message);
+    logger.error({ error: error.message }, 'battle-notifications query error');
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -49,11 +50,11 @@ export async function GET(req: NextRequest) {
     // (the challenged trip). The trip_a_id is the challenger.
     let challengerName = 'Another trip';
     try {
-      const { data: battleRow } = await supabase
-        .from('trip_vs_trip' as never)
+      const { data: battleRow } = await (supabase as any)
+        .from('trip_vs_trip')
         .select('trip_a_id, trip_a:trip_a_id(name)')
-        .eq('trip_b_id' as never, trip.id)
-        .order('created_at' as never, { ascending: false })
+        .eq('trip_b_id', trip.id)
+        .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
@@ -116,31 +117,35 @@ export async function GET(req: NextRequest) {
         });
 
         // Mark sent AFTER confirmed delivery
-        const { error: claimError } = await supabase
-          .from('scheduled_emails' as never)
-          .update({ sent_at: new Date().toISOString() } as never)
-          .eq('id' as never, (row as any).id)
-          .is('sent_at' as never, null);
+        const { error: claimError } = await (supabase as any)
+          .from('scheduled_emails')
+          .update({ sent_at: new Date().toISOString() })
+          .eq('id', (row as any).id)
+          .is('sent_at', null);
 
         if (claimError) {
-          console.warn(
-            `[battle-notifications] claim failed for row ${(row as any).id}:`,
-            claimError.message
+          logger.warn(
+            { rowId: (row as any).id, error: claimError.message },
+            'battle-notifications claim failed after send'
           );
         }
       } else {
-        console.log(
-          `[battle-notifications] Would send to ${profile.email} — "${challengerName}" challenged "${trip.name}"`
+        logger.info(
+          { email: profile.email, challengerName, tripName: trip.name },
+          'Dry run: Would send battle notification email'
         );
       }
 
       sent++;
     } catch (err) {
-      console.error(`[battle-notifications] failed for ${profile.email}:`, err);
+      logger.error(
+        { email: profile.email, err: (err as Error).message },
+        'battle notification email sending failed'
+      );
       // sent_at remains null — next cron run will retry
     }
   }
 
-  console.log(`[cron/battle-notifications] Sent ${sent}/${(due as any[]).length} battle emails`);
+  logger.info({ sent, total: (due as any[]).length }, 'battle-notifications cron run completed');
   return NextResponse.json({ sent, total: (due as any[]).length });
 }

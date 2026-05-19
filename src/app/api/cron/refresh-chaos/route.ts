@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 // Hourly cron — refreshes the chaos_distribution_cache materialized view.
 // This prevents getChaosDistribution from doing a full `trips` table scan
@@ -22,10 +23,10 @@ export async function GET(req: NextRequest) {
   const { error } = await (admin as unknown as RpcClient).rpc('refresh_chaos_distribution');
 
   if (error) {
-    console.error('[cron/refresh-chaos] RPC error:', error.message);
+    logger.error({ error: error.message }, 'refresh-chaos RPC error');
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  console.log('[cron/refresh-chaos] chaos_distribution_cache refreshed');
+  logger.info('chaos_distribution_cache refreshed');
   return NextResponse.json({ refreshed: true, timestamp: new Date().toISOString() });
 }

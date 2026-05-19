@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import type { LoreJson } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 // Runs daily at 6am UTC via Vercel Cron
 // Sends:
@@ -20,8 +21,8 @@ export async function GET(req: NextRequest) {
   const windowStart = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString();
   const windowEnd = new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString();
 
-  const { data: due, error } = await supabase
-    .from('scheduled_emails' as never)
+  const { data: due, error } = await (supabase as any)
+    .from('scheduled_emails')
     .select(
       `
       id, trip_id, user_id, email_type,
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
     .lte('send_at', windowEnd);
 
   if (error) {
-    console.error('[cron/anniversaries] query error:', error.message);
+    logger.error({ error: error.message }, 'anniversaries query error');
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -46,8 +47,8 @@ export async function GET(req: NextRequest) {
   // If a user has multiple emails in the same window, send the trip with
   // the highest chaos score only (the most emotionally resonant one).
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: recentlySent } = await supabase
-    .from('scheduled_emails' as never)
+  const { data: recentlySent } = await (supabase as any)
+    .from('scheduled_emails')
     .select('user_id')
     .not('sent_at', 'is', null)
     .gte('sent_at', sevenDaysAgo);
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
   const filtered = Array.from(byUser.values());
   const skippedByFatigue = (due as any[]).length - filtered.length;
   if (skippedByFatigue > 0) {
-    console.log(`[cron/anniversaries] skipped ${skippedByFatigue} rows (push fatigue limit)`);
+    logger.info({ skippedByFatigue }, 'anniversaries skipped due to push fatigue limit');
   }
 
   if (filtered.length === 0) {
@@ -96,11 +97,11 @@ export async function GET(req: NextRequest) {
     // first_week_followup: only send if the story is publicly visible
     if (emailType === 'first_week_followup' && !trip.story_visible) {
       // Mark as sent to prevent future retries — story not visible, nothing to share
-      await supabase
-        .from('scheduled_emails' as never)
-        .update({ sent_at: new Date().toISOString() } as never)
-        .eq('id' as never, (row as any).id)
-        .is('sent_at' as never, null);
+      await (supabase as any)
+        .from('scheduled_emails')
+        .update({ sent_at: new Date().toISOString() })
+        .eq('id', (row as any).id)
+        .is('sent_at', null);
       continue;
     }
 
@@ -151,33 +152,38 @@ export async function GET(req: NextRequest) {
         });
 
         // Only mark sent AFTER confirmed delivery from Resend
-        const { error: claimError } = await supabase
-          .from('scheduled_emails' as never)
-          .update({ sent_at: new Date().toISOString() } as never)
-          .eq('id' as never, (row as any).id)
-          .is('sent_at' as never, null);
+        const { error: claimError } = await (supabase as any)
+          .from('scheduled_emails')
+          .update({ sent_at: new Date().toISOString() })
+          .eq('id', (row as any).id)
+          .is('sent_at', null);
 
         if (claimError) {
-          console.log(
-            `[anniversary] row ${(row as any).id} claim failed after send (duplicate possible):`,
-            claimError.message
+          logger.warn(
+            { rowId: (row as any).id, error: claimError.message },
+            'anniversary row claim failed after send'
           );
         }
       } else {
-        console.log(
-          `[anniversary] Would send [${emailType}] to ${profile.email} for trip: ${trip.name}`
+        logger.info(
+          { emailType, email: profile.email, tripName: trip.name },
+          'Dry run: Would send anniversary email'
         );
       }
 
       sent++;
     } catch (err) {
-      console.error(`[anniversary] [${emailType}] failed for ${profile.email}:`, err);
+      logger.error(
+        { emailType, email: profile.email, err: (err as Error).message },
+        'anniversary email sending failed'
+      );
       // sent_at is NOT set — next cron run will retry within the 25-hour window
     }
   }
 
-  console.log(
-    `[cron/anniversaries] Sent ${sent}/${filtered.length} emails (${skippedByFatigue} suppressed by fatigue limit)`
+  logger.info(
+    { sent, total: filtered.length, skippedByFatigue },
+    'anniversaries cron run completed'
   );
   return NextResponse.json({ sent, total: filtered.length, skipped_fatigue: skippedByFatigue });
 }
