@@ -2204,4 +2204,176 @@ Raw JSON only. No markdown.`;
         .single();
       return { prophecy: (data as any)?.pretrip_prophecy ?? null };
     }),
+
+  // ── Social Graph ───────────────────────────────────────────────────────────
+  // The living relationship memory — how specific people's dynamics have
+  // evolved across all documented trips together.
+
+  // Friendship timeline: all trips this user has shared with their groups,
+  // with relationship dynamics and mythology evolution across time.
+  getFriendshipTimeline: protectedProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseServiceClient();
+
+    // All trips the user is a member of, ordered chronologically
+    const { data: memberships } = await admin
+      .from('trip_members')
+      .select(
+        'trip_id, trips(id, name, destination, trip_start_date, chaos_score, lore_status, lore_json, member_count)'
+      )
+      .eq('user_id', ctx.user.id)
+      .eq('trips.lore_status' as never, 'ready')
+      .order('trips(trip_start_date)' as never, { ascending: true });
+
+    const trips = ((memberships as any[]) ?? []).map((m: any) => m.trips).filter(Boolean) as any[];
+
+    if (trips.length === 0) return { entries: [], totalTrips: 0 };
+
+    // For each trip, get identity snapshot for this user
+    const tripIds = trips.map((t: any) => t.id as string);
+    const { data: snapshots } = await admin
+      .from('user_identity_snapshots' as never)
+      .select('trip_id, archetype, chaos_rating, role_title')
+      .eq('user_id', ctx.user.id)
+      .in('trip_id' as never, tripIds);
+
+    const snapshotByTrip = new Map<string, any>();
+    for (const snap of (snapshots as any[]) ?? []) {
+      snapshotByTrip.set(snap.trip_id, snap);
+    }
+
+    // Get canonical incidents per trip (high callback potential)
+    const { data: incidents } = await admin
+      .from('trip_incidents' as never)
+      .select('trip_id, incident_ref, title, callback_potential, mythology_status')
+      .in('trip_id' as never, tripIds)
+      .in('callback_potential' as never, ['HIGH'])
+      .order('incident_ref');
+
+    const incidentsByTrip = new Map<string, any[]>();
+    for (const inc of (incidents as any[]) ?? []) {
+      if (!incidentsByTrip.has(inc.trip_id)) incidentsByTrip.set(inc.trip_id, []);
+      incidentsByTrip.get(inc.trip_id)!.push(inc);
+    }
+
+    const entries = trips.map((trip: any) => {
+      const snap = snapshotByTrip.get(trip.id);
+      const lore = trip.lore_json as LoreJson | null;
+      return {
+        tripId: trip.id as string,
+        tripName: trip.name as string,
+        destination: (trip.destination as string | null) ?? 'Unknown',
+        tripDate: trip.trip_start_date as string | null,
+        chaosScore: (trip.chaos_score as number | null) ?? 0,
+        verdict: lore?.cooked_verdict ?? null,
+        tagline: lore?.tagline ?? null,
+        memberCount: (trip.member_count as number) ?? 0,
+        // This user's identity snapshot for this trip
+        myArchetype: (snap?.archetype as string | null) ?? null,
+        myChaosRating: (snap?.chaos_rating as number | null) ?? null,
+        myRoleTitle: (snap?.role_title as string | null) ?? null,
+        // Legendary incidents from this trip
+        legendaryIncidents: (incidentsByTrip.get(trip.id) ?? []).map((i: any) => ({
+          ref: i.incident_ref as string,
+          title: i.title as string,
+          status: i.mythology_status as string,
+        })),
+      };
+    });
+
+    return { entries, totalTrips: trips.length };
+  }),
+
+  // Relationship dynamics between this user and one other user
+  getRelationshipDynamics: protectedProcedure
+    .input(z.object({ otherUserId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      const myId = ctx.user.id;
+      const userId1 = myId < input.otherUserId ? myId : input.otherUserId;
+      const userId2 = myId < input.otherUserId ? input.otherUserId : myId;
+
+      // All documented interactions between these two people
+      const { data: dynamics } = await admin
+        .from('relationship_dynamics' as never)
+        .select(
+          'trip_id, chaos_delta, archetype_similarity, opposing_dispute_count, alliance_dispute_count, duo_descriptor, snapshot_at'
+        )
+        .eq('user_a', userId1)
+        .eq('user_b', userId2)
+        .order('snapshot_at', { ascending: true });
+
+      const { data: otherProfile } = await admin
+        .from('profiles')
+        .select('display_name')
+        .eq('id', input.otherUserId)
+        .single();
+
+      const rows = (dynamics as any[]) ?? [];
+
+      // Compute relationship trajectory
+      const totalAlliances = rows.reduce(
+        (s: number, r: any) => s + (r.alliance_dispute_count ?? 0),
+        0
+      );
+      const totalConflicts = rows.reduce(
+        (s: number, r: any) => s + (r.opposing_dispute_count ?? 0),
+        0
+      );
+      const polarity =
+        totalAlliances + totalConflicts > 0
+          ? (totalAlliances - totalConflicts) / (totalAlliances + totalConflicts)
+          : 0;
+
+      return {
+        otherName: (otherProfile as any)?.display_name ?? 'Unknown',
+        sharedTrips: rows.length,
+        totalAlliances,
+        totalConflicts,
+        polarity,
+        dynamics: rows.map((r: any) => ({
+          tripId: r.trip_id as string,
+          chaosDelta: r.chaos_delta as number,
+          similarity: r.archetype_similarity as string,
+          opposingDisputes: r.opposing_dispute_count as number,
+          allianceDisputes: r.alliance_dispute_count as number,
+          duoDescriptor: r.duo_descriptor as string | null,
+          snapshotAt: r.snapshot_at as string,
+        })),
+      };
+    }),
+
+  // Group Lore OS — the living mythology document for a friend group
+  getGroupLoreOS: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Get all members of this trip
+      const { data: members } = await admin
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', input.tripId);
+
+      const memberIds = ((members as any[]) ?? []).map((m: any) => m.user_id as string);
+      if (!memberIds.includes(ctx.user.id)) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      if (memberIds.length === 0) return null;
+
+      // Find group_lore_os for this member set
+      const { data: groupLore } = await admin
+        .from('group_lore_os' as never)
+        .select('mythology_state, trip_count, last_updated')
+        .contains('canonical_members' as never, memberIds)
+        .maybeSingle();
+
+      if (!groupLore) return null;
+
+      const g = groupLore as any;
+      return {
+        mythologyState: g.mythology_state as Record<string, unknown>,
+        tripCount: g.trip_count as number,
+        lastUpdated: g.last_updated as string,
+      };
+    }),
 });

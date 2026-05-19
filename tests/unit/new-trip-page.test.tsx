@@ -19,6 +19,14 @@ vi.mock('@/lib/trpc/client', () => ({
           error: null,
         })),
       },
+      // generatePretripProphecy is called non-blockingly on trip creation
+      generatePretripProphecy: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          isPending: false,
+          error: null,
+        })),
+      },
     },
   },
 }));

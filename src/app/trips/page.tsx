@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { GroupPulse } from '@/components/experience/GroupPulse';
 import { CharacterArcWidget } from '@/components/experience/CharacterArc';
+import { FriendshipTimeline } from '@/components/experience/FriendshipTimeline';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIRST-TIME WELCOME MODAL
@@ -401,6 +402,11 @@ export default function TripsPage() {
       {/* Character Arc — your cross-trip identity (the moat) */}
       <div className="px-8 pt-6 pb-0">
         <CharacterArcWidget />
+      </div>
+
+      {/* Friendship Timeline — your mythology across all trips */}
+      <div className="px-8 pt-6 pb-0">
+        <FriendshipTimeline />
       </div>
 
       {/* Group Pulse — the living social feed */}

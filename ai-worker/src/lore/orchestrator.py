@@ -273,6 +273,7 @@ class LoreOrchestrator:
             )
             self._update_pipeline_state(trip_id, "fetch", "done")
             log.info(f"[{trip_id}][{trace_id}] fetched: {len(photos)} photos, {len(members)} members")
+            member_user_ids = [m["user_id"] for m in members if m.get("user_id")]
 
             if trip and len(photos) != trip.get("total_photos", 0):
                 supabase.table("trips").update({"total_photos": len(photos), "member_count": len(members)}).eq("id", trip_id).execute()
@@ -321,7 +322,18 @@ class LoreOrchestrator:
             self._update_pipeline_state(trip_id, "lore", "running")
             self._current_step = "lore"
             confessions = self._get_confessions(trip_id)
-            lore = await self._generate_lore_with_retry(trip, aggregated, confessions, low_confidence=low_confidence)
+
+            # Fetch callback context — past mythology from this group.
+            # Injected into the lore prompt for returning groups so the AI
+            # can reference past incidents and recurring patterns.
+            # Non-blocking: empty string if first trip or fetch fails.
+            callback_context = await self._get_callback_context(trip_id, member_user_ids)
+
+            lore = await self._generate_lore_with_retry(
+                trip, aggregated, confessions,
+                low_confidence=low_confidence,
+                callback_context=callback_context
+            )
             lore, eval_result, retry_meta = await self._quality_gate(trip, aggregated, confessions, lore, low_confidence=low_confidence)
             self._update_pipeline_state(trip_id, "lore", "done")
 
@@ -431,6 +443,11 @@ class LoreOrchestrator:
             # and recurring references. These power the explorable incident log.
             # Non-blocking — failures don't affect the main lore delivery.
             await self._extract_incidents(trip_id, lore, trip)
+
+            # Social Graph: build relationship dynamics and update Group Lore OS.
+            # This is the long-term moat — accumulated behavioral data about
+            # how specific people interact across years of documented trips.
+            await self._update_social_graph(trip_id, lore)
 
             # Open the 7-day memory review window so members can confirm/add context.
             # This creates the "the group is waiting for your version" social pressure.
@@ -650,6 +667,246 @@ class LoreOrchestrator:
         except Exception as e:
             # Non-fatal — identity snapshots are additive, not blocking
             log.warning(f"[{trip_id}] identity snapshot recording failed (non-blocking): {e}")
+
+    # -------------------------------------------------------------------------
+    # Social Graph: relationship dynamics + Group Lore OS update
+    # -------------------------------------------------------------------------
+
+    async def _update_social_graph(self, trip_id: str, lore: dict) -> None:
+        """Build relationship dynamics between all member pairs and update the
+        Group Lore OS — the living mythology document for this friend group.
+
+        This is the long-term defensibility layer: after 5 years, these tables
+        contain the documented behavioral history of specific human relationships
+        that cannot be reproduced without the full trip history.
+
+        Non-fatal — any failure is logged and swallowed.
+        """
+        try:
+            # Fetch members with their role/archetype data
+            members_result = supabase.table("trip_members") \
+                .select("user_id, role_title, role_chaos_rating, archetype") \
+                .eq("trip_id", trip_id) \
+                .execute()
+            members = members_result.data or []
+            if len(members) < 2:
+                return  # Need at least 2 people for relationship dynamics
+
+            member_ids = [m["user_id"] for m in members if m.get("user_id")]
+
+            # ── 1. Build pairwise relationship dynamics ────────────────────
+            pairs_inserted = 0
+            for i, m_a in enumerate(members):
+                for j, m_b in enumerate(members):
+                    if j <= i:
+                        continue  # canonical ordering: user_a < user_b
+                    uid_a = m_a.get("user_id")
+                    uid_b = m_b.get("user_id")
+                    if not uid_a or not uid_b:
+                        continue
+
+                    # Ensure canonical ordering
+                    if uid_a > uid_b:
+                        uid_a, uid_b = uid_b, uid_a
+                        m_a, m_b = m_b, m_a
+
+                    chaos_a = m_a.get("role_chaos_rating") or 5
+                    chaos_b = m_b.get("role_chaos_rating") or 5
+                    chaos_delta = abs(chaos_a - chaos_b)
+
+                    arch_a = (m_a.get("archetype") or "").lower()
+                    arch_b = (m_b.get("archetype") or "").lower()
+                    if arch_a == arch_b and arch_a:
+                        similarity = "same"
+                    elif arch_a and arch_b:
+                        similarity = "complementary"  # simplified; AI could refine
+                    else:
+                        similarity = "unknown"
+
+                    try:
+                        supabase.table("relationship_dynamics").upsert({
+                            "user_a": uid_a,
+                            "user_b": uid_b,
+                            "trip_id": trip_id,
+                            "chaos_delta": chaos_delta,
+                            "archetype_similarity": similarity,
+                        }, on_conflict="user_a,user_b,trip_id").execute()
+                        pairs_inserted += 1
+                    except Exception as e:
+                        log.warning(f"[{trip_id}] rel dynamics insert failed for {uid_a}/{uid_b}: {e}")
+
+            # ── 2. Assign social roles based on lore evidence ──────────────
+            roles_to_insert = []
+            chaos_source = lore.get("friendship_dynamics", {}).get("chaos_source", "")
+            emotional_center = lore.get("friendship_dynamics", {}).get("emotional_center", "")
+            villain = (lore.get("trip_lore_awards") or {}).get("trip_villain", "")
+            mvp = (lore.get("trip_lore_awards") or {}).get("trip_mvp", "")
+
+            for m in members:
+                uid = m.get("user_id")
+                if not uid:
+                    continue
+                name = (m.get("role_title") or "").lower()
+                chaos = m.get("role_chaos_rating") or 5
+
+                # Assign roles based on chaos rating and lore context
+                if chaos >= 8:
+                    roles_to_insert.append({"trip_id": trip_id, "user_id": uid, "role_type": "chaos_initiator", "confidence": 0.9})
+                if chaos <= 3:
+                    roles_to_insert.append({"trip_id": trip_id, "user_id": uid, "role_type": "social_glue", "confidence": 0.8})
+                if m.get("archetype") and "camera" in m.get("archetype", "").lower():
+                    roles_to_insert.append({"trip_id": trip_id, "user_id": uid, "role_type": "documenter", "confidence": 0.85})
+
+            for role in roles_to_insert:
+                try:
+                    supabase.table("social_role_assignments").upsert(
+                        role, on_conflict="trip_id,user_id,role_type"
+                    ).execute()
+                except Exception:
+                    pass  # Non-fatal
+
+            # ── 3. Update Group Lore OS ────────────────────────────────────
+            # Find or create the Group Lore OS for this member set
+            sorted_ids = sorted(member_ids)
+            group_hash = await asyncio.to_thread(
+                lambda: supabase.rpc("canonical_group_hash", {"member_ids": sorted_ids}).execute()
+            )
+            hash_val = group_hash.data if group_hash else None
+
+            if hash_val:
+                # Fetch existing OS
+                existing = await asyncio.to_thread(
+                    lambda: supabase.table("group_lore_os")
+                        .select("id, mythology_state, trip_count")
+                        .eq("group_hash", hash_val)
+                        .maybeSingle()
+                        .execute()
+                )
+
+                existing_record = existing.data if existing else None
+
+                # Build updated mythology state snippet
+                current_state = (existing_record or {}).get("mythology_state") or {}
+                current_incidents = current_state.get("canon_incidents") or []
+
+                # Add this trip's high-callback incidents
+                high_cb_incidents = await asyncio.to_thread(
+                    lambda: supabase.table("trip_incidents")
+                        .select("incident_ref, title, callback_potential, invocation_count")
+                        .eq("trip_id", trip_id)
+                        .in_("callback_potential", ["HIGH"])
+                        .execute()
+                )
+
+                new_incidents = [
+                    {"ref": i["incident_ref"], "title": i["title"], "trip_id": trip_id}
+                    for i in (high_cb_incidents.data or [])
+                ]
+                all_incidents = current_incidents + new_incidents
+
+                # Upsert Group Lore OS
+                upsert_payload = {
+                    "canonical_members": sorted_ids,
+                    "last_trip_id": trip_id,
+                    "trip_count": (existing_record or {}).get("trip_count", 0) + 1,
+                    "mythology_state": {
+                        **current_state,
+                        "canon_incidents": all_incidents[-20:],  # keep most recent 20
+                        "era_current": lore.get("trip_personality_type", ""),
+                        "mythology_arc": lore.get("what_this_trip_was_really_about", ""),
+                    },
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                }
+                await asyncio.to_thread(
+                    lambda: supabase.table("group_lore_os")
+                        .upsert(upsert_payload, on_conflict="group_hash")
+                        .execute()
+                )
+
+            log.info(
+                f"[{trip_id}] social graph updated: "
+                f"{pairs_inserted} pairs, {len(roles_to_insert)} roles"
+            )
+
+        except Exception as e:
+            log.warning(f"[{trip_id}] social graph update failed (non-blocking): {e}")
+
+    async def _get_callback_context(self, trip_id: str, member_ids: list[str]) -> str:
+        """Fetch callback context for lore generation — past incidents + recurring
+        references from this group's mythology history.
+
+        Returns a formatted string injected into the lore generation prompt.
+        Empty string if this is the group's first trip together.
+        """
+        try:
+            # Find past trips where a majority of these members were together
+            # (any trip where at least 2/3 of current members were present)
+            min_overlap = max(2, len(member_ids) * 2 // 3)
+
+            # Get all trip_ids these members have been on
+            trip_member_rows = await asyncio.to_thread(
+                lambda: supabase.table("trip_members")
+                    .select("trip_id, user_id")
+                    .in_("user_id", member_ids)
+                    .neq("trip_id", trip_id)
+                    .execute()
+            )
+
+            # Count overlap per trip
+            from collections import Counter
+            trip_overlaps = Counter(row["trip_id"] for row in (trip_member_rows.data or []))
+            shared_trips = [t for t, count in trip_overlaps.items() if count >= min_overlap]
+
+            if not shared_trips:
+                return ""  # First trip together
+
+            # Fetch high-callback incidents from shared trips
+            incidents = await asyncio.to_thread(
+                lambda: supabase.table("trip_incidents")
+                    .select("incident_ref, title, investigator_note, callback_potential, invocation_count")
+                    .in_("trip_id", shared_trips)
+                    .in_("callback_potential", ["HIGH", "MEDIUM"])
+                    .order("invocation_count", desc=True)
+                    .limit(5)
+                    .execute()
+            )
+
+            # Fetch recurring references
+            refs = await asyncio.to_thread(
+                lambda: supabase.table("recurring_references")
+                    .select("phrase, context, activation_condition")
+                    .in_("origin_trip_id", shared_trips)
+                    .order("invocation_count", desc=True)
+                    .limit(5)
+                    .execute()
+            )
+
+            incidents_data = incidents.data or []
+            refs_data = refs.data or []
+
+            if not incidents_data and not refs_data:
+                return ""
+
+            ctx = "\n\nCALLBACK CONTEXT — This group's documented mythology (use if applicable):\n"
+
+            if incidents_data:
+                ctx += "\nPast incidents with callback potential:\n"
+                for inc in incidents_data:
+                    note = (inc.get("investigator_note") or "")[:80]
+                    ctx += f"  • [{inc['incident_ref']}] \"{inc['title']}\" — {note}\n"
+                ctx += "\nIf this trip echoes any of these patterns, reference them explicitly.\n"
+                ctx += "A callback must be genuinely applicable — do not force it.\n"
+
+            if refs_data:
+                ctx += "\nRecurring group vocabulary:\n"
+                for ref in refs_data:
+                    ctx += f"  • \"{ref['phrase']}\" (from: {ref['context'][:60]}) — invoke when: {ref['activation_condition']}\n"
+
+            return ctx
+
+        except Exception as e:
+            log.warning(f"callback context fetch failed (non-blocking): {e}")
+            return ""
 
     # -------------------------------------------------------------------------
     # Lore-ready notification — fires after status is written to Supabase
@@ -1231,13 +1488,14 @@ class LoreOrchestrator:
         aggregated: dict,
         confessions: list[str],
         low_confidence: bool = False,
+        callback_context: str = "",
     ) -> dict:
         last_err = None
         for attempt in range(settings.MAX_LORE_RETRIES):
             try:
-                extra = ""
+                extra = callback_context  # inject mythology callbacks
                 if attempt > 0:
-                    extra = "\n\nYour last response was rejected. Return ONLY raw JSON. Be more specific and roasty. Avoid generic phrases."
+                    extra += "\n\nYour last response was rejected. Return ONLY raw JSON. Be more specific. Avoid generic phrases."
                 lore     = await self._generate_lore(trip, aggregated, confessions, extra, low_confidence=low_confidence)
                 validate_lore_json(lore)
                 forbidden = scan_forbidden_phrases(lore)
