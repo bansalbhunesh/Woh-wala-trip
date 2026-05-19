@@ -255,7 +255,13 @@ Do NOT use placeholder text. Each act must describe what actually happened to TH
       "unit": "<unit that is itself part of the joke>"
     }}
   ],
-  "whatsapp_caption": "<What they'll type when forwarding this to the group chat. Hinglish. Creates instant chaos in the chat. Max 30 words. Must feel like it was actually written by one of them.>"
+  "whatsapp_caption": "<What they'll type when forwarding this to the group chat. Hinglish. Creates instant chaos in the chat. Max 30 words. Must feel like it was actually written by one of them.>",
+  "group_anthem": {{
+    "title": "<Song title — Artist. Real song. Must match the trip's actual energy, not a cliché choice. Think: what was statistically playing at 2 AM when the plan collapsed.>",
+    "reason": "<1 sentence: why THIS song. Specific to THIS trip's energy. 'The song playing before the incident' energy. Internet-native, slightly cryptic.>",
+    "vibe": "<3-5 words: the emotional register this song captures for this trip>",
+    "spotify_search": "<The exact search term that would find this song on Spotify>"
+  }}
 }}"""
 
 CHARACTER_ROLE_SYSTEM = """You write behavioral profiles of people in a friend group based on specific, documented evidence from their shared trip.

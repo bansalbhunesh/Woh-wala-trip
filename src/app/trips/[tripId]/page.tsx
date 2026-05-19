@@ -44,6 +44,7 @@ import { MemoryReviewBanner } from '@/components/experience/MemoryReview';
 import { ProphecyCard, ProphecyAccuracyReveal } from '@/components/experience/ProphecyCard';
 import { IncidentButton } from '@/components/experience/GroupPulse';
 import { IncidentLog } from '@/components/experience/IncidentLog';
+import { GroupAnthem } from '@/components/experience/GroupAnthem';
 
 export default function TripRoomPage() {
   const params = useParams();
@@ -958,6 +959,11 @@ function DeeperRecord({ tripId, lore, isReady }: { tripId: string; lore: any; is
           >
             {lore && <ProphecyAccuracyReveal tripId={tripId} />}
             <IncidentLog tripId={tripId} />
+            {/* Group Anthem — the audio artifact that belongs here, not above the fold.
+                Emotionally loaded discovery. Never plays. Points to where the feeling lives. */}
+            {lore?.group_anthem && (
+              <GroupAnthem anthem={lore.group_anthem} chaosScore={lore.cooked_level} />
+            )}
           </motion.div>
         )}
       </div>

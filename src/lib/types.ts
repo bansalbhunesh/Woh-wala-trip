@@ -8,10 +8,18 @@ export interface LoreJson {
   whatsapp_caption?: string;
   what_this_trip_was_really_about?: string;
 
+  // Group Anthem — the recovered audio artifact (text-only, lives in Deeper Record)
+  group_anthem?: {
+    title: string; // "Song Title — Artist"
+    reason: string; // why this song for THIS trip
+    vibe: string; // 3-5 words emotional register
+    spotify_search: string; // exact search term
+  };
+
   // "How cooked?" — canonical field names
-  cooked_level: number;          // 0-100
-  cooked_verdict: string;        // "Historically Cooked" | "Peak Delusion" | "Emotionally Unstable" | "Mildly Simmering"
-  cooked_explanation?: string;   // one witty sentence
+  cooked_level: number; // 0-100
+  cooked_verdict: string; // "Historically Cooked" | "Peak Delusion" | "Emotionally Unstable" | "Mildly Simmering"
+  cooked_explanation?: string; // one witty sentence
 
   // Season recap
   season_recap?: {
