@@ -175,6 +175,31 @@ export const battlesRouter = router({
         console.error('[challenge] battle notification scheduling failed:', notifErr);
       }
 
+      // Emit battle_started pulse event so both crews see it in their Group Pulse feed
+      try {
+        const { data: bothTripsMembers } = await battleAdmin
+          .from('trip_members')
+          .select('user_id')
+          .in('trip_id', [input.myTripId, input.opponentTripId]);
+
+        const allMemberIds = [
+          ...new Set(((bothTripsMembers as any[]) ?? []).map((m: any) => m.user_id as string)),
+        ];
+
+        if (allMemberIds.length > 0) {
+          await battleAdmin.from('group_pulse_events' as never).insert({
+            trip_id: input.myTripId,
+            event_type: 'battle_started',
+            actor_user_id: ctx.user.id,
+            payload: { battle_id: (battle as any).id, opponent_trip_id: input.opponentTripId },
+            visible_to: allMemberIds,
+          } as never);
+        }
+      } catch (pulseErr) {
+        // Non-fatal — battle creation must always succeed even if pulse fails
+        console.error('[challenge] group_pulse_events insert failed:', pulseErr);
+      }
+
       return battle;
     }),
 

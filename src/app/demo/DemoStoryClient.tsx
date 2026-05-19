@@ -1,7 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import type { LoreJson } from '@/lib/types';
-import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
+// MoodSoundtrack removed — audio is blocked by default on iOS/Android.
+// It created a visible UI element for <1% of users who could use it.
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { analytics } from '@/lib/analytics';
 
@@ -69,7 +70,6 @@ export default function DemoStoryClient({ lore, members }: Props) {
   const [dir, setDir] = useState<'forward' | 'backward'>('forward');
   const [animKey, setAnimKey] = useState(0);
   const [slamActive, setSlamActive] = useState(false);
-  const [soundOn, setSoundOn] = useState(false);
   const touchStart = useRef<number | null>(null);
 
   const slides = buildSlides(lore, members);
@@ -154,18 +154,7 @@ export default function DemoStoryClient({ lore, members }: Props) {
         ))}
       </div>
 
-      {/* Mood Soundtrack */}
-      <div className="absolute top-6 right-28 z-50">
-        <ErrorBoundary name="demo-mood-soundtrack">
-          <MoodSoundtrack
-            cookedScore={cookedScore}
-            active={soundOn}
-            onToggle={() => setSoundOn(p => !p)}
-            activeSlideType={current?.type}
-            slideIndex={idx}
-          />
-        </ErrorBoundary>
-      </div>
+      {/* MoodSoundtrack removed from demo flow */}
 
       {/* DEMO badge */}
       <div

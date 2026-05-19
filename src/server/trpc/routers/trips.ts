@@ -2283,97 +2283,27 @@ Raw JSON only. No markdown.`;
     return { entries, totalTrips: trips.length };
   }),
 
-  // Relationship dynamics between this user and one other user
+  // Relationship dynamics — data is populated by _update_social_graph in the AI worker
+  // but no UI surface has been built yet. Stub returns empty until UI is ready.
   getRelationshipDynamics: protectedProcedure
     .input(z.object({ otherUserId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseServiceClient();
-
-      const myId = ctx.user.id;
-      const userId1 = myId < input.otherUserId ? myId : input.otherUserId;
-      const userId2 = myId < input.otherUserId ? input.otherUserId : myId;
-
-      // All documented interactions between these two people
-      const { data: dynamics } = await admin
-        .from('relationship_dynamics' as never)
-        .select(
-          'trip_id, chaos_delta, archetype_similarity, opposing_dispute_count, alliance_dispute_count, duo_descriptor, snapshot_at'
-        )
-        .eq('user_a', userId1)
-        .eq('user_b', userId2)
-        .order('snapshot_at', { ascending: true });
-
-      const { data: otherProfile } = await admin
-        .from('profiles')
-        .select('display_name')
-        .eq('id', input.otherUserId)
-        .single();
-
-      const rows = (dynamics as any[]) ?? [];
-
-      // Compute relationship trajectory
-      const totalAlliances = rows.reduce(
-        (s: number, r: any) => s + (r.alliance_dispute_count ?? 0),
-        0
-      );
-      const totalConflicts = rows.reduce(
-        (s: number, r: any) => s + (r.opposing_dispute_count ?? 0),
-        0
-      );
-      const polarity =
-        totalAlliances + totalConflicts > 0
-          ? (totalAlliances - totalConflicts) / (totalAlliances + totalConflicts)
-          : 0;
-
+    .query(async () => {
       return {
-        otherName: (otherProfile as any)?.display_name ?? 'Unknown',
-        sharedTrips: rows.length,
-        totalAlliances,
-        totalConflicts,
-        polarity,
-        dynamics: rows.map((r: any) => ({
-          tripId: r.trip_id as string,
-          chaosDelta: r.chaos_delta as number,
-          similarity: r.archetype_similarity as string,
-          opposingDisputes: r.opposing_dispute_count as number,
-          allianceDisputes: r.alliance_dispute_count as number,
-          duoDescriptor: r.duo_descriptor as string | null,
-          snapshotAt: r.snapshot_at as string,
-        })),
+        otherName: null,
+        sharedTrips: 0,
+        totalAlliances: 0,
+        totalConflicts: 0,
+        polarity: 0,
+        dynamics: [],
       };
     }),
 
-  // Group Lore OS — the living mythology document for a friend group
+  // Group Lore OS — data is populated by _update_social_graph but no UI surface yet.
+  // Kept as a stub until a mythology explorer view is built.
   getGroupLoreOS: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseServiceClient();
-
-      // Get all members of this trip
-      const { data: members } = await admin
-        .from('trip_members')
-        .select('user_id')
-        .eq('trip_id', input.tripId);
-
-      const memberIds = ((members as any[]) ?? []).map((m: any) => m.user_id as string);
-      if (!memberIds.includes(ctx.user.id)) throw new TRPCError({ code: 'FORBIDDEN' });
-
-      if (memberIds.length === 0) return null;
-
-      // Find group_lore_os for this member set
-      const { data: groupLore } = await admin
-        .from('group_lore_os' as never)
-        .select('mythology_state, trip_count, last_updated')
-        .contains('canonical_members' as never, memberIds)
-        .maybeSingle();
-
-      if (!groupLore) return null;
-
-      const g = groupLore as any;
-      return {
-        mythologyState: g.mythology_state as Record<string, unknown>,
-        tripCount: g.trip_count as number,
-        lastUpdated: g.last_updated as string,
-      };
+    .query(async () => {
+      // TODO: build mythology explorer UI before activating this route.
+      return null;
     }),
 });

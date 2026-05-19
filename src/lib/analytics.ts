@@ -52,4 +52,21 @@ export const analytics = {
   battleCreated: (tripId: string) => posthog.capture('battle_created', { trip_id: tripId }),
   battleShared: (battleId: string) => posthog.capture('battle_shared', { battle_id: battleId }),
   wrapShared: (year: number) => posthog.capture('wrap_shared', { year }),
+
+  // ── Retention feature instrumentation ─────────────────────────────────────
+  // These events track engagement with depth features to measure actual usage.
+  // All were untracked before — meaning we had zero signal on whether they worked.
+  disputeFiled: (tripId: string) => posthog.capture('dispute_filed', { trip_id: tripId }),
+  disputeVoted: (disputeId: string, vote: 'ai' | 'user') =>
+    posthog.capture('dispute_voted', { dispute_id: disputeId, vote }),
+  memoryReviewOpened: (tripId: string) =>
+    posthog.capture('memory_review_opened', { trip_id: tripId }),
+  memoryContributed: (tripId: string, type: 'confirm' | 'addition') =>
+    posthog.capture('memory_contributed', { trip_id: tripId, type }),
+  prophecyRevealed: (tripId: string) => posthog.capture('prophecy_revealed', { trip_id: tripId }),
+  incidentLogOpened: (tripId: string) =>
+    posthog.capture('incident_log_opened', { trip_id: tripId }),
+  anthemRevealed: (tripId: string) => posthog.capture('anthem_revealed', { trip_id: tripId }),
+  deeperRecordOpened: (tripId: string) =>
+    posthog.capture('deeper_record_opened', { trip_id: tripId }),
 };

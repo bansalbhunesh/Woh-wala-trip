@@ -52,20 +52,30 @@ export default function TripRoomPage() {
   const tripId = params.tripId as string;
   const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
   const [showRawData, setShowRawData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'hub' | 'chaos' | 'evidence' | 'timeline' | 'verdict'>(
-    'hub'
-  );
+  // Tab system removed — content is now linear scroll. The 5-tab abstraction
+  // required users to discover depth through navigation rather than scroll.
+  // All tab content is now always rendered and reachable by scrolling.
+  // Kept as a no-op variable for backwards compatibility with setActiveTab calls
+  // that remain in sub-components pending cleanup.
+  const [activeTab] = useState<'hub'>('hub');
+  const setActiveTab = (_: string) => {}; // no-op
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
   const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
 
+  // Single shared Supabase browser client — fixes the previous dual-client issue
+  // where two createBrowserClient() calls created competing WebSocket connections.
+  const supabaseRef = useRef(
+    createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  );
+
   // PROD-02: Track current user ID so we can gate creator-only controls.
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = supabaseRef.current;
     supabase.auth.getUser().then(({ data }) => {
       setCurrentUserId(data?.user?.id ?? null);
     });
@@ -77,14 +87,11 @@ export default function TripRoomPage() {
     analytics.storyRevisited(tripId);
   }, [tripId]);
 
-  // Realtime subscription — replaces setInterval polling
+  // Realtime subscription — uses the shared supabase client (no duplicate WebSocket)
   const loreStatus = (tripData as any)?.trip?.lore_status;
   useEffect(() => {
     let mounted = true;
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = supabaseRef.current;
     const channel = supabase
       .channel(`trip-status-${tripId}`)
       .on(
@@ -211,7 +218,7 @@ export default function TripRoomPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
             {/* ── LEFT: documentary interactive visual deck ──────────────── */}
             <div className="space-y-6">
-              {activeTab === 'hub' && (
+              {
                 <div className="space-y-8">
                   {/* ① Delusion Index — giant emotional beat acts as hook */}
                   <ErrorBoundary name="cooked-level-reveal">
@@ -330,9 +337,9 @@ export default function TripRoomPage() {
                     </div>
                   </div>
                 </div>
-              )}
+              }
 
-              {activeTab === 'chaos' && (
+              {
                 <div className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
@@ -392,9 +399,9 @@ export default function TripRoomPage() {
                     </button>
                   </div>
                 </div>
-              )}
+              }
 
-              {activeTab === 'evidence' && (
+              {
                 <div className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
@@ -494,9 +501,9 @@ export default function TripRoomPage() {
                     </button>
                   </div>
                 </div>
-              )}
+              }
 
-              {activeTab === 'timeline' && (
+              {
                 <div className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
@@ -553,9 +560,9 @@ export default function TripRoomPage() {
                     </button>
                   </div>
                 </div>
-              )}
+              }
 
-              {activeTab === 'verdict' && (
+              {
                 <div className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
@@ -631,7 +638,7 @@ export default function TripRoomPage() {
                     </button>
                   </div>
                 </div>
-              )}
+              }
             </div>
 
             {/* ── RIGHT: case dossier panel ─────────────────────────────── */}
@@ -930,6 +937,12 @@ function DeeperRecord({ tripId, lore, isReady }: { tripId: string; lore: any; is
 
   if (!isReady) return null;
 
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) analytics.deeperRecordOpened(tripId);
+  };
+
   return (
     <div className="mb-6">
       {/* Contextual sections that only show when data exists */}
@@ -941,7 +954,7 @@ function DeeperRecord({ tripId, lore, isReady }: { tripId: string; lore: any; is
       {/* "Deeper record" — collapsed by default, reveals incident log + prophecy */}
       <div className="mt-4">
         <button
-          onClick={() => setOpen(o => !o)}
+          onClick={handleToggle}
           className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-[0.45em] text-white/25 hover:text-white/45 transition-colors"
         >
           <span className="w-3 h-px" style={{ background: 'rgba(255,255,255,0.15)' }} />

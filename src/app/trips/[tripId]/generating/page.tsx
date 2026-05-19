@@ -79,10 +79,12 @@ export default function GeneratingPage() {
     if (loreStatus === 'ready' && !unlocking) {
       // Track generation completion
       analytics.generationCompleted(tripId, trip?.chaos_score ?? 0);
-      // Dramatic unlock flash before routing to story
+      // Route to the trip room — the lore is revealed there.
+      // The private /story route now redirects to the public story anyway;
+      // the trip room is the richer authenticated experience.
       setUnlocking(true);
       setProgress(100);
-      setTimeout(() => router.push(`/trips/${tripId}/story`), 1800);
+      setTimeout(() => router.push(`/trips/${tripId}`), 1800);
     } else if (loreStatus === 'failed') {
       router.push(`/trips/${tripId}`);
     } else if (tripData && loreStatus !== 'processing' && loreStatus !== undefined) {
