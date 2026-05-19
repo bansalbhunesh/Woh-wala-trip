@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { GroupPulse } from '@/components/experience/GroupPulse';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIRST-TIME WELCOME MODAL
@@ -395,6 +396,17 @@ export default function TripsPage() {
       </header>
 
       <NostalgiaStrip />
+
+      {/* Group Pulse — the living social feed */}
+      <div className="px-8 pt-6 pb-2">
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.55em] mb-4"
+          style={{ color: '#FF4D4D' }}
+        >
+          ● MYTHOLOGY IN MOTION
+        </p>
+        <GroupPulse />
+      </div>
 
       {/* Content */}
       <main className="relative z-10 px-8 py-10 pb-24">

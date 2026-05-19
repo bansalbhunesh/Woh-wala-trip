@@ -422,6 +422,11 @@ class LoreOrchestrator:
             # Phase 2: durable image generation job (no fire-and-forget asyncio.create_task)
             self._enqueue_image_job(trip_id, trace_id)
 
+            # Retention Machine: record cross-trip identity snapshots for every member.
+            # This is the moat — behavioral data that accumulates across trips and enables
+            # the character arc, "who changed?", and dispute history features.
+            self._record_identity_snapshots(trip_id, lore)
+
         except Exception as e:
             log.exception(f"[{trip_id}][{trace_id}] pipeline failed at step={self._current_step}: {e}")
             supabase.table("trips").update({
@@ -438,6 +443,86 @@ class LoreOrchestrator:
                 },
             }).eq("id", trip_id).execute()
             raise
+
+    # -------------------------------------------------------------------------
+    # Retention Machine: identity snapshots
+    # -------------------------------------------------------------------------
+
+    def _record_identity_snapshots(self, trip_id: str, lore: dict) -> None:
+        """After lore is finalised, write one identity snapshot per trip member.
+
+        This is the cross-trip behavioral data layer — the platform moat.
+        After N trips, each user has a longitudinal behavioral record that
+        enables: character arc updates, 'who changed?' engine, dispute history,
+        pre-trip prophecies, and archetype evolution tracking.
+
+        Non-fatal: any failure here is logged but never surfaces to the user.
+        """
+        try:
+            # Fetch trip members with their current character role data
+            members_result = supabase.table("trip_members") \
+                .select("id, user_id, role_title, role_description, role_chaos_rating, archetype") \
+                .eq("trip_id", trip_id) \
+                .execute()
+
+            members = members_result.data or []
+            if not members:
+                return
+
+            snapshots = []
+            for m in members:
+                user_id = m.get("user_id")
+                if not user_id:
+                    continue
+
+                archetype = m.get("archetype") or "Unknown"
+                chaos_rating = m.get("role_chaos_rating") or 5
+                role_title = m.get("role_title") or ""
+
+                # Extract signature behavior from lore if available
+                signature_behavior = None
+                if lore.get("superlatives"):
+                    for sup in lore["superlatives"]:
+                        if sup.get("winner_user_id") == user_id:
+                            signature_behavior = sup.get("question", "")[:200]
+                            break
+
+                snapshots.append({
+                    "user_id": user_id,
+                    "trip_id": trip_id,
+                    "archetype": archetype,
+                    "chaos_rating": min(10, max(0, int(chaos_rating))),
+                    "role_title": role_title[:200] if role_title else None,
+                    "signature_behavior": signature_behavior,
+                })
+
+            if snapshots:
+                # ON CONFLICT (user_id, trip_id) DO UPDATE — idempotent
+                supabase.table("user_identity_snapshots").upsert(
+                    snapshots,
+                    on_conflict="user_id,trip_id"
+                ).execute()
+
+                log.info(f"[{trip_id}] recorded {len(snapshots)} identity snapshots")
+
+            # Also emit a group pulse event so the home feed updates
+            member_ids = [m["user_id"] for m in members if m.get("user_id")]
+            if member_ids:
+                supabase.table("group_pulse_events").insert({
+                    "trip_id": trip_id,
+                    "event_type": "lore_generated",
+                    "actor_user_id": None,
+                    "payload": {
+                        "chaos_score": lore.get("cooked_level"),
+                        "verdict": lore.get("cooked_verdict"),
+                        "tagline": (lore.get("tagline") or "")[:100],
+                    },
+                    "visible_to": member_ids,
+                }).execute()
+
+        except Exception as e:
+            # Non-fatal — identity snapshots are additive, not blocking
+            log.warning(f"[{trip_id}] identity snapshot recording failed (non-blocking): {e}")
 
     # -------------------------------------------------------------------------
     # Lore-ready notification — fires after status is written to Supabase

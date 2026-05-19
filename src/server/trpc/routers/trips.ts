@@ -1453,4 +1453,366 @@ export const tripsRouter = router({
       tagline: (t.lore_json as LoreJson | null)?.tagline ?? null,
     }));
   }),
+
+  // ── RETENTION MACHINE ──────────────────────────────────────────────────────
+  // The Dispute + Canon Vote system: the single strongest retention loop.
+  // Disputes create social pressure, WhatsApp content, and permanent mythology
+  // records that compound over trips. See docs/RETENTION.md.
+
+  // File a dispute against the AI's assessment of your character
+  disputeCharacterRole: protectedProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        disputeType: z.enum(['character_role', 'chaos_rating', 'verdict', 'superlative']),
+        aiClaim: z.string().min(1).max(500),
+        userClaim: z.string().min(10).max(500),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Verify user is a member of this trip
+      const { data: memberRaw } = await ctx.supabase
+        .from('trip_members')
+        .select('id, user_id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      // Count eligible voters (all trip members except self)
+      const { count: memberCount } = await admin
+        .from('trip_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('trip_id', input.tripId);
+      const totalEligible = Math.max((memberCount ?? 1) - 1, 1);
+
+      // Create dispute — UNIQUE constraint prevents duplicate active disputes
+      const { data: dispute, error } = await admin
+        .from('lore_disputes' as never)
+        .insert({
+          trip_id: input.tripId,
+          user_id: ctx.user.id,
+          dispute_type: input.disputeType,
+          ai_claim: input.aiClaim,
+          user_claim: input.userClaim,
+          total_eligible: totalEligible,
+        } as never)
+        .select('id')
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'You already have an active dispute for this trip.',
+          });
+        }
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+
+      // Get all member user_ids for pulse event visibility
+      const { data: members } = await admin
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', input.tripId);
+      const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
+
+      // Emit group pulse event — surfaces on everyone's home screen
+      await admin.from('group_pulse_events' as never).insert({
+        trip_id: input.tripId,
+        event_type: 'dispute_filed',
+        actor_user_id: ctx.user.id,
+        payload: {
+          dispute_id: (dispute as any).id,
+          dispute_type: input.disputeType,
+          ai_claim: input.aiClaim.slice(0, 100),
+        },
+        visible_to: visibleTo,
+      } as never);
+
+      return { disputeId: (dispute as any).id as string };
+    }),
+
+  // Vote on an active dispute (ai vs. user)
+  voteOnDispute: protectedProcedure
+    .input(
+      z.object({
+        disputeId: z.string().uuid(),
+        vote: z.enum(['ai', 'user']),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Load dispute to check trip membership and deadline
+      const { data: disputeRaw } = await admin
+        .from('lore_disputes' as never)
+        .select(
+          'id, trip_id, user_id, status, vote_deadline, ai_vote_count, user_vote_count, total_eligible'
+        )
+        .eq('id', input.disputeId)
+        .single();
+      const dispute = disputeRaw as any;
+
+      if (!dispute) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (dispute.status !== 'voting') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This dispute has already been resolved.',
+        });
+      }
+      if (new Date(dispute.vote_deadline) < new Date()) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Voting period has ended.' });
+      }
+
+      // Can't vote on your own dispute
+      if (dispute.user_id === ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: "You can't vote on your own dispute." });
+      }
+
+      // Verify trip membership
+      const { data: memberRaw } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', dispute.trip_id)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      // Record vote — PK prevents double-voting
+      const { error: voteError } = await admin.from('dispute_votes' as never).insert({
+        dispute_id: input.disputeId,
+        voter_user_id: ctx.user.id,
+        vote: input.vote,
+      } as never);
+
+      if (voteError) {
+        if (voteError.code === '23505') {
+          throw new TRPCError({ code: 'CONFLICT', message: "You've already voted." });
+        }
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: voteError.message });
+      }
+
+      // Update vote counters atomically
+      const newAi = dispute.ai_vote_count + (input.vote === 'ai' ? 1 : 0);
+      const newUser = dispute.user_vote_count + (input.vote === 'user' ? 1 : 0);
+      const totalVotes = newAi + newUser;
+
+      // Check if all eligible voters have voted → resolve immediately
+      let newStatus = 'voting';
+      if (totalVotes >= dispute.total_eligible) {
+        newStatus = newAi > newUser ? 'ai_wins' : newUser > newAi ? 'user_wins' : 'tied';
+      }
+
+      await admin
+        .from('lore_disputes' as never)
+        .update({
+          ai_vote_count: newAi,
+          user_vote_count: newUser,
+          status: newStatus,
+          ...(newStatus !== 'voting' ? { resolved_at: new Date().toISOString() } : {}),
+        } as never)
+        .eq('id', input.disputeId);
+
+      // Emit pulse event for the vote
+      const { data: members } = await admin
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', dispute.trip_id);
+      const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
+
+      await admin.from('group_pulse_events' as never).insert({
+        trip_id: dispute.trip_id,
+        event_type: newStatus !== 'voting' ? 'dispute_resolved' : 'vote_cast',
+        actor_user_id: ctx.user.id,
+        payload: {
+          dispute_id: input.disputeId,
+          vote: input.vote,
+          ai_votes: newAi,
+          user_votes: newUser,
+          total_eligible: dispute.total_eligible,
+          resolved: newStatus !== 'voting',
+          winner: newStatus !== 'voting' ? newStatus : null,
+        },
+        visible_to: visibleTo,
+      } as never);
+
+      return {
+        newStatus,
+        aiVotes: newAi,
+        userVotes: newUser,
+        totalEligible: dispute.total_eligible,
+        resolved: newStatus !== 'voting',
+      };
+    }),
+
+  // Get all disputes for a trip, with current vote state
+  getDisputes: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Verify membership
+      const { data: memberRaw } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      // Resolve expired disputes first
+      await admin.rpc('resolve_expired_disputes' as never);
+
+      const { data } = await admin
+        .from('lore_disputes' as never)
+        .select(
+          'id, user_id, dispute_type, ai_claim, user_claim, status, vote_deadline, ai_vote_count, user_vote_count, total_eligible, created_at, resolved_at'
+        )
+        .eq('trip_id', input.tripId)
+        .order('created_at', { ascending: false });
+
+      // Get which disputes this user has already voted on
+      const disputeIds = ((data as any[]) ?? []).map((d: any) => d.id);
+      let votedDisputeIds = new Set<string>();
+      if (disputeIds.length > 0) {
+        const { data: votes } = await admin
+          .from('dispute_votes' as never)
+          .select('dispute_id')
+          .eq('voter_user_id', ctx.user.id)
+          .in('dispute_id' as never, disputeIds);
+        votedDisputeIds = new Set(((votes as any[]) ?? []).map((v: any) => v.dispute_id));
+      }
+
+      return ((data as any[]) ?? []).map((d: any) => ({
+        id: d.id as string,
+        userId: d.user_id as string,
+        disputeType: d.dispute_type as string,
+        aiClaim: d.ai_claim as string,
+        userClaim: d.user_claim as string,
+        status: d.status as string,
+        voteDeadline: d.vote_deadline as string,
+        aiVotes: d.ai_vote_count as number,
+        userVotes: d.user_vote_count as number,
+        totalEligible: d.total_eligible as number,
+        createdAt: d.created_at as string,
+        resolvedAt: d.resolved_at as string | null,
+        hasVoted: votedDisputeIds.has(d.id),
+        isOwn: d.user_id === ctx.user.id,
+      }));
+    }),
+
+  // Group pulse feed — the living home screen social feed
+  getGroupPulse: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      let query = admin
+        .from('group_pulse_events' as never)
+        .select('id, trip_id, event_type, actor_user_id, payload, created_at')
+        .contains('visible_to' as never, [ctx.user.id])
+        .order('created_at', { ascending: false })
+        .limit(input.limit);
+
+      if (input.cursor) {
+        query = (query as any).lt('created_at', input.cursor);
+      }
+
+      const { data } = await (query as any);
+      const events = (data as any[]) ?? [];
+
+      // Fetch display names for actors (batch)
+      const actorIds = [...new Set(events.map((e: any) => e.actor_user_id).filter(Boolean))];
+      let actorNames: Record<string, string> = {};
+      if (actorIds.length > 0) {
+        const { data: profiles } = await admin
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', actorIds);
+        actorNames = Object.fromEntries(
+          ((profiles as any[]) ?? []).map((p: any) => [p.id, p.display_name ?? 'Someone'])
+        );
+      }
+
+      // Fetch trip names (batch)
+      const tripIds = [...new Set(events.map((e: any) => e.trip_id))];
+      let tripNames: Record<string, string> = {};
+      if (tripIds.length > 0) {
+        const { data: trips } = await admin.from('trips').select('id, name').in('id', tripIds);
+        tripNames = Object.fromEntries(
+          ((trips as any[]) ?? []).map((t: any) => [t.id, t.name ?? 'Your Trip'])
+        );
+      }
+
+      return events.map((e: any) => ({
+        id: e.id as string,
+        tripId: e.trip_id as string,
+        tripName: tripNames[e.trip_id] ?? 'Your Trip',
+        eventType: e.event_type as string,
+        actorUserId: e.actor_user_id as string | null,
+        actorName: e.actor_user_id ? (actorNames[e.actor_user_id] ?? 'Someone') : null,
+        payload: e.payload as Record<string, unknown>,
+        createdAt: e.created_at as string,
+      }));
+    }),
+
+  // Incident button — flag a mythology-worthy moment during a trip
+  flagIncident: protectedProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        note: z.string().max(200).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      const { data: memberRaw } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      await admin.from('pending_incidents' as never).insert({
+        trip_id: input.tripId,
+        triggered_by: ctx.user.id,
+        note: input.note ?? null,
+      } as never);
+
+      // Get trip members for pulse event
+      const { data: members } = await admin
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', input.tripId);
+      const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
+
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('display_name')
+        .eq('id', ctx.user.id)
+        .single();
+
+      await admin.from('group_pulse_events' as never).insert({
+        trip_id: input.tripId,
+        event_type: 'incident_flagged',
+        actor_user_id: ctx.user.id,
+        payload: {
+          note: input.note ?? null,
+          actor_name: (profile as any)?.display_name ?? 'Someone',
+        },
+        visible_to: visibleTo,
+      } as never);
+
+      return { ok: true };
+    }),
 });
