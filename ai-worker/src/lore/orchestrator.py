@@ -434,32 +434,39 @@ class LoreOrchestrator:
             # Phase 2: durable image generation job (no fire-and-forget asyncio.create_task)
             self._enqueue_image_job(trip_id, trace_id)
 
-            # Retention Machine: record cross-trip identity snapshots for every member.
-            # This is the moat — behavioral data that accumulates across trips and enables
-            # the character arc, "who changed?", and dispute history features.
-            self._record_identity_snapshots(trip_id, lore)
+            # ── Post-processing: ALL steps run as background tasks ────────────
+            # CRITICAL: These must NOT block lore delivery. The user's phone
+            # is waiting for lore_status='ready'. Every second of post-processing
+            # feels like the product is broken. Fire-and-forget all enrichment.
+            #
+            # The lore is already written to the DB above (lore_status='ready').
+            # These tasks enrich the data model — they are not user-facing delays.
 
-            # Investigative Reconstruction: extract structured incidents, evidence gaps,
-            # and recurring references. These power the explorable incident log.
-            # Non-blocking — failures don't affect the main lore delivery.
-            await self._extract_incidents(trip_id, lore, trip)
+            async def _run_enrichment():
+                """All post-generation enrichment in background — never blocks lore delivery."""
+                try:
+                    self._record_identity_snapshots(trip_id, lore)
+                except Exception as e:
+                    log.warning(f"[{trip_id}] identity snapshots failed: {e}")
+                try:
+                    await self._extract_incidents(trip_id, lore, trip)
+                except Exception as e:
+                    log.warning(f"[{trip_id}] incident extraction failed: {e}")
+                try:
+                    await self._update_social_graph(trip_id, lore)
+                except Exception as e:
+                    log.warning(f"[{trip_id}] social graph update failed: {e}")
+                try:
+                    from datetime import timedelta
+                    review_deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                    supabase.table("trips").update({
+                        "memory_review_closes_at": review_deadline
+                    }).eq("id", trip_id).execute()
+                except Exception as e:
+                    log.warning(f"[{trip_id}] memory review window failed: {e}")
 
-            # Social Graph: build relationship dynamics and update Group Lore OS.
-            # This is the long-term moat — accumulated behavioral data about
-            # how specific people interact across years of documented trips.
-            await self._update_social_graph(trip_id, lore)
-
-            # Open the 7-day memory review window so members can confirm/add context.
-            # This creates the "the group is waiting for your version" social pressure.
-            from datetime import timedelta
-            review_deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-            try:
-                supabase.table("trips").update({
-                    "memory_review_closes_at": review_deadline
-                }).eq("id", trip_id).execute()
-                log.info(f"[{trip_id}] memory review window opened until {review_deadline}")
-            except Exception as e:
-                log.warning(f"[{trip_id}] failed to open memory review window: {e}")
+            # Schedule enrichment as a background task — returns immediately
+            asyncio.create_task(_run_enrichment())
 
         except Exception as e:
             log.exception(f"[{trip_id}][{trace_id}] pipeline failed at step={self._current_step}: {e}")

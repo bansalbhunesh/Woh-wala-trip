@@ -502,7 +502,25 @@ export default function CinematicAuth() {
   );
 
   const handleDigitChange = (i: number, val: string) => {
-    const digit = val.replace(/\D/g, '').slice(-1);
+    const digits = val.replace(/\D/g, '');
+
+    // Mobile OS paste fills onChange with the full code (e.g. "12345678").
+    // Distribute across all inputs when multiple digits detected.
+    if (digits.length > 1) {
+      const next = [...otp];
+      digits
+        .slice(0, 8)
+        .split('')
+        .forEach((d, idx) => {
+          next[idx] = d;
+        });
+      setOtp(next);
+      otpRefs.current[Math.min(digits.length, 7)]?.focus();
+      if (next.join('').length === 8) setTimeout(() => verifyOtp(next), 50);
+      return;
+    }
+
+    const digit = digits.slice(-1);
     const next = [...otp];
     next[i] = digit;
     setOtp(next);
@@ -854,6 +872,7 @@ export default function CinematicAuth() {
                   value={d}
                   onChange={e => handleDigitChange(i, e.target.value)}
                   onKeyDown={e => handleDigitKey(i, e)}
+                  onPaste={handlePaste}
                   onFocus={() => setActiveDigit(i)}
                   onBlur={() => setActiveDigit(-1)}
                   disabled={verifyLoading}

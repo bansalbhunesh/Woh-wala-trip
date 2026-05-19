@@ -1224,7 +1224,11 @@ function UploadState({
   // Use whichever is higher — optimistic (immediate) or confirmed (from DB)
   const photos = photoData?.photos;
   const photoCount = Math.max(photos?.length || 0, optimisticCount);
-  const canGenerate = photoCount >= 5;
+  // Block generate while uploads are still in-flight (batchDone < batchTotal).
+  // This fixes the race where the 6th photo shows "5/6" and clicking Generate
+  // routes back to the upload screen because the server count is still 5.
+  const uploadsInFlight = batchTotal > 0 && batchDone < batchTotal;
+  const canGenerate = photoCount >= 5 && !uploadsInFlight;
   const needed = Math.max(0, 5 - photoCount);
   const isActive = !!active;
 

@@ -223,8 +223,11 @@ export default function CinematicLanding() {
           'background 0.55s cubic-bezier(0.16,1,0.3,1), color 0.55s cubic-bezier(0.16,1,0.3,1)',
       }}
     >
-      {/* Particle universe — only mounted in dark mode */}
-      {D && <ParticleUniverse phase={2} mouseX={0.5} mouseY={0.5} />}
+      {/* Particle universe — desktop only. Three.js renders messily on mobile
+          screens (small viewports + GPU constraints). Disabled below 768px. */}
+      {D && typeof window !== 'undefined' && window.innerWidth >= 768 && (
+        <ParticleUniverse phase={2} mouseX={0.5} mouseY={0.5} />
+      )}
 
       {/* Grain overlay — lighter in light mode, heavier in dark */}
       <div className={D ? 'film-grain' : 'light-grain'} />
