@@ -19,6 +19,14 @@
     {
       "path": "/api/cron/refresh-chaos",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/on-this-day",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-arc",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

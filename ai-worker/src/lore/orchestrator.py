@@ -427,6 +427,18 @@ class LoreOrchestrator:
             # the character arc, "who changed?", and dispute history features.
             self._record_identity_snapshots(trip_id, lore)
 
+            # Open the 7-day memory review window so members can confirm/add context.
+            # This creates the "the group is waiting for your version" social pressure.
+            from datetime import timedelta
+            review_deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+            try:
+                supabase.table("trips").update({
+                    "memory_review_closes_at": review_deadline
+                }).eq("id", trip_id).execute()
+                log.info(f"[{trip_id}] memory review window opened until {review_deadline}")
+            except Exception as e:
+                log.warning(f"[{trip_id}] failed to open memory review window: {e}")
+
         except Exception as e:
             log.exception(f"[{trip_id}][{trace_id}] pipeline failed at step={self._current_step}: {e}")
             supabase.table("trips").update({

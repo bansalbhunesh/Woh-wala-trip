@@ -4,6 +4,7 @@ import { trpc } from '@/lib/trpc/client';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { GroupPulse } from '@/components/experience/GroupPulse';
+import { CharacterArcWidget } from '@/components/experience/CharacterArc';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIRST-TIME WELCOME MODAL
@@ -396,6 +397,11 @@ export default function TripsPage() {
       </header>
 
       <NostalgiaStrip />
+
+      {/* Character Arc — your cross-trip identity (the moat) */}
+      <div className="px-8 pt-6 pb-0">
+        <CharacterArcWidget />
+      </div>
 
       {/* Group Pulse — the living social feed */}
       <div className="px-8 pt-6 pb-2">

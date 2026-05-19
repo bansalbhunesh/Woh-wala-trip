@@ -39,6 +39,10 @@ import { analytics } from '@/lib/analytics';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { LoreCapsules } from '@/components/experience/LoreCapsules';
+import { DisputePanel } from '@/components/experience/DisputeSystem';
+import { MemoryReviewBanner } from '@/components/experience/MemoryReview';
+import { ProphecyCard, ProphecyAccuracyReveal } from '@/components/experience/ProphecyCard';
+import { IncidentButton } from '@/components/experience/GroupPulse';
 
 export default function TripRoomPage() {
   const params = useParams();
@@ -165,12 +169,21 @@ export default function TripRoomPage() {
 
       {/* Full-width hero outside the grid */}
       <div className="max-w-[1600px] mx-auto px-6 pt-12">
+        {/* Pre-trip prophecy — shows before first lore generation */}
+        {!isReady && !isProcessing && <ProphecyCard tripId={tripId} />}
+
         {isProcessing ? (
           <GeneratingState tripId={tripId} />
         ) : isFailed ? (
           <FailedState trip={trip} tripId={tripId} onRetry={() => refetch()} />
         ) : !isReady ? (
-          <UploadState trip={trip} tripId={tripId} onPhotosChanged={() => refetch()} />
+          <>
+            <UploadState trip={trip} tripId={tripId} onPhotosChanged={() => refetch()} />
+            {/* Incident button — for flagging moments during an active trip */}
+            <div className="mt-4">
+              <IncidentButton tripId={tripId} />
+            </div>
+          </>
         ) : null}
       </div>
 
@@ -183,6 +196,15 @@ export default function TripRoomPage() {
 
           {/* Lore Capsules — tap-to-unlock reveals (villain, MVP, core memory) */}
           {lore && <LoreCapsules lore={lore} members={members} tripId={tripId} />}
+
+          {/* Retention Machine: memory review banner + dispute panel */}
+          <div className="space-y-3 mb-6">
+            <MemoryReviewBanner tripId={tripId} />
+            <DisputePanel tripId={tripId} />
+          </div>
+
+          {/* Pre-trip prophecy accuracy (shown if there was a prophecy before this trip) */}
+          {isReady && lore && <ProphecyAccuracyReveal tripId={tripId} />}
 
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
@@ -660,6 +682,25 @@ export default function TripRoomPage() {
               </div>
 
               <ConfessionInput tripId={tripId} />
+
+              {/* WhatsApp-first share — primary action for India */}
+              {lore && trip?.invite_code && (
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `${lore.whatsapp_caption ?? lore.tagline ?? trip.name}\n\nhttps://${typeof window !== 'undefined' ? window.location.host : 'yaarlore.app'}/t/${trip.invite_code}/story`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-mono font-black text-[9px] uppercase tracking-[0.35em] transition-all hover:scale-[1.02] active:scale-95"
+                  style={{
+                    background: 'rgba(37,211,102,0.1)',
+                    border: '1px solid rgba(37,211,102,0.3)',
+                    color: 'rgba(37,211,102,0.9)',
+                  }}
+                >
+                  &#9654; Share in WhatsApp
+                </a>
+              )}
 
               {/* PROD-02: Story visibility toggle — only shown to the trip creator */}
               {isCreator && (

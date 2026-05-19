@@ -1815,4 +1815,335 @@ export const tripsRouter = router({
 
       return { ok: true };
     }),
+
+  // ── Character Arc — cross-trip identity evolution ──────────────────────────
+  // The identity data that makes switching cost emotional, not technical.
+  getMyCharacterArc: protectedProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseServiceClient();
+
+    const { data: snapshots } = await admin
+      .from('user_identity_snapshots' as never)
+      .select('archetype, chaos_rating, role_title, signature_behavior, snapshot_at, trip_id')
+      .eq('user_id', ctx.user.id)
+      .order('snapshot_at', { ascending: true });
+
+    const snaps = (snapshots as any[]) ?? [];
+    if (snaps.length === 0) return { hasData: false, snapshots: [] };
+
+    // Compute trajectory
+    const recent = snaps.slice(-3);
+    const avgChaos = recent.reduce((s: number, n: any) => s + n.chaos_rating, 0) / recent.length;
+    const firstChaos = snaps[0].chaos_rating as number;
+    const trajectory =
+      avgChaos > firstChaos + 1 ? 'rising' : avgChaos < firstChaos - 1 ? 'falling' : 'stable';
+
+    // Most common archetype
+    const archetypeCounts: Record<string, number> = {};
+    for (const s of snaps) {
+      archetypeCounts[s.archetype] = (archetypeCounts[s.archetype] ?? 0) + 1;
+    }
+    const dominantArchetype = Object.entries(archetypeCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+    // Arc definition: 100% when 5+ trips, same archetype 3+ times, trajectory clear
+    const arcPct = Math.min(
+      100,
+      Math.round(
+        (snaps.length / 5) * 40 +
+          ((archetypeCounts[dominantArchetype] ?? 0) / snaps.length) * 40 +
+          (trajectory !== 'stable' ? 20 : 0)
+      )
+    );
+
+    return {
+      hasData: true,
+      tripCount: snaps.length,
+      dominantArchetype,
+      trajectory,
+      currentChaos: recent[recent.length - 1]?.chaos_rating ?? 5,
+      firstChaos: snaps[0].chaos_rating,
+      arcPct,
+      snapshots: snaps.map((s: any) => ({
+        archetype: s.archetype as string,
+        chaosRating: s.chaos_rating as number,
+        roleTitle: s.role_title as string | null,
+        snapshotAt: s.snapshot_at as string,
+        tripId: s.trip_id as string,
+      })),
+    };
+  }),
+
+  // ── Memory Review — 7-day window to confirm/add context ───────────────────
+  addMemoryContribution: protectedProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        contributionType: z.enum(['confirm', 'addition']),
+        targetSection: z.string().optional(),
+        content: z.string().min(1).max(500).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Verify membership
+      const { data: member } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!member) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      // Check review window is still open
+      const { data: tripRaw } = await admin
+        .from('trips')
+        .select('memory_review_closes_at')
+        .eq('id', input.tripId)
+        .single();
+      const reviewClosesAt = (tripRaw as any)?.memory_review_closes_at;
+      if (reviewClosesAt && new Date(reviewClosesAt) < new Date()) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Memory review window has closed.' });
+      }
+
+      await admin.from('memory_contributions' as never).insert({
+        trip_id: input.tripId,
+        user_id: ctx.user.id,
+        contribution_type: input.contributionType,
+        target_section: input.targetSection ?? null,
+        content: input.content ?? null,
+      } as never);
+
+      // Pulse event for additions
+      if (input.contributionType === 'addition' && input.content) {
+        const { data: members } = await admin
+          .from('trip_members')
+          .select('user_id')
+          .eq('trip_id', input.tripId);
+        const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
+        await admin.from('group_pulse_events' as never).insert({
+          trip_id: input.tripId,
+          event_type: 'memory_added',
+          actor_user_id: ctx.user.id,
+          payload: { preview: input.content.slice(0, 80), section: input.targetSection },
+          visible_to: visibleTo,
+        } as never);
+      }
+
+      return { ok: true };
+    }),
+
+  // Get memory review status for a trip
+  getMemoryReviewStatus: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      const { data: tripRaw } = await admin
+        .from('trips')
+        .select('memory_review_closes_at, review_confirmed_count, member_count')
+        .eq('id', input.tripId)
+        .single();
+      const trip = tripRaw as any;
+
+      if (!trip?.memory_review_closes_at) return { isOpen: false };
+
+      const closesAt = new Date(trip.memory_review_closes_at);
+      const isOpen = closesAt > new Date();
+      const hoursLeft = Math.max(0, Math.round((closesAt.getTime() - Date.now()) / 3600000));
+
+      // Has this user contributed?
+      const { data: myContrib } = await admin
+        .from('memory_contributions' as never)
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .limit(1);
+
+      // Get all contributions
+      const { data: allContribs } = await admin
+        .from('memory_contributions' as never)
+        .select('user_id, contribution_type, content, created_at')
+        .eq('trip_id', input.tripId)
+        .order('created_at', { ascending: false });
+
+      return {
+        isOpen,
+        hoursLeft,
+        closesAt: closesAt.toISOString(),
+        totalMembers: trip.member_count ?? 0,
+        confirmedCount: trip.review_confirmed_count ?? 0,
+        hasContributed: ((myContrib as any[]) ?? []).length > 0,
+        contributions: ((allContribs as any[]) ?? []).map((c: any) => ({
+          userId: c.user_id as string,
+          type: c.contribution_type as string,
+          content: c.content as string | null,
+          createdAt: c.created_at as string,
+        })),
+      };
+    }),
+
+  // ── Pre-trip Prophecy ──────────────────────────────────────────────────────
+  // Called after trip creation when returning members are detected.
+  // Uses cross-trip identity data to generate behavioral predictions.
+  generatePretripProphecy: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      // Only creator can generate prophecy
+      const { data: tripRaw } = await ctx.supabase
+        .from('trips')
+        .select('creator_id, name, destination, pretrip_prophecy')
+        .eq('id', input.tripId)
+        .single();
+      const trip = tripRaw as any;
+      if (!trip || trip.creator_id !== ctx.user.id) throw new TRPCError({ code: 'FORBIDDEN' });
+      if (trip.pretrip_prophecy) return { alreadyExists: true };
+
+      // Get all members and their cross-trip identity
+      const { data: members } = await admin
+        .from('trip_members')
+        .select('user_id')
+        .eq('trip_id', input.tripId);
+      const memberIds = ((members as any[]) ?? []).map((m: any) => m.user_id as string);
+
+      // Fetch identity snapshots for all members (last 3 trips each)
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', memberIds);
+
+      const profileMap: Record<string, string> = {};
+      for (const p of (profiles as any[]) ?? []) {
+        profileMap[p.id] = p.display_name ?? 'Unknown';
+      }
+
+      const { data: allSnaps } = await admin
+        .from('user_identity_snapshots' as never)
+        .select('user_id, archetype, chaos_rating, role_title, snapshot_at')
+        .in('user_id' as never, memberIds)
+        .order('snapshot_at', { ascending: false });
+
+      // Group by user, take last 3 per user
+      const snapsByUser: Record<string, any[]> = {};
+      for (const snap of (allSnaps as any[]) ?? []) {
+        const uid = snap.user_id as string;
+        if (!snapsByUser[uid]) snapsByUser[uid] = [];
+        if (snapsByUser[uid].length < 3) snapsByUser[uid].push(snap);
+      }
+
+      // Build member histories
+      const memberHistories = memberIds
+        .filter(uid => snapsByUser[uid]?.length > 0)
+        .map(uid => ({
+          name: profileMap[uid] ?? 'Unknown',
+          trips: snapsByUser[uid].length,
+          avgChaos: Math.round(
+            snapsByUser[uid].reduce((s: number, n: any) => s + n.chaos_rating, 0) /
+              snapsByUser[uid].length
+          ),
+          currentArchetype: snapsByUser[uid][0]?.archetype ?? 'Unknown',
+          trajectory:
+            snapsByUser[uid].length > 1
+              ? snapsByUser[uid][0].chaos_rating >
+                snapsByUser[uid][snapsByUser[uid].length - 1].chaos_rating
+                ? 'rising'
+                : 'falling'
+              : 'stable',
+        }));
+
+      if (memberHistories.length === 0) {
+        return { alreadyExists: false, newGroup: true };
+      }
+
+      // Group chaos probability based on average of members
+      const avgGroupChaos =
+        memberHistories.reduce((s, m) => s + m.avgChaos, 0) / memberHistories.length;
+      const groupChaosPct = Math.min(99, Math.round(avgGroupChaos * 10));
+
+      // Generate prophecy narrative via AI
+      const prophecyPrompt = `You are the Yaarlore AI Historian, generating a pre-trip prophecy for a returning friend group.
+
+Trip: "${trip.name}" to ${trip.destination ?? 'an undisclosed location'}
+
+Member histories (documented across previous trips):
+${memberHistories
+  .map(
+    m =>
+      `- ${m.name}: ${m.trips} documented trips, avg chaos ${m.avgChaos}/10, current archetype: ${m.currentArchetype}, trajectory: ${m.trajectory}`
+  )
+  .join('\n')}
+
+Generate a SHORT prophecy JSON with:
+- A dramatic headline (max 15 words)
+- Per-member predictions (one per person with mythology history, max 25 words each, HIGH/MEDIUM/LOW confidence)
+- A whatsapp_text: what someone would forward in the group chat to hype up the trip (Hinglish, internet-native, max 40 words)
+
+Format:
+{
+  "headline": "...",
+  "predictions": [{"name": "...", "prediction": "...", "confidence": "HIGH|MEDIUM|LOW"}],
+  "group_chaos_probability": ${groupChaosPct},
+  "whatsapp_text": "..."
+}
+
+Raw JSON only. No markdown.`;
+
+      try {
+        const { Anthropic } = await import('@anthropic-ai/sdk');
+        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const msg = await client.messages.create({
+          model: 'claude-haiku-20241022',
+          max_tokens: 512,
+          messages: [{ role: 'user', content: prophecyPrompt }],
+        });
+        const raw = (msg.content[0] as any).text as string;
+        const prophecy = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
+
+        // Store prophecy on trip
+        await admin
+          .from('trips')
+          .update({
+            pretrip_prophecy: { ...prophecy, generated_at: new Date().toISOString() },
+          } as never)
+          .eq('id', input.tripId);
+
+        // Store WhatsApp card
+        await admin.from('trip_prophecy_cards' as never).upsert({
+          trip_id: input.tripId,
+          whatsapp_text: prophecy.whatsapp_text ?? prophecy.headline,
+          card_headline: prophecy.headline,
+        } as never);
+
+        // Pulse event
+        const { data: allMembers } = await admin
+          .from('trip_members')
+          .select('user_id')
+          .eq('trip_id', input.tripId);
+        const visibleTo = ((allMembers as any[]) ?? []).map((m: any) => m.user_id as string);
+        await admin.from('group_pulse_events' as never).insert({
+          trip_id: input.tripId,
+          event_type: 'lore_generated',
+          actor_user_id: null,
+          payload: { type: 'prophecy', headline: prophecy.headline },
+          visible_to: visibleTo,
+        } as never);
+
+        return { ok: true, prophecy };
+      } catch (e) {
+        return { ok: false, error: 'Could not generate prophecy' };
+      }
+    }),
+
+  // Get prophecy for a trip
+  getPretripProphecy: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data } = await ctx.supabase
+        .from('trips')
+        .select('pretrip_prophecy, name, destination')
+        .eq('id', input.tripId)
+        .single();
+      return { prophecy: (data as any)?.pretrip_prophecy ?? null };
+    }),
 });

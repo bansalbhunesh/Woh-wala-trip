@@ -157,6 +157,16 @@ CRITICAL RULES — violations will cause rejection and retry:
 - The opening_line must make the group feel immediately, uncomfortably seen.
 - Acts 1, 2, and 3 must contain SPECIFIC events from THIS trip — not generic arc descriptions.
 
+ROUGH EDGES DIRECTIVE — the most important rule:
+Real memories are messy, contradictory, incomplete. The lore must feel like it came from someone who was THERE, not an AI that read a report.
+MANDATORY: Include at least ONE of these in your lore:
+1. A moment of explicit uncertainty: "The photos from Day 2 are ambiguous. Something happened between 11 PM and 2 AM that no one photographed. The historian records this as [UNVERIFIED]."
+2. A contradiction: acknowledge when two interpretations are possible ("Either X or Y — the evidence is split.")
+3. A specific messy detail that would only appear in this trip's record — something awkward, specific, slightly embarrassing.
+4. One section that sounds like it was narrated by someone who slightly lost the thread: "And then — look, the evidence just says three people ended up at a chai stall at 3 AM. That's all we know."
+
+This roughness is the authenticity. Lore that is too perfect reads as AI-generated. Lore that includes one messy ambiguous moment reads as truth.
+
 You output ONLY valid JSON. No preamble. No explanation. No markdown fences. Raw JSON only."""
 
 LORE_GENERATION_USER = """Generate the complete friendship lore for this group.
