@@ -26,8 +26,8 @@ export interface DemoMember {
 
 function buildSlides(lore: LoreJson, members: DemoMember[]): Slide[] {
   const slides: Slide[] = [];
-  slides.push({ type: 'title', lore });
   slides.push({ type: 'cooked', lore });
+  slides.push({ type: 'title', lore });
   if (lore.season_recap?.full_narrative) slides.push({ type: 'recap', lore });
   (lore.trip_eras || []).slice(0, 3).forEach((_, i) => slides.push({ type: 'era', lore, idx: i }));
   members.filter(m => m.role_title).forEach(m => slides.push({ type: 'character', member: m }));
