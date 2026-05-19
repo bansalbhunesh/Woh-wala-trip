@@ -112,10 +112,9 @@ CREATE TABLE IF NOT EXISTS group_lore_os (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   -- Canonical group identity: sorted array of user_ids
   canonical_members  uuid[] NOT NULL,
-  group_hash         text GENERATED ALWAYS AS (
-    -- Deterministic hash of sorted member array for lookups
-    encode(sha256(array_to_string(canonical_members, ',')::bytea), 'hex')
-  ) STORED,
+  -- group_hash is set by the application (canonical_group_hash() function below).
+  -- Cannot use GENERATED ALWAYS AS because sha256() is not IMMUTABLE in Postgres.
+  group_hash         text,
   -- Living mythology state
   mythology_state    jsonb DEFAULT '{
     "identity": null,
@@ -141,14 +140,21 @@ ALTER TABLE mythology_nodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mythology_edges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_lore_os ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_role_rel_dynamics" ON relationship_dynamics;
 CREATE POLICY "service_role_rel_dynamics"   ON relationship_dynamics   FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_reputation" ON user_reputation;
 CREATE POLICY "service_role_reputation"     ON user_reputation         FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_social_roles" ON social_role_assignments;
 CREATE POLICY "service_role_social_roles"   ON social_role_assignments FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_myth_nodes" ON mythology_nodes;
 CREATE POLICY "service_role_myth_nodes"     ON mythology_nodes         FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_myth_edges" ON mythology_edges;
 CREATE POLICY "service_role_myth_edges"     ON mythology_edges         FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_group_lore_os" ON group_lore_os;
 CREATE POLICY "service_role_group_lore_os"  ON group_lore_os           FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Users can read relationship dynamics for trips they're in
+DROP POLICY IF EXISTS "member_read_dynamics" ON relationship_dynamics;
 CREATE POLICY "member_read_dynamics" ON relationship_dynamics
   FOR SELECT TO authenticated
   USING (
@@ -156,14 +162,17 @@ CREATE POLICY "member_read_dynamics" ON relationship_dynamics
     AND (user_a = auth.uid() OR user_b = auth.uid())
   );
 
+DROP POLICY IF EXISTS "own_reputation_read" ON user_reputation;
 CREATE POLICY "own_reputation_read" ON user_reputation
   FOR SELECT TO authenticated USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "member_read_roles" ON social_role_assignments;
 CREATE POLICY "member_read_roles" ON social_role_assignments
   FOR SELECT TO authenticated
   USING (trip_id IN (SELECT trip_id FROM trip_members WHERE user_id = auth.uid()));
 
 -- Group lore OS: readable by any current member of the group
+DROP POLICY IF EXISTS "group_member_read_os" ON group_lore_os;
 CREATE POLICY "group_member_read_os" ON group_lore_os
   FOR SELECT TO authenticated
   USING (auth.uid() = ANY(canonical_members));

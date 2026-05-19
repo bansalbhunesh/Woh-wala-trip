@@ -102,26 +102,35 @@ ALTER TABLE recurring_references ENABLE ROW LEVEL SECURITY;
 ALTER TABLE incident_references ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trip_timeline_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_role_incidents" ON trip_incidents;
 CREATE POLICY "service_role_incidents" ON trip_incidents FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_evidence_gaps" ON evidence_gaps;
 CREATE POLICY "service_role_evidence_gaps" ON evidence_gaps FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_recurring_refs" ON recurring_references;
 CREATE POLICY "service_role_recurring_refs" ON recurring_references FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_incident_refs" ON incident_references;
 CREATE POLICY "service_role_incident_refs" ON incident_references FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_timeline" ON trip_timeline_events;
 CREATE POLICY "service_role_timeline" ON trip_timeline_events FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Trip members can read incidents for their trips
+DROP POLICY IF EXISTS "trip_member_read_incidents_v2" ON trip_incidents;
 CREATE POLICY "trip_member_read_incidents_v2" ON trip_incidents
   FOR SELECT TO authenticated
   USING (trip_id IN (SELECT trip_id FROM trip_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "trip_member_read_gaps" ON evidence_gaps;
 CREATE POLICY "trip_member_read_gaps" ON evidence_gaps
   FOR SELECT TO authenticated
   USING (trip_id IN (SELECT trip_id FROM trip_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "trip_member_read_timeline" ON trip_timeline_events;
 CREATE POLICY "trip_member_read_timeline" ON trip_timeline_events
   FOR SELECT TO authenticated
   USING (trip_id IN (SELECT trip_id FROM trip_members WHERE user_id = auth.uid()));
 
 -- Recurring references are readable if you're a member of the origin trip
+DROP POLICY IF EXISTS "trip_member_read_refs" ON recurring_references;
 CREATE POLICY "trip_member_read_refs" ON recurring_references
   FOR SELECT TO authenticated
   USING (origin_trip_id IN (SELECT trip_id FROM trip_members WHERE user_id = auth.uid()));

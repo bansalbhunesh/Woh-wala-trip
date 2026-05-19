@@ -129,14 +129,21 @@ ALTER TABLE user_identity_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pending_incidents ENABLE ROW LEVEL SECURITY;
 
 -- Service role: full access to all retention tables
+DROP POLICY IF EXISTS "service_role_lore_disputes" ON lore_disputes;
 CREATE POLICY "service_role_lore_disputes"       ON lore_disputes           FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_dispute_votes" ON dispute_votes;
 CREATE POLICY "service_role_dispute_votes"       ON dispute_votes           FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_group_pulse" ON group_pulse_events;
 CREATE POLICY "service_role_group_pulse"         ON group_pulse_events      FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_memory_contrib" ON memory_contributions;
 CREATE POLICY "service_role_memory_contrib"      ON memory_contributions    FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_identity_snapshots" ON user_identity_snapshots;
 CREATE POLICY "service_role_identity_snapshots"  ON user_identity_snapshots FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_pending_incidents" ON pending_incidents;
 CREATE POLICY "service_role_pending_incidents"   ON pending_incidents       FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Trip members: read disputes and pulse events for their trips
+DROP POLICY IF EXISTS "trip_member_read_disputes" ON lore_disputes;
 CREATE POLICY "trip_member_read_disputes" ON lore_disputes
   FOR SELECT TO authenticated
   USING (
@@ -145,10 +152,12 @@ CREATE POLICY "trip_member_read_disputes" ON lore_disputes
     )
   );
 
+DROP POLICY IF EXISTS "trip_member_read_pulse" ON group_pulse_events;
 CREATE POLICY "trip_member_read_pulse" ON group_pulse_events
   FOR SELECT TO authenticated
   USING (auth.uid() = ANY(visible_to));
 
+DROP POLICY IF EXISTS "trip_member_read_memory" ON memory_contributions;
 CREATE POLICY "trip_member_read_memory" ON memory_contributions
   FOR SELECT TO authenticated
   USING (
@@ -158,11 +167,13 @@ CREATE POLICY "trip_member_read_memory" ON memory_contributions
   );
 
 -- Users can read their own identity snapshots
+DROP POLICY IF EXISTS "own_identity_read" ON user_identity_snapshots;
 CREATE POLICY "own_identity_read" ON user_identity_snapshots
   FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
 -- Users can read incidents for trips they're members of
+DROP POLICY IF EXISTS "trip_member_read_incidents" ON pending_incidents;
 CREATE POLICY "trip_member_read_incidents" ON pending_incidents
   FOR SELECT TO authenticated
   USING (

@@ -56,10 +56,14 @@ CREATE TABLE IF NOT EXISTS trip_prophecy_cards (
 ALTER TABLE character_arc_updates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trip_prophecy_cards ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_role_arc_updates" ON character_arc_updates;
 CREATE POLICY "service_role_arc_updates" ON character_arc_updates FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_prophecy_cards" ON trip_prophecy_cards;
 CREATE POLICY "service_role_prophecy_cards" ON trip_prophecy_cards FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "own_arc_read" ON character_arc_updates;
 CREATE POLICY "own_arc_read" ON character_arc_updates FOR SELECT TO authenticated USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "trip_member_prophecy_read" ON trip_prophecy_cards;
 CREATE POLICY "trip_member_prophecy_read" ON trip_prophecy_cards FOR SELECT TO authenticated
   USING (trip_id IN (SELECT trip_id FROM trip_members WHERE user_id = auth.uid()));
 
