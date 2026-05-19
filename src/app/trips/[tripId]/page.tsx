@@ -217,7 +217,7 @@ export default function TripRoomPage() {
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
             {/* ── LEFT: documentary interactive visual deck ──────────────── */}
-            <div id="section-chaos" className="space-y-6">
+            <div className="space-y-6">
               {
                 <div className="space-y-8">
                   {/* ① Delusion Index — giant emotional beat acts as hook */}
@@ -227,7 +227,7 @@ export default function TripRoomPage() {
 
                   {/* Visual Scene Selection Shelf */}
                   <div className="space-y-4 pt-4 border-t border-white/5">
-                    <div className="flex justify-between items-end">
+                    <div id="section-hub" className="flex justify-between items-end">
                       <div className="space-y-1">
                         <div className="text-[9px] uppercase tracking-[0.45em] text-[#FF4D4D] font-vibe font-black">
                           ● CHAPTER DECK
@@ -344,11 +344,15 @@ export default function TripRoomPage() {
               }
 
               {
-                <div id="section-evidence" className="space-y-6">
+                <div id="section-chaos" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
-                      onClick={() => setActiveTab('hub')}
+                      onClick={() =>
+                        document
+                          .getElementById('section-hub')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
                     >
                       ← Return to Scene Hub
@@ -387,16 +391,21 @@ export default function TripRoomPage() {
                   {/* Navigation footer */}
                   <div className="pt-6 border-t border-white/5 flex justify-between items-center">
                     <button
-                      onClick={() => setActiveTab('hub')}
+                      onClick={() =>
+                        document
+                          .getElementById('section-hub')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
                     >
                       Exit Scene
                     </button>
                     <button
-                      onClick={() => {
-                        setActiveTab('evidence');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-evidence')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
                     >
                       Next Scene →
@@ -406,11 +415,15 @@ export default function TripRoomPage() {
               }
 
               {
-                <div id="section-timeline" className="space-y-6">
+                <div id="section-evidence" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
-                      onClick={() => setActiveTab('hub')}
+                      onClick={() =>
+                        document
+                          .getElementById('section-hub')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
                     >
                       ← Return to Scene Hub
@@ -486,19 +499,21 @@ export default function TripRoomPage() {
                   {/* Navigation footer */}
                   <div className="pt-6 border-t border-white/5 flex justify-between items-center">
                     <button
-                      onClick={() => {
-                        setActiveTab('chaos');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-chaos')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
                     >
                       ← Previous Scene
                     </button>
                     <button
-                      onClick={() => {
-                        setActiveTab('timeline');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-timeline')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
                     >
                       Next Scene →
@@ -508,11 +523,15 @@ export default function TripRoomPage() {
               }
 
               {
-                <div id="section-verdict" className="space-y-6">
+                <div id="section-timeline" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
-                      onClick={() => setActiveTab('hub')}
+                      onClick={() =>
+                        document
+                          .getElementById('section-hub')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
                     >
                       ← Return to Scene Hub
@@ -545,19 +564,21 @@ export default function TripRoomPage() {
                   {/* Navigation footer */}
                   <div className="pt-6 border-t border-white/5 flex justify-between items-center">
                     <button
-                      onClick={() => {
-                        setActiveTab('evidence');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-evidence')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
                     >
                       ← Previous Scene
                     </button>
                     <button
-                      onClick={() => {
-                        setActiveTab('verdict');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-verdict')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
                     >
                       Next Scene →
@@ -567,11 +588,15 @@ export default function TripRoomPage() {
               }
 
               {
-                <div className="space-y-6">
+                <div id="section-verdict" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
-                      onClick={() => setActiveTab('hub')}
+                      onClick={() =>
+                        document
+                          .getElementById('section-hub')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
                     >
                       ← Return to Scene Hub
@@ -623,19 +648,21 @@ export default function TripRoomPage() {
                   {/* Navigation footer */}
                   <div className="pt-6 border-t border-white/5 flex justify-between items-center">
                     <button
-                      onClick={() => {
-                        setActiveTab('timeline');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-timeline')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
                     >
                       ← Previous Scene
                     </button>
                     <button
-                      onClick={() => {
-                        setActiveTab('hub');
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
+                      onClick={() =>
+                        document
+                          .getElementById('section-hub')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
                       className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
                     >
                       Exit to Scene Hub 🎬

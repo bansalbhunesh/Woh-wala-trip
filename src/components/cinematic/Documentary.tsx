@@ -1132,7 +1132,9 @@ export function MemoryCollage({
                 )}
               </div>
               <div className="h-5 bg-white/[0.04] flex items-center justify-center">
-                <div className="w-8 h-px bg-white/10" />
+                <span className="text-[6px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
               </div>
             </motion.div>
           );
@@ -1245,9 +1247,14 @@ export function MemoryCollage({
                 </div>
               </div>
             )}
-            <span className="font-mono text-[8px] uppercase tracking-[0.4em] text-white/20">
-              {(activeIdx ?? 0) + 1} / {slots} · ESC TO CLOSE
-            </span>
+            <div className="text-center space-y-1">
+              <span className="font-mono text-[8px] uppercase tracking-[0.4em] text-white/20 block">
+                Photo {(activeIdx ?? 0) + 1} of {slots} · ESC to close
+              </span>
+              <span className="font-cinematic italic text-[11px] text-white/35 block">
+                Recovered from device storage · {label}
+              </span>
+            </div>
           </div>
         </motion.div>
       )}
