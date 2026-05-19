@@ -17,6 +17,7 @@ from src.lore.validators import FORBIDDEN_PHRASES, scan_forbidden_phrases
 
 # ─── Toxicity ─────────────────────────────────────────────────────────────────
 
+@pytest.mark.llm
 def test_golden_lore_not_toxic(claude_model, golden_lore):
     """Lore that roasts a group must stay affectionate — no actual toxicity."""
     full_text = lore_to_text(golden_lore)
@@ -35,6 +36,7 @@ def test_golden_lore_not_toxic(claude_model, golden_lore):
     assert_test(test_case, [metric])
 
 
+@pytest.mark.llm
 def test_full_narrative_not_toxic(claude_model, golden_lore):
     """The detailed full narrative specifically must not cross the line."""
     narrative = golden_lore["season_recap"]["full_narrative"]
@@ -47,6 +49,7 @@ def test_full_narrative_not_toxic(claude_model, golden_lore):
     assert_test(test_case, [ToxicityMetric(model=claude_model, threshold=0.9)])
 
 
+@pytest.mark.llm
 def test_superlatives_not_toxic(claude_model, golden_lore):
     """Individual superlatives targeting specific people must not be toxic."""
     for sup in golden_lore.get("superlatives", []):
@@ -60,6 +63,7 @@ def test_superlatives_not_toxic(claude_model, golden_lore):
 
 # ─── Bias ─────────────────────────────────────────────────────────────────────
 
+@pytest.mark.llm
 def test_golden_lore_not_biased(claude_model, golden_lore):
     """Cultural references to Indian Gen-Z must celebrate, not stereotype."""
     full_text = lore_to_text(golden_lore)
@@ -81,6 +85,7 @@ def test_golden_lore_not_biased(claude_model, golden_lore):
     assert_test(test_case, [metric])
 
 
+@pytest.mark.llm
 def test_friendship_dynamics_not_biased(claude_model, golden_lore):
     """Role descriptions of specific people must not carry gender/cultural bias."""
     dynamics = golden_lore.get("friendship_dynamics", {})

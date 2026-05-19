@@ -15,9 +15,9 @@ export function CinematicText({
 }) {
   const styles = {
     heading: 'font-display font-black tracking-tighter uppercase leading-[0.85]',
-    data:    'font-ui font-bold uppercase tracking-[0.2em]',
+    data: 'font-ui font-bold uppercase tracking-[0.2em]',
     eyebrow: 'font-ui font-bold uppercase tracking-[0.4em] text-[9px]',
-    italic:  'font-display italic tracking-tight',
+    italic: 'font-display italic tracking-tight',
   };
   return <div className={cn(styles[variant], className)}>{children}</div>;
 }

@@ -8,20 +8,19 @@ import { CardFrame, Eyebrow, CardFooter } from '../../../../../lib/og/components
 
 export const runtime = 'edge';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ battleId: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ battleId: string }> }) {
   const { battleId } = await params;
   const supabase = createSupabaseServiceClient();
 
   const { data: battle, error } = await supabase
     .from('trip_vs_trip' as never)
-    .select(`
+    .select(
+      `
       *,
       trip_a:trip_a_id (*),
       trip_b:trip_b_id (*)
-    `)
+    `
+    )
     .eq('id', battleId)
     .single();
 
@@ -38,7 +37,9 @@ export async function GET(
 
   const maxScore = Math.max(tripA?.chaos_score ?? 0, tripB?.chaos_score ?? 0);
   const palette = maxScore >= 76 ? PALETTES.cooked : PALETTES.delusional;
-  const origin = req.headers.get('origin') ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const origin =
+    req.headers.get('origin') ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const [fonts, qr] = await Promise.all([
     loadCardFonts(origin).catch(() => null),
     qrDataUrl(`${origin}/trips/${tripA.id}`, { dark: palette.ink }),
@@ -104,12 +105,7 @@ export async function GET(
         </div>
       </div>
 
-      <CardFooter
-        palette={palette}
-        qrDataUrl={qr}
-        showWatermark={true}
-        qrLabel="Scan to vote"
-      />
+      <CardFooter palette={palette} qrDataUrl={qr} showWatermark={true} qrLabel="Scan to vote" />
     </CardFrame>,
     { fonts }
   );

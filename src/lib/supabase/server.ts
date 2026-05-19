@@ -16,9 +16,7 @@ export async function createSupabaseServerClient() {
         },
         setAll(cookiesToSet: any[]) {
           try {
-            cookiesToSet.forEach((c) =>
-              cookieStore.set(c.name, c.value, c.options)
-            );
+            cookiesToSet.forEach(c => cookieStore.set(c.name, c.value, c.options));
           } catch {
             // Server Component context — ignore
           }

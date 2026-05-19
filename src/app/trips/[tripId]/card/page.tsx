@@ -24,7 +24,9 @@ export default function ShareCardPage({ params }: { params: Promise<{ tripId: st
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 gap-4">
         <p className="text-sm text-red-500 font-inter">Could not load trip card.</p>
-        <button onClick={() => router.back()} className="text-sm underline text-gray-500">Go back</button>
+        <button onClick={() => router.back()} className="text-sm underline text-gray-500">
+          Go back
+        </button>
       </div>
     );
   }
@@ -32,8 +34,15 @@ export default function ShareCardPage({ params }: { params: Promise<{ tripId: st
   if (!lore) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 gap-4">
-        <p className="text-sm text-amber-600 font-inter">Lore not generated yet. Generate lore first.</p>
-        <button onClick={() => router.push(`/trips/${tripId}`)} className="text-sm underline text-gray-500">Back to trip</button>
+        <p className="text-sm text-amber-600 font-inter">
+          Lore not generated yet. Generate lore first.
+        </p>
+        <button
+          onClick={() => router.push(`/trips/${tripId}`)}
+          className="text-sm underline text-gray-500"
+        >
+          Back to trip
+        </button>
       </div>
     );
   }
@@ -81,7 +90,9 @@ export default function ShareCardPage({ params }: { params: Promise<{ tripId: st
 
         <div className="mt-12 p-6 bg-amber-50 rounded-3xl border border-amber-100 text-center">
           <p className="text-xs text-amber-700 font-inter leading-relaxed">
-            Free cards have a small watermark. Upgrade to <span className="font-bold">Digital Tier (₹299)</span> to remove it and unlock permanent hosting.
+            Free cards have a small watermark. Upgrade to{' '}
+            <span className="font-bold">Digital Tier (₹299)</span> to remove it and unlock permanent
+            hosting.
           </p>
         </div>
       </div>

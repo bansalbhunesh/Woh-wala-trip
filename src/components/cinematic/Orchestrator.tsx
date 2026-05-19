@@ -8,7 +8,9 @@ export function Act({ title, sub, act }: { title: string; sub?: string; act: num
     <section className="min-h-screen bg-black flex flex-col items-center justify-center text-center p-8 border-y border-white/[0.03]">
       <div className="space-y-12 max-w-2xl">
         <div className="space-y-4">
-          <CinematicText variant="eyebrow" className="text-white/40">Act {act}</CinematicText>
+          <CinematicText variant="eyebrow" className="text-white/40">
+            Act {act}
+          </CinematicText>
           <div className="h-px w-12 bg-cooked-accent mx-auto" />
         </div>
         <CinematicText variant="heading" className="text-6xl md:text-8xl leading-none">
@@ -36,12 +38,16 @@ export function TheatricalCredits({ trip }: { trip: any }) {
             <p>Friendship Hardening: Critical</p>
           </div>
         </div>
-        
+
         <div className="space-y-6 text-center">
           <CinematicText variant="eyebrow">Share the Lore</CinematicText>
           <div className="flex flex-col gap-3 items-center">
-            <button className="px-10 py-4 bg-[#F5F0E8] text-black rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">Export Poster</button>
-            <button className="text-[9px] uppercase tracking-widest text-white/20 hover:text-white transition-colors">Copy Short Link</button>
+            <button className="px-10 py-4 bg-[#F5F0E8] text-black rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">
+              Export Poster
+            </button>
+            <button className="text-[9px] uppercase tracking-widest text-white/20 hover:text-white transition-colors">
+              Copy Short Link
+            </button>
           </div>
         </div>
 
@@ -54,7 +60,7 @@ export function TheatricalCredits({ trip }: { trip: any }) {
           </div>
         </div>
       </div>
-      
+
       <div className="text-center opacity-10 font-cinematic italic text-xs tracking-[0.5em] uppercase">
         yaarlore
       </div>

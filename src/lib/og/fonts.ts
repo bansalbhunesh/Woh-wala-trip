@@ -31,14 +31,20 @@ export async function loadCardFonts(origin?: string | null): Promise<Font[]> {
   ]);
 
   const fonts: Font[] = [];
-  if (results[0].status === 'fulfilled') fonts.push({ name: 'Inter', data: results[0].value, weight: 500, style: 'normal' });
-  if (results[1].status === 'fulfilled') fonts.push({ name: 'Inter', data: results[1].value, weight: 400, style: 'normal' });
-  if (results[2].status === 'fulfilled') fonts.push({ name: 'Lora', data: results[2].value, weight: 400, style: 'italic' });
+  if (results[0].status === 'fulfilled')
+    fonts.push({ name: 'Inter', data: results[0].value, weight: 500, style: 'normal' });
+  if (results[1].status === 'fulfilled')
+    fonts.push({ name: 'Inter', data: results[1].value, weight: 400, style: 'normal' });
+  if (results[2].status === 'fulfilled')
+    fonts.push({ name: 'Lora', data: results[2].value, weight: 400, style: 'italic' });
 
   // Space Grotesk maps to Inter for the card (satori limitation)
-  if (results[0].status === 'fulfilled') fonts.push({ name: 'Space Grotesk', data: results[0].value, weight: 500, style: 'normal' });
-  if (results[0].status === 'fulfilled') fonts.push({ name: 'Space Grotesk', data: results[0].value, weight: 600, style: 'normal' });
-  if (results[0].status === 'fulfilled') fonts.push({ name: 'Space Grotesk', data: results[0].value, weight: 700, style: 'normal' });
+  if (results[0].status === 'fulfilled')
+    fonts.push({ name: 'Space Grotesk', data: results[0].value, weight: 500, style: 'normal' });
+  if (results[0].status === 'fulfilled')
+    fonts.push({ name: 'Space Grotesk', data: results[0].value, weight: 600, style: 'normal' });
+  if (results[0].status === 'fulfilled')
+    fonts.push({ name: 'Space Grotesk', data: results[0].value, weight: 700, style: 'normal' });
 
   if (fonts.length === 0) throw new Error('All fonts failed to load');
   return fonts;

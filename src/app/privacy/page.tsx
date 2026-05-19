@@ -40,7 +40,6 @@ export default function PrivacyPage() {
 
       {/* Page content */}
       <main className="mx-auto max-w-2xl px-6 py-16 pb-32">
-
         {/* Header block */}
         <div className="mb-14 space-y-3">
           <p
@@ -56,28 +55,27 @@ export default function PrivacyPage() {
               color: 'rgba(245,240,232,0.95)',
             }}
           >
-            Privacy<br />
-            <em className="italic" style={{ color: '#FF4D4D' }}>Policy</em>
+            Privacy
+            <br />
+            <em className="italic" style={{ color: '#FF4D4D' }}>
+              Policy
+            </em>
           </h1>
-          <p
-            className="font-data text-sm pt-2"
-            style={{ color: 'rgba(245,240,232,0.35)' }}
-          >
+          <p className="font-data text-sm pt-2" style={{ color: 'rgba(245,240,232,0.35)' }}>
             Last updated: May 2025 &nbsp;·&nbsp; Effective immediately
           </p>
         </div>
 
         <div className="space-y-12 font-data">
-
           {/* Intro */}
           <section className="space-y-3">
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
-              Yaarlore (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) is an AI-powered trip photo analysis service
-              operated as an Indian startup. This Privacy Policy explains what personal data we
-              collect, why we collect it, how AI processes your photos, and your rights over
-              that data. By using the app at{' '}
-              <span style={{ color: 'rgba(245,240,232,0.8)' }}>yaarlore.app</span>,
-              you agree to this policy.
+              Yaarlore (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) is an AI-powered
+              trip photo analysis service operated as an Indian startup. This Privacy Policy
+              explains what personal data we collect, why we collect it, how AI processes your
+              photos, and your rights over that data. By using the app at{' '}
+              <span style={{ color: 'rgba(245,240,232,0.8)' }}>yaarlore.app</span>, you agree to
+              this policy.
             </p>
           </section>
 
@@ -86,7 +84,10 @@ export default function PrivacyPage() {
           {/* 1 — What data we collect */}
           <section className="space-y-5">
             <SectionLabel index="01" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               What Data We Collect
             </h2>
             <ul className="space-y-4">
@@ -118,14 +119,17 @@ export default function PrivacyPage() {
           {/* 2 — How AI processes your photos */}
           <section className="space-y-5">
             <SectionLabel index="02" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               How AI Processes Your Photos
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               When you trigger lore generation, your uploaded photos are sent to{' '}
-              <span style={{ color: 'rgba(245,240,232,0.8)' }}>Anthropic&apos;s Claude API</span>{' '}
-              (a third-party AI provider) for analysis. The Claude model reads visual content in
-              your photos to produce narrative text — &quot;friendship lore&quot; — and no other output.
+              <span style={{ color: 'rgba(245,240,232,0.8)' }}>Anthropic&apos;s Claude API</span> (a
+              third-party AI provider) for analysis. The Claude model reads visual content in your
+              photos to produce narrative text — &quot;friendship lore&quot; — and no other output.
             </p>
             <div
               className="rounded-2xl p-5 space-y-2"
@@ -134,20 +138,39 @@ export default function PrivacyPage() {
                 border: '1px solid rgba(245,240,232,0.07)',
               }}
             >
-              <p className="font-mono text-[9px] uppercase tracking-[0.4em]" style={{ color: 'rgba(255,77,77,0.5)' }}>
+              <p
+                className="font-mono text-[9px] uppercase tracking-[0.4em]"
+                style={{ color: 'rgba(255,77,77,0.5)' }}
+              >
                 KEY POINTS
               </p>
-              <ul className="space-y-2" style={{ color: 'rgba(245,240,232,0.6)', fontSize: '0.875rem', lineHeight: 1.7 }}>
-                <li>— Photos are transmitted to Anthropic only for the duration of inference; Anthropic&apos;s data-handling is governed by their own{' '}
-                  <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer"
+              <ul
+                className="space-y-2"
+                style={{ color: 'rgba(245,240,232,0.6)', fontSize: '0.875rem', lineHeight: 1.7 }}
+              >
+                <li>
+                  — Photos are transmitted to Anthropic only for the duration of inference;
+                  Anthropic&apos;s data-handling is governed by their own{' '}
+                  <a
+                    href="https://www.anthropic.com/legal/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="underline underline-offset-2 hover:opacity-80"
-                    style={{ color: 'rgba(245,240,232,0.8)' }}>
+                    style={{ color: 'rgba(245,240,232,0.8)' }}
+                  >
                     Privacy Policy
-                  </a>.
+                  </a>
+                  .
                 </li>
                 <li>— We do not use your photos to train any AI model ourselves.</li>
-                <li>— AI-generated text is stored alongside your trip data and visible only to you and people you explicitly share the trip with.</li>
-                <li>— No facial recognition is performed; the AI analyses scenes and activities, not identities.</li>
+                <li>
+                  — AI-generated text is stored alongside your trip data and visible only to you and
+                  people you explicitly share the trip with.
+                </li>
+                <li>
+                  — No facial recognition is performed; the AI analyses scenes and activities, not
+                  identities.
+                </li>
               </ul>
             </div>
           </section>
@@ -157,7 +180,10 @@ export default function PrivacyPage() {
           {/* 3 — Sharing of data */}
           <section className="space-y-5">
             <SectionLabel index="03" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               How We Share Your Data
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
@@ -188,7 +214,10 @@ export default function PrivacyPage() {
           {/* 4 — User rights */}
           <section className="space-y-5">
             <SectionLabel index="04" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               Your Rights Over Your Data
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
@@ -223,7 +252,10 @@ export default function PrivacyPage() {
           {/* 5 — Deletion policy */}
           <section className="space-y-5">
             <SectionLabel index="05" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               Deletion Policy
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
@@ -240,7 +272,8 @@ export default function PrivacyPage() {
               >
                 bhuneshbansal20039888@gmail.com
               </a>{' '}
-              with the subject line <span style={{ color: 'rgba(245,240,232,0.8)' }}>&quot;Delete My Account&quot;</span>.
+              with the subject line{' '}
+              <span style={{ color: 'rgba(245,240,232,0.8)' }}>&quot;Delete My Account&quot;</span>.
               We will permanently erase all your data within 7 days and confirm via email.
             </p>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
@@ -254,7 +287,10 @@ export default function PrivacyPage() {
           {/* 6 — Data security */}
           <section className="space-y-5">
             <SectionLabel index="06" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               Data Security
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
@@ -264,8 +300,8 @@ export default function PrivacyPage() {
             </p>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               Despite these measures, no system is completely secure. In the unlikely event of a
-              data breach that affects you, we will notify you via email within 72 hours of
-              becoming aware of it.
+              data breach that affects you, we will notify you via email within 72 hours of becoming
+              aware of it.
             </p>
           </section>
 
@@ -274,7 +310,10 @@ export default function PrivacyPage() {
           {/* 7 — Children */}
           <section className="space-y-5">
             <SectionLabel index="07" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               Children&apos;s Privacy
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
@@ -289,14 +328,17 @@ export default function PrivacyPage() {
           {/* 8 — Changes */}
           <section className="space-y-5">
             <SectionLabel index="08" />
-            <h2 className="font-cinematic font-black text-2xl uppercase tracking-tight" style={{ color: 'rgba(245,240,232,0.92)' }}>
+            <h2
+              className="font-cinematic font-black text-2xl uppercase tracking-tight"
+              style={{ color: 'rgba(245,240,232,0.92)' }}
+            >
               Changes to This Policy
             </h2>
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               We may update this Privacy Policy as the app evolves. If we make material changes, we
-              will update the &quot;Last updated&quot; date above and, where practical, send a notice to your
-              registered email address. Continued use of the app after changes constitutes
-              acceptance of the revised policy.
+              will update the &quot;Last updated&quot; date above and, where practical, send a
+              notice to your registered email address. Continued use of the app after changes
+              constitutes acceptance of the revised policy.
             </p>
           </section>
 
@@ -321,7 +363,6 @@ export default function PrivacyPage() {
               </a>
             </p>
           </section>
-
         </div>
       </main>
 
@@ -334,11 +375,17 @@ export default function PrivacyPage() {
           backdropFilter: 'blur(12px)',
         }}
       >
-        <p className="font-mono text-[7.5px] uppercase tracking-[0.5em]" style={{ color: 'rgba(245,240,232,0.15)' }}>
+        <p
+          className="font-mono text-[7.5px] uppercase tracking-[0.5em]"
+          style={{ color: 'rgba(245,240,232,0.15)' }}
+        >
           YAARLORE
         </p>
-        <Link href="/terms" className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
-          style={{ color: 'rgba(245,240,232,0.2)' }}>
+        <Link
+          href="/terms"
+          className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+          style={{ color: 'rgba(245,240,232,0.2)' }}
+        >
           Terms of Service →
         </Link>
       </footer>
@@ -350,8 +397,10 @@ export default function PrivacyPage() {
 
 function SectionLabel({ index }: { index: string }) {
   return (
-    <p className="font-mono text-[8px] uppercase tracking-[0.5em]"
-      style={{ color: 'rgba(245,240,232,0.2)' }}>
+    <p
+      className="font-mono text-[8px] uppercase tracking-[0.5em]"
+      style={{ color: 'rgba(245,240,232,0.2)' }}
+    >
       § {index}
     </p>
   );
@@ -361,7 +410,9 @@ function Divider() {
   return (
     <div
       className="w-full h-px"
-      style={{ background: 'linear-gradient(90deg, transparent, rgba(245,240,232,0.08), transparent)' }}
+      style={{
+        background: 'linear-gradient(90deg, transparent, rgba(245,240,232,0.08), transparent)',
+      }}
     />
   );
 }
@@ -375,8 +426,10 @@ function ListItem({ label, body }: { label: string; body: string }) {
         border: '1px solid rgba(245,240,232,0.06)',
       }}
     >
-      <p className="font-cinematic font-black text-[13px] uppercase tracking-wide"
-        style={{ color: 'rgba(245,240,232,0.75)' }}>
+      <p
+        className="font-cinematic font-black text-[13px] uppercase tracking-wide"
+        style={{ color: 'rgba(245,240,232,0.75)' }}
+      >
         {label}
       </p>
       <p style={{ color: 'rgba(245,240,232,0.5)', fontSize: '0.875rem', lineHeight: 1.7 }}>

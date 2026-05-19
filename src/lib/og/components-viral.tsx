@@ -14,7 +14,7 @@ export function MemberInitial({
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((w) => w[0])
+    .map(w => w[0])
     .join('')
     .toUpperCase();
 
@@ -88,12 +88,24 @@ export function MetricBlock({
       >
         {value}
         {outOf && (
-          <span style={{ fontSize: 100, color: palette.inkMuted, fontWeight: 500, letterSpacing: -4 }}>
+          <span
+            style={{ fontSize: 100, color: palette.inkMuted, fontWeight: 500, letterSpacing: -4 }}
+          >
             /{outOf}
           </span>
         )}
       </div>
-      <div style={{ paddingBottom: 24, fontSize: 32, fontFamily: 'Space Grotesk', fontWeight: 500, color: palette.inkSoft, textTransform: 'uppercase', letterSpacing: 4 }}>
+      <div
+        style={{
+          paddingBottom: 24,
+          fontSize: 32,
+          fontFamily: 'Space Grotesk',
+          fontWeight: 500,
+          color: palette.inkSoft,
+          textTransform: 'uppercase',
+          letterSpacing: 4,
+        }}
+      >
         {label}
       </div>
     </div>

@@ -17,7 +17,9 @@ export function SlidePhotoBackground({ photos, slideIdx, visible = true }: Props
   const photo = photos[slideIdx % Math.max(photos.length, 1)];
   const url = photo?.thumbnailUrl || photo?.url;
 
-  useEffect(() => { setLoaded(false); }, [slideIdx]);
+  useEffect(() => {
+    setLoaded(false);
+  }, [slideIdx]);
 
   if (!url || !visible) return null;
 
@@ -36,8 +38,10 @@ export function SlidePhotoBackground({ photos, slideIdx, visible = true }: Props
         }}
       />
       {/* Vignette overlay */}
-      <div className="absolute inset-0"
-           style={{ background: 'radial-gradient(ellipse at center, transparent 20%, #060604 80%)' }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(ellipse at center, transparent 20%, #060604 80%)' }}
+      />
     </div>
   );
 }

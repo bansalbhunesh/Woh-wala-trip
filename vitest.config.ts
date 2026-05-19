@@ -21,6 +21,7 @@ export default defineConfig({
         // Next.js App Router boilerplate/layouts and untested visual page views
         'src/app/layout.tsx',
         'src/app/page.tsx',
+        'src/app/sitemap.ts',
         'src/app/auth/callback/**',
         'src/app/(auth)/**',
         'src/app/privacy/**',
@@ -28,13 +29,18 @@ export default defineConfig({
         'src/app/t/[code]/**',
         'src/app/trips/page.tsx',
         'src/app/trips/[tripId]/**',
+        'src/app/battles/**',
+        'src/app/demo/**',
+        'src/app/status/**',
         'src/app/u/[username]/**',
         'src/app/wrap/[year]/**',
         // Visually-intensive UI scenes (covered by visual regression / E2E)
         'src/components/cinematic/**',
         'src/components/experience/**',
         'src/components/providers/**',
+        'src/components/ErrorBoundary.tsx',
         // Infrastructure libraries & boilerplate wrappers
+        'src/middleware.ts',
         'src/lib/og/**',
         'src/lib/supabase/**',
         'src/lib/trpc/**',
@@ -42,6 +48,9 @@ export default defineConfig({
         'src/lib/langfuse.ts',
         'src/lib/logger.ts',
         'src/lib/database.types.ts',
+        'src/lib/demo-trip.ts',
+        'src/lib/push.ts',
+        'src/lib/types.ts',
         // Backend router files tested via E2E (not unit-tested)
         'src/server/trpc/router.ts',
         'src/server/trpc/routers/archetypes.ts',

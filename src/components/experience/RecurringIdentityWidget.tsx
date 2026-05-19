@@ -24,10 +24,14 @@ export function RecurringIdentityWidget({ tripId }: { tripId: string }) {
   const isRecurring = history.length >= 2 && (archCounts[topArchetype] ?? 0) >= 2;
 
   return (
-    <div className="px-6 py-5 rounded-[2rem] border space-y-4"
-         style={{ background: 'rgba(255,77,77,0.04)', borderColor: 'rgba(255,77,77,0.12)' }}>
-      <div className="text-[7px] font-mono uppercase tracking-[0.5em]"
-           style={{ color: 'rgba(255,77,77,0.5)' }}>
+    <div
+      className="px-6 py-5 rounded-[2rem] border space-y-4"
+      style={{ background: 'rgba(255,77,77,0.04)', borderColor: 'rgba(255,77,77,0.12)' }}
+    >
+      <div
+        className="text-[7px] font-mono uppercase tracking-[0.5em]"
+        style={{ color: 'rgba(255,77,77,0.5)' }}
+      >
         Recurring Identity
       </div>
 

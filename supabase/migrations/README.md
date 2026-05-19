@@ -7,11 +7,11 @@ https://app.supabase.com/project/lngtsccftumhbycywerg/sql
 
 ## Order
 
-| File | Description |
-|------|-------------|
-| `20260515_auto_profile.sql` | Trigger: auto-create `profiles` row on new auth signup |
-| `20260516_anniversary_and_reactions.sql` | `scheduled_emails` table + lore reaction tables/views |
-| `20260516_cross_trip_features.sql` | `user_archetypes`, `yearly_wraps`, `username`/`is_public` columns, archetype functions, `public_profiles` view |
+| File                                     | Description                                                                                                    |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `20260515_auto_profile.sql`              | Trigger: auto-create `profiles` row on new auth signup                                                         |
+| `20260516_anniversary_and_reactions.sql` | `scheduled_emails` table + lore reaction tables/views                                                          |
+| `20260516_cross_trip_features.sql`       | `user_archetypes`, `yearly_wraps`, `username`/`is_public` columns, archetype functions, `public_profiles` view |
 
 ## Rules
 

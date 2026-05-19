@@ -6,3 +6,10 @@ playwright-report
 ai-worker
 external-tools
 *.min.js
+
+# Tool metadata — not project source
+.claude
+.claude-flow
+.swarm
+.planning
+supabase/.temp

@@ -20,7 +20,9 @@ export default function ReactionBar({ tripId, slideType, slideIdx, isPublic }: P
   useEffect(() => {
     fetch(`/api/reactions?tripId=${tripId}&slideType=${slideType}&slideIdx=${slideIdx ?? -1}`)
       .then(r => r.json())
-      .then(d => { if (d.counts) setCounts(d.counts); })
+      .then(d => {
+        if (d.counts) setCounts(d.counts);
+      })
       .catch(() => {});
   }, [tripId, slideType, slideIdx]);
 
@@ -40,7 +42,9 @@ export default function ReactionBar({ tripId, slideType, slideIdx, isPublic }: P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tripId, slideType, slideIdx: slideIdx ?? null, emoji }),
       });
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
     setSending(false);
   };
 
@@ -65,8 +69,10 @@ export default function ReactionBar({ tripId, slideType, slideIdx, isPublic }: P
           >
             <span style={{ fontSize: 16 }}>{emoji}</span>
             {count > 0 && (
-              <span className="font-mono text-[9px]"
-                    style={{ color: isActive ? 'rgba(255,77,77,0.8)' : 'rgba(245,240,232,0.3)' }}>
+              <span
+                className="font-mono text-[9px]"
+                style={{ color: isActive ? 'rgba(255,77,77,0.8)' : 'rgba(245,240,232,0.3)' }}
+              >
                 {count}
               </span>
             )}
