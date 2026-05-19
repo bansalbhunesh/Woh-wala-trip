@@ -54,7 +54,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ trip
 
     const isDownload = req.nextUrl.searchParams.get('download') === '1';
 
-    const imgResponse = await renderCard(
+    // Download variant — same card, forced download header
+    if (isDownload) {
+      const filename = `${(trip.name || 'trip').replace(/\s+/g, '-')}-lore-card.png`;
+      const downloadCard = await renderCard(
+        <CardFrame palette={palette}>
+          <Eyebrow palette={palette}>Yaarlore</Eyebrow>
+          <Title palette={palette}>{lore.trip_title}</Title>
+          <Tagline palette={palette}>{lore.tagline}</Tagline>
+          <CookedLevel
+            palette={palette}
+            level={trip.chaos_score || 0}
+            verdict={lore.cooked_verdict}
+          />
+          <Closing palette={palette}>{lore.closing_line}</Closing>
+          <CardFooter
+            palette={palette}
+            qrDataUrl={qr}
+            showWatermark={trip.tier === 'free'}
+            qrLabel="Scan to join"
+          />
+        </CardFrame>,
+        { width: 1200, height: 630, fonts, filename }
+      );
+      return downloadCard;
+    }
+
+    // OG preview — standard 1200×630 landscape for WhatsApp/Twitter/OG tags.
+    // Note: renderCard defaults to 1080×1920 (portrait).
+    // Main trip OG card must explicitly request 1200×630 (landscape standard).
+    // Without this, WhatsApp/Twitter previews show a blank/cropped portrait image.
+    return renderCard(
       <CardFrame palette={palette}>
         <Eyebrow palette={palette}>Yaarlore</Eyebrow>
         <Title palette={palette}>{lore.trip_title}</Title>
@@ -72,22 +102,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ trip
           qrLabel="Scan to join"
         />
       </CardFrame>,
-      { fonts }
+      { width: 1200, height: 630, fonts, cacheSeconds: 3600 }
     );
-
-    if (isDownload) {
-      const filename = `${(trip.name || 'trip').replace(/\s+/g, '-')}-lore-card.png`;
-      const buf = await imgResponse.arrayBuffer();
-      return new Response(buf, {
-        headers: {
-          'Content-Type': 'image/png',
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Cache-Control': 'no-store',
-        },
-      });
-    }
-
-    return imgResponse;
   } catch (err) {
     console.error('OG Route Error:', err);
     return errorImage('Critical render failure');

@@ -217,7 +217,7 @@ export default function TripRoomPage() {
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
             {/* ── LEFT: documentary interactive visual deck ──────────────── */}
-            <div className="space-y-6">
+            <div id="section-chaos" className="space-y-6">
               {
                 <div className="space-y-8">
                   {/* ① Delusion Index — giant emotional beat acts as hook */}
@@ -282,8 +282,12 @@ export default function TripRoomPage() {
                             key={ch.id}
                             aria-label={`Open scene: ${ch.title} — ${ch.desc}`}
                             onClick={() => {
-                              setActiveTab(ch.id as any);
-                              window.scrollTo({ top: 400, behavior: 'smooth' });
+                              // Scroll to the named section — setActiveTab is now a no-op
+                              // since content is linear. Each section has id="section-{id}".
+                              const el = document.getElementById(`section-${ch.id}`);
+                              if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
                             }}
                             className="group relative h-48 rounded-[2rem] overflow-hidden text-left border border-white/[0.08] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] active:scale-98 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
                           >
@@ -340,7 +344,7 @@ export default function TripRoomPage() {
               }
 
               {
-                <div className="space-y-6">
+                <div id="section-evidence" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
@@ -402,7 +406,7 @@ export default function TripRoomPage() {
               }
 
               {
-                <div className="space-y-6">
+                <div id="section-timeline" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
@@ -504,7 +508,7 @@ export default function TripRoomPage() {
               }
 
               {
-                <div className="space-y-6">
+                <div id="section-verdict" className="space-y-6">
                   {/* Category Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-white/5">
                     <button
