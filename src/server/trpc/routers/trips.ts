@@ -6,33 +6,75 @@ import { langfuse } from '@/lib/langfuse';
 import { logger } from '@/lib/logger';
 import { signWorkerRequest } from '@/lib/worker-auth';
 import { Redis } from '@upstash/redis';
-// TYPE-01: Centralised type overrides for stale Supabase codegen.
-// See src/lib/supabase-extended.types.ts for full JSDoc on each type.
-// Remove imports one-by-one as TYPE-01 is resolved (supabase gen types re-run).
+// TYPE-01 resolved: database.types.ts regenerated 2026-05-19.
+// Only RPC result shapes remain in supabase-extended.types.ts.
 import type {
-  BackgroundJobInsert,
-  GenerationJobUpsert,
-  TripStatusUpdate,
-  TripPaymentUpdate,
-  StoryVisibilityUpdate,
-  ProfileReferralUpdate,
-  TripMemberAbsenceUpdate,
-  YearlyWrapUpsert,
-  YearlyWrapRow,
   SupabaseRpcClient,
   ListUserTripsArgs,
-  ListUserTripsClient,
+  ListUserTripsRow,
   GetTripFullResult,
   JoinTripResult,
   ConfessionResult,
   NostalgiaRow,
   SimilarPhotoRow,
-  TripCreatorRow,
-  TripUpgradeRow,
-  TripSummary,
-  ChaosDistributionRow,
-  ProfileTokenUsage,
+  ClaimLoreResult,
 } from '@/lib/supabase-extended.types';
+import type { Database } from '@/lib/database.types';
+
+// Convenience aliases from the generated Database type — TYPE-01 fully resolved.
+type TripRow = Database['public']['Tables']['trips']['Row'];
+type TripUpdate = Database['public']['Tables']['trips']['Update'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+type TripMemberUpdate = Database['public']['Tables']['trip_members']['Update'];
+type BackgroundJobInsert = Database['public']['Tables']['background_jobs']['Insert'];
+type YearlyWrapRow = Database['public']['Tables']['yearly_wraps']['Row'];
+type YearlyWrapInsert = Database['public']['Tables']['yearly_wraps']['Insert'];
+type GenerationJobInsert = Database['public']['Tables']['generation_jobs']['Insert'];
+type ChaosDistributionRow = Database['public']['Views']['chaos_distribution_cache']['Row'];
+
+// Structural aliases — subset of generated row types used for query result shapes
+type TripCreatorRow = Pick<TripRow, 'creator_id'>;
+type TripUpgradeRow = Pick<TripRow, 'creator_id' | 'tier'>;
+type TripSummary = Pick<
+  TripRow,
+  | 'id'
+  | 'name'
+  | 'destination'
+  | 'trip_start_date'
+  | 'trip_end_date'
+  | 'lore_status'
+  | 'lore_json'
+  | 'chaos_score'
+  | 'member_count'
+  | 'total_photos'
+  | 'tier'
+  | 'created_at'
+>;
+type ProfileReferralUpdate = Pick<
+  ProfileUpdate,
+  'referral_counted' | 'referral_count' | 'referral_bonus_unlocked' | 'invited_by_user_id'
+>;
+type ProfileTokenUsage = Pick<
+  ProfileRow,
+  'referral_bonus_unlocked' | 'generation_tokens_used_this_month' | 'generation_tokens_month'
+>;
+type TripMemberAbsenceUpdate = Pick<TripMemberUpdate, 'status' | 'absence_reason'>;
+type TripStatusUpdate = Pick<TripUpdate, 'lore_status' | 'processing_started_at'>;
+type TripPaymentUpdate = Pick<TripUpdate, 'tier' | 'payment_id' | 'expires_at'>;
+type StoryVisibilityUpdate = Pick<TripUpdate, 'story_visible'>;
+// YearlyWrapUpsert extends the generated Insert type with trip_ids/status columns
+// added in migration 2026051908_yearly_wraps_columns.sql
+type YearlyWrapUpsert = YearlyWrapInsert & { trip_ids?: string[]; status?: string };
+type GenerationJobUpsert = GenerationJobInsert;
+
+// ListUserTripsClient: typed RPC wrapper for the list_user_trips pagination function
+type ListUserTripsClient = {
+  rpc: (
+    fn: 'list_user_trips',
+    args: ListUserTripsArgs
+  ) => Promise<{ data: ListUserTripsRow[] | null; error: { message: string } | null }>;
+};
 
 // COST-05: Server-side warmupWorker cache.
 // Maps userId → Unix timestamp (ms) of the last successful warmup call.
@@ -65,13 +107,6 @@ type ChaosDist = { p50: number; p75: number; p90: number; total: number };
 
 // Module-level in-memory fallback — used ONLY when Redis is not configured (dev only).
 const _chaosDistMemCache = new Map<'global', { data: ChaosDist | null; expiry: number }>();
-
-// All module-level type declarations moved to @/lib/supabase-extended.types.ts (TYPE-01).
-// The import block above brings in: BackgroundJobInsert, GenerationJobUpsert,
-// TripStatusUpdate, TripPaymentUpdate, StoryVisibilityUpdate, ProfileReferralUpdate,
-// TripMemberAbsenceUpdate, YearlyWrapUpsert, YearlyWrapRow, SupabaseRpcClient,
-// GetTripFullResult, JoinTripResult, ConfessionResult, NostalgiaRow, SimilarPhotoRow,
-// TripCreatorRow, TripUpgradeRow, TripSummary, ChaosDistributionRow, ProfileTokenUsage.
 
 const TripCreateInput = z.object({
   name: z.string().min(2).max(80),

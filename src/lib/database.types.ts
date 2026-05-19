@@ -50,6 +50,13 @@ export type Database = {
             foreignKeyName: 'background_jobs_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'background_jobs_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -103,6 +110,13 @@ export type Database = {
             foreignKeyName: 'generation_jobs_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: true;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'generation_jobs_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: true;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -137,6 +151,13 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'lore_reactions_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
           {
             foreignKeyName: 'lore_reactions_trip_id_fkey';
             columns: ['trip_id'];
@@ -224,6 +245,13 @@ export type Database = {
             foreignKeyName: 'photo_views_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'photo_views_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -238,6 +266,7 @@ export type Database = {
           file_size: number | null;
           id: string;
           is_analyzed: boolean | null;
+          is_private: boolean;
           signed_url: string | null;
           storage_path: string;
           thumb_signed_url: string | null;
@@ -254,6 +283,7 @@ export type Database = {
           file_size?: number | null;
           id?: string;
           is_analyzed?: boolean | null;
+          is_private?: boolean;
           signed_url?: string | null;
           storage_path: string;
           thumb_signed_url?: string | null;
@@ -270,6 +300,7 @@ export type Database = {
           file_size?: number | null;
           id?: string;
           is_analyzed?: boolean | null;
+          is_private?: boolean;
           signed_url?: string | null;
           storage_path?: string;
           thumb_signed_url?: string | null;
@@ -279,6 +310,13 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'photos_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
           {
             foreignKeyName: 'photos_trip_id_fkey';
             columns: ['trip_id'];
@@ -328,6 +366,13 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'print_waitlist_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
           {
             foreignKeyName: 'print_waitlist_trip_id_fkey';
             columns: ['trip_id'];
@@ -421,6 +466,13 @@ export type Database = {
             foreignKeyName: 'scheduled_emails_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'scheduled_emails_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -473,6 +525,13 @@ export type Database = {
             foreignKeyName: 'trip_eras_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_eras_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -516,6 +575,13 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'trip_members_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
           {
             foreignKeyName: 'trip_members_trip_id_fkey';
             columns: ['trip_id'];
@@ -569,6 +635,13 @@ export type Database = {
             foreignKeyName: 'trip_stats_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_stats_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -610,6 +683,13 @@ export type Database = {
             foreignKeyName: 'trip_vs_trip_ai_winner_fkey';
             columns: ['ai_winner'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_vs_trip_ai_winner_fkey';
+            columns: ['ai_winner'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -617,8 +697,22 @@ export type Database = {
             foreignKeyName: 'trip_vs_trip_trip_a_id_fkey';
             columns: ['trip_a_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_vs_trip_trip_a_id_fkey';
+            columns: ['trip_a_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'trip_vs_trip_trip_b_id_fkey';
+            columns: ['trip_b_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
           },
           {
             foreignKeyName: 'trip_vs_trip_trip_b_id_fkey';
@@ -647,6 +741,10 @@ export type Database = {
           lore_json: Json | null;
           lore_needs_review: boolean | null;
           lore_pipeline_state: Json | null;
+          lore_prompt_version: string | null;
+          lore_quality_retried: boolean | null;
+          lore_quality_retry_score_after: number | null;
+          lore_quality_retry_score_before: number | null;
           lore_status: string | null;
           lore_trace_id: string | null;
           member_count: number | null;
@@ -678,6 +776,10 @@ export type Database = {
           lore_json?: Json | null;
           lore_needs_review?: boolean | null;
           lore_pipeline_state?: Json | null;
+          lore_prompt_version?: string | null;
+          lore_quality_retried?: boolean | null;
+          lore_quality_retry_score_after?: number | null;
+          lore_quality_retry_score_before?: number | null;
           lore_status?: string | null;
           lore_trace_id?: string | null;
           member_count?: number | null;
@@ -709,6 +811,10 @@ export type Database = {
           lore_json?: Json | null;
           lore_needs_review?: boolean | null;
           lore_pipeline_state?: Json | null;
+          lore_prompt_version?: string | null;
+          lore_quality_retried?: boolean | null;
+          lore_quality_retry_score_after?: number | null;
+          lore_quality_retry_score_before?: number | null;
           lore_status?: string | null;
           lore_trace_id?: string | null;
           member_count?: number | null;
@@ -782,6 +888,13 @@ export type Database = {
             foreignKeyName: 'user_archetypes_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'user_archetypes_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -813,6 +926,13 @@ export type Database = {
       };
     };
     Views: {
+      chaos_distribution_cache: {
+        Row: {
+          chaos_score: number | null;
+          trip_id: string | null;
+        };
+        Relationships: [];
+      };
       lore_reaction_counts: {
         Row: {
           count: number | null;
@@ -822,6 +942,13 @@ export type Database = {
           trip_id: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'lore_reactions_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
           {
             foreignKeyName: 'lore_reactions_trip_id_fkey';
             columns: ['trip_id'];
@@ -852,6 +979,13 @@ export type Database = {
             foreignKeyName: 'photo_views_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'photo_views_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
             referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
@@ -872,6 +1006,10 @@ export type Database = {
     };
     Functions: {
       claim_generation_job: { Args: never; Returns: string };
+      claim_lore_generation: {
+        Args: { p_trip_id: string; p_user_id: string };
+        Returns: string;
+      };
       cleanup_expired_otp_codes: { Args: never; Returns: undefined };
       find_similar_photos: {
         Args: { p_limit?: number; p_photo_id: string; p_user_id: string };
@@ -919,7 +1057,25 @@ export type Database = {
           trip_year: number;
         }[];
       };
+      is_member_of_trip: { Args: { p_trip_id: string }; Returns: boolean };
       join_trip_by_code: { Args: { p_invite_code: string }; Returns: Json };
+      list_user_trips: {
+        Args: { p_cursor?: string; p_limit?: number; p_user_id: string };
+        Returns: {
+          chaos_score: number;
+          created_at: string;
+          destination: string;
+          lore_status: string;
+          member_count: number;
+          name: string;
+          tier: string;
+          total_photos: number;
+          trip_end_date: string;
+          trip_id: string;
+          trip_start_date: string;
+        }[];
+      };
+      refresh_chaos_distribution: { Args: never; Returns: undefined };
       submit_confession: {
         Args: { p_confession: string; p_trip_id: string };
         Returns: Json;

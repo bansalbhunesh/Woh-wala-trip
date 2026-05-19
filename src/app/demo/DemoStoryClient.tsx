@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { LoreJson } from '@/lib/types';
 import { MoodSoundtrack } from '@/components/experience/MoodSoundtrack';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { analytics } from '@/lib/analytics';
 
 type Slide =
   | { type: 'title'; lore: LoreJson }

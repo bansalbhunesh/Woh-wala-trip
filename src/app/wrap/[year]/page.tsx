@@ -1,11 +1,10 @@
 'use client';
 
-// FEAT-V2-01: Yearly Wrap feature — fully wired.
-// Replaced the redirect stub with real generation + viewer.
-
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import { analytics } from '@/lib/analytics';
+import { createBrowserClient } from '@supabase/ssr';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -44,9 +43,11 @@ function tierColor(tier?: string): string {
 function WrapViewer({
   wrap,
   year,
+  userId,
 }: {
   wrap: { wrap_json: WrapJson; status: string; trip_ids: string[] };
   year: number;
+  userId?: string;
 }) {
   const wj = wrap.wrap_json;
   const color = tierColor(wj?.chaos_tier);
@@ -171,6 +172,9 @@ function WrapViewer({
         </div>
       )}
 
+      {/* Share row */}
+      <ShareButton year={year} userId={userId} />
+
       {/* Back link */}
       <a
         href="/trips"
@@ -179,6 +183,50 @@ function WrapViewer({
         ← Back to trips
       </a>
     </main>
+  );
+}
+
+function ShareButton({ year, userId }: { year: number; userId?: string }) {
+  const [copied, setCopied] = useState(false);
+  const shareUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/wrap/${year}` : `/wrap/${year}`;
+  const cardUrl = userId ? `/api/card/wrap/${userId}/${year}` : null;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      analytics.wrapShared(year);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard not available */
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-4 relative z-10 mt-6 mb-2">
+      <button
+        onClick={handleCopy}
+        className="px-8 py-3 rounded-full font-mono font-black text-[10px] uppercase tracking-[0.35em] transition-all hover:scale-105 active:scale-95"
+        style={{
+          background: copied ? 'rgba(45,158,139,0.12)' : 'rgba(255,77,77,0.1)',
+          border: `1px solid ${copied ? 'rgba(45,158,139,0.4)' : 'rgba(255,77,77,0.35)'}`,
+          color: copied ? 'rgba(45,158,139,0.95)' : 'rgba(255,77,77,0.9)',
+        }}
+      >
+        {copied ? '✓ Link Copied!' : `↑ Share ${year} Wrap`}
+      </button>
+      {cardUrl && (
+        <a
+          href={cardUrl}
+          download={`yaarlore-wrap-${year}.png`}
+          className="font-mono text-[8px] uppercase tracking-[0.4em] text-white/25 hover:text-white/50 transition-colors"
+          onClick={() => analytics.wrapShared(year)}
+        >
+          ↓ Download card
+        </a>
+      )}
+    </div>
   );
 }
 
@@ -281,6 +329,15 @@ export default function WrapPage() {
   const params = useParams();
   const yearStr = params.year as string;
   const year = parseInt(yearStr, 10);
+  const [userId, setUserId] = useState<string | undefined>();
+
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth.getUser().then(({ data }) => setUserId(data?.user?.id ?? undefined));
+  }, []);
 
   // Basic validation
   const validYear = !isNaN(year) && year >= 2020 && year <= 2030;
@@ -335,5 +392,5 @@ export default function WrapPage() {
     return <GenerateWrapPrompt year={year} />;
   }
 
-  return <WrapViewer wrap={wrap as any} year={year} />;
+  return <WrapViewer wrap={wrap as any} year={year} userId={userId} />;
 }

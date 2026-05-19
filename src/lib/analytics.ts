@@ -11,18 +11,45 @@ export function initPostHog() {
 }
 
 export const analytics = {
-  tripCreated: (tripId: string, name: string) =>
-    posthog.capture('trip_created', { tripId, name }),
+  // ── Existing events ────────────────────────────────────────────────────────
+  tripCreated: (tripId: string, name: string) => posthog.capture('trip_created', { tripId, name }),
   photosUploaded: (tripId: string, count: number) =>
     posthog.capture('photos_uploaded', { tripId, count }),
-  generationStarted: (tripId: string) =>
-    posthog.capture('generation_started', { tripId }),
+  generationStarted: (tripId: string) => posthog.capture('generation_started', { tripId }),
   generationCompleted: (tripId: string, cookedScore: number, duration_s?: number) =>
     posthog.capture('generation_completed', { tripId, cookedScore, duration_s }),
   storyShared: (tripId: string, method: 'link' | 'whatsapp' | 'instagram' | 'download') =>
     posthog.capture('story_shared', { tripId, method }),
-  friendInvited: (tripId: string) =>
-    posthog.capture('friend_invited', { tripId }),
-  storyRevisited: (tripId: string) =>
-    posthog.capture('story_revisited', { tripId }),
+  friendInvited: (tripId: string) => posthog.capture('friend_invited', { tripId }),
+  storyRevisited: (tripId: string) => posthog.capture('story_revisited', { tripId }),
+
+  // ── Demo funnel ────────────────────────────────────────────────────────────
+  demoViewed: () => posthog.capture('demo_viewed'),
+  demoCTAClicked: () => posthog.capture('demo_cta_clicked'),
+  demoShared: () => posthog.capture('demo_shared'),
+
+  // ── Onboarding funnel ──────────────────────────────────────────────────────
+  signupStarted: (source: string) => posthog.capture('signup_started', { source }),
+  otpSent: () => posthog.capture('otp_sent'),
+  otpVerified: () => posthog.capture('otp_verified'),
+  firstTripCreated: () => posthog.capture('first_trip_created'),
+  photoUploaded: (count: number) =>
+    posthog.capture('photo_uploaded', { count, milestone: count >= 5 ? '5+' : '<5' }),
+  loreGenerationStarted: (isFirstTrip: boolean) =>
+    posthog.capture('lore_generation_started', { is_first_trip: isFirstTrip }),
+  loreGenerationCompleted: (tripId: string) =>
+    posthog.capture('lore_generation_completed', { trip_id: tripId }),
+
+  // ── Revenue funnel ─────────────────────────────────────────────────────────
+  upgradePageViewed: (tripId: string) =>
+    posthog.capture('upgrade_page_viewed', { trip_id: tripId }),
+  planSelected: (plan: 'monthly' | 'annual' | 'digital' | 'print') =>
+    posthog.capture('plan_selected', { plan }),
+  paymentCompleted: (plan: string, amountPaise: number) =>
+    posthog.capture('payment_completed', { plan, amount_inr: amountPaise / 100 }),
+
+  // ── Virality funnel ────────────────────────────────────────────────────────
+  battleCreated: (tripId: string) => posthog.capture('battle_created', { trip_id: tripId }),
+  battleShared: (battleId: string) => posthog.capture('battle_shared', { battle_id: battleId }),
+  wrapShared: (year: number) => posthog.capture('wrap_shared', { year }),
 };
