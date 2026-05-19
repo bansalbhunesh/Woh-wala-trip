@@ -43,6 +43,7 @@ import { DisputePanel } from '@/components/experience/DisputeSystem';
 import { MemoryReviewBanner } from '@/components/experience/MemoryReview';
 import { ProphecyCard, ProphecyAccuracyReveal } from '@/components/experience/ProphecyCard';
 import { IncidentButton } from '@/components/experience/GroupPulse';
+import { IncidentLog } from '@/components/experience/IncidentLog';
 
 export default function TripRoomPage() {
   const params = useParams();
@@ -205,6 +206,13 @@ export default function TripRoomPage() {
 
           {/* Pre-trip prophecy accuracy (shown if there was a prophecy before this trip) */}
           {isReady && lore && <ProphecyAccuracyReveal tripId={tripId} />}
+
+          {/* Incident Log — explorable structured history record */}
+          {isReady && (
+            <div className="mb-6">
+              <IncidentLog tripId={tripId} />
+            </div>
+          )}
 
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">

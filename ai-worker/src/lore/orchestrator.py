@@ -427,6 +427,11 @@ class LoreOrchestrator:
             # the character arc, "who changed?", and dispute history features.
             self._record_identity_snapshots(trip_id, lore)
 
+            # Investigative Reconstruction: extract structured incidents, evidence gaps,
+            # and recurring references. These power the explorable incident log.
+            # Non-blocking — failures don't affect the main lore delivery.
+            await self._extract_incidents(trip_id, lore, trip)
+
             # Open the 7-day memory review window so members can confirm/add context.
             # This creates the "the group is waiting for your version" social pressure.
             from datetime import timedelta
@@ -459,6 +464,116 @@ class LoreOrchestrator:
     # -------------------------------------------------------------------------
     # Retention Machine: identity snapshots
     # -------------------------------------------------------------------------
+
+    async def _extract_incidents(self, trip_id: str, lore: dict, trip: dict) -> None:
+        """Extract structured incidents from the generated lore using Haiku.
+
+        Produces: trip_incidents, evidence_gaps, recurring_references records.
+        These power the explorable incident log — discrete, navigable memory records
+        instead of a single consumable narrative blob.
+
+        Architecture: Uses Haiku (cheap) because it's extraction not generation.
+        Non-fatal: any failure is logged and swallowed.
+        """
+        try:
+            # Build a summarized lore input (avoid sending the entire lore JSON)
+            lore_summary = {
+                "trip_title": lore.get("trip_title", ""),
+                "opening_line": lore.get("opening_line", ""),
+                "full_narrative": lore.get("season_recap", {}).get("full_narrative", ""),
+                "eras": [
+                    {"name": e.get("era_name"), "timeframe": e.get("timeframe"), "defining_moment": e.get("defining_moment")}
+                    for e in (lore.get("trip_eras") or [])
+                ],
+                "core_memory": lore.get("trip_lore_awards", {}).get("core_memory", ""),
+                "chaos_source": lore.get("friendship_dynamics", {}).get("chaos_source", ""),
+                "what_really_about": lore.get("what_this_trip_was_really_about", ""),
+            }
+            lore_summary_str = json.dumps(lore_summary, indent=2)[:3000]  # cap for token budget
+
+            prompt = prompts.INCIDENT_EXTRACTION_USER.format(
+                trip_name=trip.get("name", ""),
+                destination=trip.get("destination", ""),
+                duration_days=(trip.get("duration_days") or 3),
+                lore_json_summary=lore_summary_str,
+            )
+
+            response = await asyncio.to_thread(
+                lambda: _anthropic.Anthropic().messages.create(
+                    model="claude-haiku-20241022",
+                    max_tokens=2048,
+                    system=prompts.INCIDENT_EXTRACTION_SYSTEM,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+            )
+
+            raw = response.content[0].text
+            # Strip any accidental markdown fences
+            raw = raw.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+
+            extracted = json.loads(raw)
+
+            # Persist incidents
+            incidents = extracted.get("incidents") or []
+            for inc in incidents:
+                try:
+                    supabase.table("trip_incidents").insert({
+                        "trip_id": trip_id,
+                        "incident_ref": inc.get("incident_ref", "INC-?"),
+                        "title": inc.get("title", "Unnamed incident"),
+                        "timeframe": inc.get("timeframe"),
+                        "confidence": inc.get("confidence", "INFERRED"),
+                        "verified_facts": inc.get("verified_facts") or [],
+                        "inferred_elements": inc.get("inferred_elements") or [],
+                        "unknown_elements": inc.get("unknown_elements") or [],
+                        "participant_names": inc.get("participant_names") or [],
+                        "is_contested": bool(inc.get("is_contested", False)),
+                        "callback_potential": inc.get("callback_potential", "LOW"),
+                        "mythology_status": "contested" if inc.get("is_contested") else "pending",
+                        "investigator_note": inc.get("investigator_note"),
+                    }).execute()
+                except Exception as e:
+                    log.warning(f"[{trip_id}] failed to insert incident {inc.get('incident_ref')}: {e}")
+
+            # Persist evidence gaps
+            gaps = extracted.get("evidence_gaps") or []
+            for gap in gaps:
+                try:
+                    supabase.table("evidence_gaps").insert({
+                        "trip_id": trip_id,
+                        "gap_ref": gap.get("gap_ref", "GAP-?"),
+                        "timeframe": gap.get("timeframe", ""),
+                        "what_we_know": gap.get("what_we_know"),
+                        "what_we_dont": gap.get("what_we_dont", ""),
+                        "significance": gap.get("significance", "LOW"),
+                    }).execute()
+                except Exception as e:
+                    log.warning(f"[{trip_id}] failed to insert gap {gap.get('gap_ref')}: {e}")
+
+            # Persist recurring references
+            refs = extracted.get("recurring_references") or []
+            for ref in refs:
+                if not ref.get("phrase"):
+                    continue
+                try:
+                    supabase.table("recurring_references").insert({
+                        "origin_trip_id": trip_id,
+                        "phrase": ref.get("phrase", ""),
+                        "context": ref.get("context"),
+                        "activation_condition": ref.get("activation_condition"),
+                    }).execute()
+                except Exception as e:
+                    log.warning(f"[{trip_id}] failed to insert recurring ref: {e}")
+
+            log.info(
+                f"[{trip_id}] incident extraction complete: "
+                f"{len(incidents)} incidents, {len(gaps)} gaps, {len(refs)} refs"
+            )
+
+        except Exception as e:
+            log.warning(f"[{trip_id}] incident extraction failed (non-blocking): {e}")
 
     def _record_identity_snapshots(self, trip_id: str, lore: dict) -> None:
         """After lore is finalised, write one identity snapshot per trip member.

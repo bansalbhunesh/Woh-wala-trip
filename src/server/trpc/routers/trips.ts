@@ -1816,6 +1816,64 @@ export const tripsRouter = router({
       return { ok: true };
     }),
 
+  // ── Incident Log — explorable memory reconstruction ───────────────────────
+  // Returns structured incidents and evidence gaps for a trip.
+  // These power the explorable history view (not the consumable narrative).
+  getIncidentLog: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseServiceClient();
+
+      const { data: member } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!member) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      const [{ data: incidents }, { data: gaps }] = await Promise.all([
+        admin
+          .from('trip_incidents' as never)
+          .select(
+            'id, incident_ref, title, timeframe, confidence, verified_facts, inferred_elements, unknown_elements, participant_names, is_contested, callback_potential, mythology_status, investigator_note'
+          )
+          .eq('trip_id', input.tripId)
+          .order('incident_ref'),
+        admin
+          .from('evidence_gaps' as never)
+          .select('id, gap_ref, timeframe, what_we_know, what_we_dont, significance')
+          .eq('trip_id', input.tripId)
+          .order('gap_ref'),
+      ]);
+
+      return {
+        incidents: ((incidents as any[]) ?? []).map((i: any) => ({
+          id: i.id as string,
+          incidentRef: i.incident_ref as string,
+          title: i.title as string,
+          timeframe: i.timeframe as string | null,
+          confidence: i.confidence as string,
+          verifiedFacts: (i.verified_facts ?? []) as string[],
+          inferredElements: (i.inferred_elements ?? []) as string[],
+          unknownElements: (i.unknown_elements ?? []) as string[],
+          participantNames: (i.participant_names ?? []) as string[],
+          isContested: i.is_contested as boolean,
+          callbackPotential: i.callback_potential as string,
+          mythologyStatus: i.mythology_status as string,
+          investigatorNote: i.investigator_note as string | null,
+        })),
+        gaps: ((gaps as any[]) ?? []).map((g: any) => ({
+          id: g.id as string,
+          gapRef: g.gap_ref as string,
+          timeframe: g.timeframe as string,
+          whatWeKnow: g.what_we_know as string | null,
+          whatWeDont: g.what_we_dont as string,
+          significance: g.significance as string,
+        })),
+      };
+    }),
+
   // ── Character Arc — cross-trip identity evolution ──────────────────────────
   // The identity data that makes switching cost emotional, not technical.
   getMyCharacterArc: protectedProcedure.query(async ({ ctx }) => {
