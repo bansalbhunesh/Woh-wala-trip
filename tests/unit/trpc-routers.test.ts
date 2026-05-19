@@ -165,21 +165,20 @@ describe('trips.generateLore', () => {
     const { tripsRouter } = await import('@/server/trpc/routers/trips');
     vi.stubEnv('AI_WORKER_URL', 'https://worker.example.com');
 
-    let tripsCallCount = 0;
+    // generateLore now uses atomic RPC claim_lore_generation instead of a DB count check.
+    // Mock the service client to return 'already_processing' from the RPC.
+    mockServiceClient = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'trips')
+          return makeChain({ data: null, error: null }, { data: null, count: 0, error: null });
+        return makeChain({ data: null, error: null });
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: 'already_processing', error: null }),
+    };
+
     const supabase: Record<string, unknown> = {
       from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'trips') {
-          tripsCallCount++;
-          if (tripsCallCount === 1) {
-            // Creator check
-            return makeChain({ data: { creator_id: USER_ID }, error: null });
-          }
-          // Active processing jobs count: 1
-          return makeChain(
-            { data: null, count: 1, error: null },
-            { data: null, count: 1, error: null }
-          );
-        }
+        if (table === 'trips') return makeChain({ data: { creator_id: USER_ID }, error: null });
         // Photos: 10
         return makeChain(
           { data: null, count: 10, error: null },
@@ -311,48 +310,60 @@ describe('trips.upgradeTier', () => {
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
-  it('updates tier when HMAC signature is valid', async () => {
+  it('updates tier when webhook_payment_id is confirmed', async () => {
+    // upgradeTier is now webhook-authoritative: it reads webhook_payment_id set by the
+    // Razorpay webhook handler and uses that as proof of payment instead of re-validating HMAC.
     const { tripsRouter } = await import('@/server/trpc/routers/trips');
-    const secret = 'razorpay-test-secret';
-    vi.stubEnv('RAZORPAY_KEY_SECRET', secret);
-
-    const crypto = await import('crypto');
-    const orderId = 'order_valid';
     const paymentId = 'pay_valid';
-    const expectedSig = crypto
-      .createHmac('sha256', secret)
-      .update(orderId + '|' + paymentId)
-      .digest('hex');
 
-    const chain = makeChain({ data: { creator_id: USER_ID, tier: 'free' }, error: null });
-    mockServiceClient = { from: vi.fn().mockReturnValue(makeChain({ error: null })) };
+    // Service client returns the trip row (admin queries trips, not ctx.supabase)
+    mockServiceClient = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'trips') {
+          return makeChain({
+            data: { creator_id: USER_ID, tier: 'free', webhook_payment_id: paymentId },
+            error: null,
+          });
+        }
+        return makeChain({ error: null });
+      }),
+    };
 
-    const result = await tripsRouter
-      .createCaller(authCtx({ id: USER_ID }, chain) as never)
-      .upgradeTier({
-        tripId: TRIP_ID,
-        tier: 'digital',
-        paymentId,
-        orderId,
-        signature: expectedSig,
-      });
+    const result = await tripsRouter.createCaller(authCtx({ id: USER_ID }) as never).upgradeTier({
+      tripId: TRIP_ID,
+      tier: 'digital',
+      paymentId,
+      orderId: 'order_valid',
+      signature: 'ignored-webhook-is-authoritative',
+    });
     expect(result).toMatchObject({ success: true });
   });
 
-  it('throws BAD_REQUEST when trip is already upgraded', async () => {
+  it('returns alreadyUpgraded when trip is already on a paid tier', async () => {
+    // upgradeTier returns { success: true, alreadyUpgraded: true } for idempotent re-calls
+    // (e.g. webhook fired and upgraded the tier before the client polled).
     const { tripsRouter } = await import('@/server/trpc/routers/trips');
-    vi.stubEnv('RAZORPAY_KEY_SECRET', 'test-secret');
 
-    const chain = makeChain({ data: { creator_id: USER_ID, tier: 'digital' }, error: null });
-    await expect(
-      tripsRouter.createCaller(authCtx({ id: USER_ID }, chain) as never).upgradeTier({
-        tripId: TRIP_ID,
-        tier: 'print',
-        paymentId: 'p2',
-        orderId: 'o2',
-        signature: 'any',
-      })
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    mockServiceClient = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'trips') {
+          return makeChain({
+            data: { creator_id: USER_ID, tier: 'digital', webhook_payment_id: 'pay_existing' },
+            error: null,
+          });
+        }
+        return makeChain({ error: null });
+      }),
+    };
+
+    const result = await tripsRouter.createCaller(authCtx({ id: USER_ID }) as never).upgradeTier({
+      tripId: TRIP_ID,
+      tier: 'print',
+      paymentId: 'p2',
+      orderId: 'o2',
+      signature: 'any',
+    });
+    expect(result).toMatchObject({ success: true, alreadyUpgraded: true });
   });
 });
 
