@@ -198,21 +198,13 @@ export default function TripRoomPage() {
           {/* Lore Capsules — tap-to-unlock reveals (villain, MVP, core memory) */}
           {lore && <LoreCapsules lore={lore} members={members} tripId={tripId} />}
 
-          {/* Retention Machine: memory review banner + dispute panel */}
-          <div className="space-y-3 mb-6">
-            <MemoryReviewBanner tripId={tripId} />
-            <DisputePanel tripId={tripId} />
-          </div>
-
-          {/* Pre-trip prophecy accuracy (shown if there was a prophecy before this trip) */}
-          {isReady && lore && <ProphecyAccuracyReveal tripId={tripId} />}
-
-          {/* Incident Log — explorable structured history record */}
-          {isReady && (
-            <div className="mb-6">
-              <IncidentLog tripId={tripId} />
-            </div>
-          )}
+          {/* ── PROGRESSIVE DISCLOSURE: Deeper Record ──────────────────────────
+            Memory review and disputes are shown ONLY when there is activity.
+            Incident log is shown only when incidents have been extracted.
+            These are depth features, not first-visit features.
+            They appear contextually — not as empty sections waiting to be filled.
+          */}
+          <DeeperRecord tripId={tripId} lore={lore} isReady={isReady} />
 
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
@@ -923,6 +915,52 @@ function EmotionalDamageScan({ members }: { members: any[] }) {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEEPER RECORD — progressive disclosure of depth features
+// Hidden by default. Reveals contextually only when data exists.
+// Design principle: depth should be discovered, not presented.
+// ─────────────────────────────────────────────────────────────────────────────
+function DeeperRecord({ tripId, lore, isReady }: { tripId: string; lore: any; isReady: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  if (!isReady) return null;
+
+  return (
+    <div className="mb-6">
+      {/* Contextual sections that only show when data exists */}
+      <MemoryReviewBanner tripId={tripId} />
+      <div className="mt-3">
+        <DisputePanel tripId={tripId} />
+      </div>
+
+      {/* "Deeper record" — collapsed by default, reveals incident log + prophecy */}
+      <div className="mt-4">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-[0.45em] text-white/25 hover:text-white/45 transition-colors"
+        >
+          <span className="w-3 h-px" style={{ background: 'rgba(255,255,255,0.15)' }} />
+          {open ? 'Close deeper record' : 'Deeper record'}
+          <span className="w-3 h-px" style={{ background: 'rgba(255,255,255,0.15)' }} />
+          <span>{open ? '↑' : '↓'}</span>
+        </button>
+
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 space-y-4 overflow-hidden"
+          >
+            {lore && <ProphecyAccuracyReveal tripId={tripId} />}
+            <IncidentLog tripId={tripId} />
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

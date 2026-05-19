@@ -397,28 +397,22 @@ export default function TripsPage() {
         </div>
       </header>
 
-      <NostalgiaStrip />
+      {/* NostalgiaStrip — only shown when user has prior trips */}
+      {(trips?.length ?? 0) > 0 && <NostalgiaStrip />}
 
-      {/* Character Arc — your cross-trip identity (the moat) */}
-      <div className="px-8 pt-6 pb-0">
-        <CharacterArcWidget />
-      </div>
-
-      {/* Friendship Timeline — your mythology across all trips */}
-      <div className="px-8 pt-6 pb-0">
-        <FriendshipTimeline />
-      </div>
-
-      {/* Group Pulse — the living social feed */}
-      <div className="px-8 pt-6 pb-2">
-        <p
-          className="font-mono text-[8px] uppercase tracking-[0.55em] mb-4"
-          style={{ color: '#FF4D4D' }}
-        >
-          ● MYTHOLOGY IN MOTION
-        </p>
-        <GroupPulse />
-      </div>
+      {/* Group Pulse — only shown when user has mythology activity.
+          Comes FIRST because it shows what needs attention TODAY. */}
+      {(trips?.length ?? 0) >= 2 && (
+        <div className="px-8 pt-6 pb-2">
+          <p
+            className="font-mono text-[8px] uppercase tracking-[0.55em] mb-4"
+            style={{ color: '#FF4D4D' }}
+          >
+            ● MYTHOLOGY IN MOTION
+          </p>
+          <GroupPulse />
+        </div>
+      )}
 
       {/* Content */}
       <main className="relative z-10 px-8 py-10 pb-24">
@@ -733,6 +727,19 @@ export default function TripsPage() {
           </div>
         )}
       </main>
+
+      {/* Mythology depth — shown AFTER the trips grid, gated on 2+ trips.
+          Progressive disclosure: users discover their arc after they've seen
+          their trips. Not presented before they understand what they're building. */}
+      {(trips?.length ?? 0) >= 2 && (
+        <div className="px-8 pb-24 space-y-8">
+          <div className="w-full h-px" style={{ background: 'rgba(245,240,232,0.06)' }} />
+          {/* Character arc compact — your evolving identity */}
+          <CharacterArcWidget />
+          {/* Friendship timeline — your mythology across all trips */}
+          <FriendshipTimeline />
+        </div>
+      )}
 
       {/* Footer */}
       <footer

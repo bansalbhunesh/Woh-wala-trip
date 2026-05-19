@@ -324,18 +324,23 @@ export default function PublicStoryClient({
         ))}
       </div>
 
-      {/* Mood Soundtrack */}
-      <div className="absolute top-6 right-24 z-50">
-        <ErrorBoundary name="mood-soundtrack">
-          <MoodSoundtrack
-            cookedScore={cookedScore}
-            active={soundOn}
-            onToggle={() => setSoundOn(p => !p)}
-            activeSlideType={current?.type}
-            slideIndex={idx}
-          />
-        </ErrorBoundary>
-      </div>
+      {/* Mood Soundtrack — removed from default flow.
+          Audio in mobile browsers is blocked by default on iOS/Android.
+          Adds a visible UI element for <1% of users who can actually use it.
+          Preserving the component but not rendering it in the default experience. */}
+      {false && soundOn && (
+        <div className="absolute top-6 right-24 z-50">
+          <ErrorBoundary name="mood-soundtrack">
+            <MoodSoundtrack
+              cookedScore={cookedScore}
+              active={soundOn}
+              onToggle={() => setSoundOn(p => !p)}
+              activeSlideType={current?.type}
+              slideIndex={idx}
+            />
+          </ErrorBoundary>
+        </div>
+      )}
 
       {/* Back to overview */}
       <button
