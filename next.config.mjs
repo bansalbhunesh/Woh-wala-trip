@@ -2,7 +2,15 @@ import { withSentryConfig } from '@sentry/nextjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Compress responses — critical for mobile users on slow Indian mobile connections
+  compress: true,
   images: {
+    // Serve WebP/AVIF automatically — ~30% smaller than JPEG on Android
+    formats: ['image/avif', 'image/webp'],
+    // Targets Redmi Note/Samsung Galaxy A-series — most India devices
+    deviceSizes: [390, 414, 640, 750, 828, 1080, 1200],
+    imageSizes: [32, 48, 64, 96, 128, 256],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: 'https',

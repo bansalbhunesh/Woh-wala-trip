@@ -82,6 +82,22 @@ test('wrap OG card endpoint returns an image for unknown user', async ({ request
   expect(ct).toMatch(/image\/(png|svg\+xml)/);
 });
 
+test('story card (Instagram Story format) returns an image', async ({ request }) => {
+  const resp = await request.get('/api/card/story/TESTID');
+  expect([200, 404]).toContain(resp.status());
+  const ct = resp.headers()['content-type'] ?? '';
+  expect(ct).toMatch(/image\/(png|svg\+xml)/);
+});
+
+test('archetype card returns an image for unknown trip/user', async ({ request }) => {
+  const resp = await request.get(
+    '/api/card/archetype/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000001'
+  );
+  expect([200, 404]).toContain(resp.status());
+  const ct = resp.headers()['content-type'] ?? '';
+  expect(ct).toMatch(/image\/(png|svg\+xml)/);
+});
+
 // ── Accessibility smoke tests ─────────────────────────────────────────────────
 
 test('login page has accessible email input', async ({ page }) => {

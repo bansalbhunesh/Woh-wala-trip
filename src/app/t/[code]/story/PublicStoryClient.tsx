@@ -21,8 +21,11 @@ type Slide =
 
 function buildSlides(inviteCode: string, lore: LoreJson, members: any[]): Slide[] {
   const slides: Slide[] = [];
-  slides.push({ type: 'title', lore });
+  // VIRAL-CRITICAL: Chaos score is the instant emotional payoff.
+  // It must be slide 1 — users coming from WhatsApp forwards need the
+  // punchline immediately. Title context comes after they're hooked.
   slides.push({ type: 'cooked', lore });
+  slides.push({ type: 'title', lore });
   if (lore.season_recap?.full_narrative) slides.push({ type: 'recap', lore });
   (lore.trip_eras || []).slice(0, 3).forEach((_, i) => slides.push({ type: 'era', lore, idx: i }));
   members.filter(m => m.role_title).forEach(m => slides.push({ type: 'character', member: m }));
@@ -67,9 +70,13 @@ function WhatsAppShareButton({
   storyUrl: string;
   chaosScore: number;
 }) {
-  const message = encodeURIComponent(
-    `"${tripName}" just got immortalized.\n\nChaos Score: ${chaosScore}/100\n\nWatch our trip documentary\n${storyUrl}`
-  );
+  // Use AI-generated whatsapp_caption if available — it's specifically written
+  // to create group chat chaos. Fall back to generic only if absent.
+  const aiCaption = (lore as any)?.whatsapp_caption as string | null;
+  const shareText = aiCaption
+    ? `${aiCaption}\n\n${storyUrl}`
+    : `"${tripName}" just got immortalized. Chaos Score: ${chaosScore}/100\n\n${storyUrl}`;
+  const message = encodeURIComponent(shareText);
   const waUrl = `https://wa.me/?text=${message}`;
 
   return (
@@ -252,11 +259,12 @@ export default function PublicStoryClient({
 
   useEffect(() => {
     if (current.type === 'cooked') {
-      const t = setTimeout(() => setSlamActive(true), 200);
+      // Cooked is now slide 0 — fire slam immediately on mount for instant impact
+      const t = setTimeout(() => setSlamActive(true), idx === 0 ? 400 : 200);
       return () => clearTimeout(t);
     }
     setSlamActive(false);
-  }, [current.type, animKey]);
+  }, [current.type, animKey, idx]);
 
   const cookedScore = (lore.cooked_level ?? (lore as any).chaos_score ?? 60) as number;
   const cookedLevel = slides.find(s => s.type === 'cooked')

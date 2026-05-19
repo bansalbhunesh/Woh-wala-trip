@@ -3,7 +3,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import ParticleUniverse from './ParticleUniverse';
+import dynamic from 'next/dynamic';
+
+// PERF: Three.js (ParticleUniverse) is ~600KB. Lazy-load it after the page
+// is interactive — never block first paint on a 3D particle system.
+// Low-end Android devices (Redmi Note series, most India traffic) would
+// spend 2-3s just parsing Three.js on the critical path.
+const ParticleUniverse = dynamic(() => import('./ParticleUniverse'), {
+  ssr: false,
+  loading: () => null, // silence while loading — background is sufficient
+});
 
 const ARCHETYPES = [
   {
