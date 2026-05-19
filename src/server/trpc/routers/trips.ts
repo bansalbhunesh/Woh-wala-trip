@@ -20,6 +20,7 @@ import type {
   ClaimLoreResult,
 } from '@/lib/supabase-extended.types';
 import type { Database } from '@/lib/database.types';
+import type { LoreJson } from '@/lib/types';
 
 // Convenience aliases from the generated Database type — TYPE-01 fully resolved.
 type TripRow = Database['public']['Tables']['trips']['Row'];
@@ -1232,7 +1233,7 @@ export const tripsRouter = router({
             tripName: meta.name,
             destination: meta.destination ?? 'Unknown',
             chaosScore: meta.chaos_score ?? 0,
-            tagline: (meta.lore_json as any)?.tagline ?? null,
+            tagline: (meta.lore_json as LoreJson | null)?.tagline ?? null,
             thumbnailUrl:
               (r.thumbnail_path ? urlByPath.get(r.thumbnail_path) : null) ??
               urlByPath.get(r.storage_path) ??
@@ -1389,10 +1390,14 @@ export const tripsRouter = router({
         });
       }
 
-      const anyTrip = trip as any;
+      // TYPE-02: trip is from a wildcard join select; cast to a local shape for nested access.
+      type TripWithRelations = typeof trip & {
+        photos: Array<{ storage_path: string; thumbnail_path?: string | null }>;
+      };
+      const typedTrip = trip as unknown as TripWithRelations;
 
       // Generate fresh signed URLs for all photos (24-hour expiry)
-      const photos: any[] = anyTrip.photos ?? [];
+      const photos = typedTrip.photos ?? [];
       const storagePaths = photos.map((p: any) => p.storage_path).filter(Boolean);
       const signedUrlMap = new Map<string, string>();
 
@@ -1408,13 +1413,13 @@ export const tripsRouter = router({
       return {
         exportedAt: new Date().toISOString(),
         trip: {
-          name: anyTrip.name,
-          destination: anyTrip.destination ?? null,
-          chaosScore: anyTrip.chaos_score ?? null,
-          lore: anyTrip.lore_json ?? null,
-          eras: anyTrip.trip_eras ?? [],
-          stats: anyTrip.trip_stats ?? [],
-          members: (anyTrip.trip_members ?? []).map((m: any) => ({
+          name: typedTrip.name,
+          destination: typedTrip.destination ?? null,
+          chaosScore: typedTrip.chaos_score ?? null,
+          lore: typedTrip.lore_json ?? null,
+          eras: typedTrip.trip_eras ?? [],
+          stats: typedTrip.trip_stats ?? [],
+          members: (typedTrip.trip_members ?? []).map((m: any) => ({
             userId: m.user_id,
             status: m.status,
             roleTitle: m.role_title ?? null,
@@ -1445,7 +1450,7 @@ export const tripsRouter = router({
       id: t.id as string,
       destination: (t.destination as string | null) ?? 'Unknown',
       chaosScore: (t.chaos_score as number | null) ?? 0,
-      tagline: (t.lore_json as any)?.tagline ?? null,
+      tagline: (t.lore_json as LoreJson | null)?.tagline ?? null,
     }));
   }),
 });

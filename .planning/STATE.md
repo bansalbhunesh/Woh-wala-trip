@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-18)
 | REQUIREMENTS.md | ✓ Created (37 v1 requirements across 9 categories)               |
 | ROADMAP.md      | ✓ Created (7 phases, 37/37 requirements mapped)                  |
 | Phase 1         | ✅ Complete — 5/5 plans, 9/9 requirements (2026-05-18)           |
-| Phase 2         | ⬜ Ready to start                                                |
-| Phase 3         | ⬜ Blocked on Phase 2                                            |
-| Phase 4         | ⬜ Blocked on Phase 2                                            |
-| Phase 5         | ⬜ Blocked on Phase 2                                            |
+| Phase 2         | ✅ Complete — 7/7 requirements (2026-05-19)                      |
+| Phase 3         | ✅ Complete — 5/5 requirements (2026-05-19)                      |
+| Phase 4         | ✅ Complete — 8/8 requirements (2026-05-19)                      |
+| Phase 5         | ✅ Complete — 6/6 requirements (2026-05-19)                      |
 | Phase 6         | ✅ Complete — 8/8 requirements (2026-05-18)                      |
 | Phase 7         | ⬜ Ready to start (only needs Phase 1)                           |
 
@@ -50,9 +50,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-18)
 
 ## Remaining Critical Issues
 
-1. 🟡 No monthly token cap → runaway AI costs possible at viral scale (Phase 3)
-2. 🟡 markAbsent + battles.challenge are fire-and-forget (Phase 2)
-3. 🟡 stuck-jobs cron runs daily not every 15 min (Phase 2)
+None — all Phase 1–5 requirements resolved. Phase 6 (Testing/Observability) and Phase 7 (Product Polish) complete from prior session.
 
 ---
 
