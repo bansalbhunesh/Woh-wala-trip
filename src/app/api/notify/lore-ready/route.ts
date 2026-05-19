@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import { sendPushToTripMembers } from '@/lib/push';
 
 // Called by the AI worker when lore generation completes.
 // Sends a push notification email via Resend to the trip creator.
@@ -70,6 +71,15 @@ export async function POST(req: NextRequest) {
         `\n[lore-ready] DEV — would email ${toEmail}: "${tripName}" lore ready → ${tripUrl}\n`
       );
     }
+
+    // Send web push to all trip members — non-fatal
+    await sendPushToTripMembers(trip_id, {
+      title: `${tripName} is ready 🔥`,
+      body: tagline ? `"${tagline}"` : 'Your trip lore has been written. Come see the verdict.',
+      url: tripUrl,
+      tripId: trip_id,
+      tag: `lore-ready-${trip_id}`,
+    }).catch(err => console.error('[lore-ready] push send failed (non-fatal):', err));
 
     return NextResponse.json({ sent: true });
   } catch (err) {

@@ -1639,6 +1639,28 @@ export const tripsRouter = router({
         visible_to: visibleTo,
       } as never);
 
+      // Send push notification to the dispute owner when their dispute is resolved
+      if (newStatus !== 'voting') {
+        const winnerLabel =
+          newStatus === 'ai_wins'
+            ? 'The AI was right.'
+            : newStatus === 'user_wins'
+              ? 'You win.'
+              : 'Tied.';
+        // Fire and forget — non-fatal
+        import('@/lib/push')
+          .then(({ sendPushToUser }) =>
+            sendPushToUser(dispute.user_id, {
+              title: `Dispute resolved — ${winnerLabel}`,
+              body: `The crew voted on your mythology dispute. ${winnerLabel}`,
+              url: `/trips/${dispute.trip_id}`,
+              tripId: dispute.trip_id,
+              tag: `dispute-resolved-${input.disputeId}`,
+            })
+          )
+          .catch(e => logger.warn({ err: e }, 'push failed for dispute resolution'));
+      }
+
       return {
         newStatus,
         aiVotes: newAi,

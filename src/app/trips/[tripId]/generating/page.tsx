@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { trpc } from '@/lib/trpc/client';
 import { analytics } from '@/lib/analytics';
+import { PushNotificationToggle } from '@/components/experience/PushNotificationToggle';
 
 const STAGES = [
   { id: 0, label: 'SCANNING MEMORIES', sub: 'Reading your photo dump for emotional evidence' },
@@ -377,6 +378,9 @@ export default function GeneratingPage() {
 
           {/* Skeleton preview — hints at what's being built */}
           <GeneratingSkeleton stage={stage} />
+
+          {/* Push notification opt-in — highest motivation moment */}
+          <PushNotificationToggle context="generating" />
         </div>
 
         {/* Timeout state — shown after 4 min if still processing */}
