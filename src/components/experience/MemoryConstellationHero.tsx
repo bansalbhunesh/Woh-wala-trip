@@ -308,8 +308,15 @@ export default function MemoryConstellationHero() {
     if (!mounted) return;
     let lastTime: number | null = null;
 
+    // Honour reduced-motion: render once, then skip all animation
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const draw = (timestamp: number) => {
-      rafRef.current = requestAnimationFrame(draw);
+      if (!reduceMotion) {
+        rafRef.current = requestAnimationFrame(draw);
+      }
       const dt = lastTime !== null ? Math.min((timestamp - lastTime) / 1000, 0.05) : 1 / 60;
       lastTime = timestamp;
 
@@ -322,8 +329,9 @@ export default function MemoryConstellationHero() {
       m.y = expLerp(m.y, targetRef.current.y, 3.5, dt);
 
       // ONE shared drift vector — all photos live in this same gravitational field
-      const sharedDriftX = Math.sin(t * 0.038) * 10 + Math.sin(t * 0.017) * 5;
-      const sharedDriftY = Math.cos(t * 0.031) * 7 + Math.cos(t * 0.022) * 4;
+      // Reduced motion: zero out the drift; keep mouse parallax only
+      const sharedDriftX = reduceMotion ? 0 : Math.sin(t * 0.038) * 10 + Math.sin(t * 0.017) * 5;
+      const sharedDriftY = reduceMotion ? 0 : Math.cos(t * 0.031) * 7 + Math.cos(t * 0.022) * 4;
 
       // Apply transforms to each photo
       MEMORIES.forEach(mem => {
