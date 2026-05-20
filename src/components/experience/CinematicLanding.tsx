@@ -277,76 +277,142 @@ export default function CinematicLanding() {
       {/* ─── HERO SECTION — cinematic memory constellation ─── */}
       <MemoryConstellationHero />
 
-      {/* ─── HOW IT WORKS ─────────────────────────────────── */}
+      {/* ─── HOW IT WORKS — cinematic editorial spread ─── */}
       <section
-        className="py-20 px-6 lg:px-20"
+        className="relative px-6 lg:px-16 py-24 md:py-32"
         style={{
           background: D ? '#0A0806' : '#FFF8F2',
           borderTop: `1px solid ${borderColor}`,
           transition: `background 0.65s cubic-bezier(0.16,1,0.3,1)`,
+          overflow: 'hidden',
         }}
       >
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14 reveal">
+        {/* atmospheric edge fade — connects to hero darkness */}
+        {D && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(20,8,4,0.6) 0%, transparent 70%)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        <div className="relative max-w-5xl mx-auto">
+          {/* Section header — editorial style */}
+          <div className="mb-20 reveal">
             <p
-              className="font-mono text-[9px] uppercase tracking-[0.5em] mb-3"
+              className="font-mono text-[9px] uppercase tracking-[0.5em] mb-4"
               style={{ color: labelRed }}
             >
-              ● HOW IT WORKS
+              ● 03 STAGES OF DOCUMENTATION
             </p>
             <h2
-              className="font-display font-black text-3xl md:text-5xl uppercase leading-tight"
-              style={{ color: textMain }}
+              className="font-display font-black uppercase leading-[0.88] tracking-tighter"
+              style={{
+                fontSize: 'clamp(40px, 6vw, 76px)',
+                color: textMain,
+              }}
             >
-              Three steps.
+              You upload chaos.
               <br />
-              One friendship documentary.
+              <em style={{ color: loreAccentColor, fontStyle: 'italic' }}>
+                The AI writes mythology.
+              </em>
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 stagger">
+          {/* Three stages — vertical timeline, not grid */}
+          <div className="space-y-20 md:space-y-24">
             {HOW_IT_WORKS.map((step, i) => (
               <div
                 key={step.step}
-                className="relative p-8 rounded-3xl space-y-4 reveal"
-                style={{
-                  background: D ? 'rgba(245,240,232,0.025)' : '#FFFFFF',
-                  border: `1px solid ${borderColor}`,
-                  backdropFilter: D ? 'blur(8px)' : 'none',
-                  boxShadow: D
-                    ? 'none'
-                    : '0 4px 24px rgba(90,58,22,0.08), 0 1px 4px rgba(90,58,22,0.04)',
-                  transition: 'background 0.65s, box-shadow 0.65s',
-                }}
+                className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-start reveal"
               >
-                {/* Step connector line */}
-                {i < 2 && (
+                {/* Step number — massive, editorial */}
+                <div className="md:col-span-3 md:sticky md:top-24">
                   <div
-                    className="hidden md:block absolute top-1/2 -right-4 w-8 h-px"
-                    style={{ background: `linear-gradient(90deg, ${borderColor}, transparent)` }}
-                  />
-                )}
-                <div className="text-4xl">{step.icon}</div>
-                <div
-                  className="font-mono text-[9px] uppercase tracking-[0.4em]"
-                  style={{ color: labelRed }}
-                >
-                  STEP {step.step}
+                    className="font-display font-black uppercase leading-none"
+                    style={{
+                      fontSize: 'clamp(80px, 11vw, 160px)',
+                      color: D ? 'rgba(255,77,77,0.10)' : 'rgba(255,77,77,0.12)',
+                      letterSpacing: '-0.04em',
+                      lineHeight: 0.8,
+                    }}
+                  >
+                    {step.step}
+                  </div>
                 </div>
-                <h3
-                  className="font-display font-black text-xl uppercase leading-tight"
-                  style={{ color: textMain }}
-                >
-                  {step.title}
-                </h3>
-                <p
-                  className="font-display italic text-sm leading-relaxed"
-                  style={{ color: textMuted }}
-                >
-                  {step.body}
-                </p>
+
+                {/* Content — story-driven, not card */}
+                <div className="md:col-span-9 space-y-5">
+                  <div className="flex items-baseline gap-3">
+                    <span
+                      className="font-mono text-[10px] uppercase tracking-[0.4em]"
+                      style={{ color: labelRed }}
+                    >
+                      STAGE {step.step}
+                    </span>
+                    <span style={{ color: textFaint }}>·</span>
+                    <span
+                      className="font-mono text-[10px] uppercase tracking-[0.3em]"
+                      style={{ color: textFaint }}
+                    >
+                      {i === 0 ? '~ 2 MINUTES' : i === 1 ? '~ 90 SECONDS' : 'INSTANT'}
+                    </span>
+                  </div>
+                  <h3
+                    className="font-display font-black uppercase tracking-tight leading-[0.95]"
+                    style={{
+                      fontSize: 'clamp(28px, 4vw, 48px)',
+                      color: textMain,
+                    }}
+                  >
+                    {step.title}
+                  </h3>
+                  <p
+                    className="font-display italic leading-relaxed max-w-xl"
+                    style={{
+                      fontSize: 'clamp(15px, 1.4vw, 18px)',
+                      color: textMuted,
+                    }}
+                  >
+                    {step.body}
+                  </p>
+                  {/* Step-specific micro-detail */}
+                  <div className="inline-flex items-center gap-2 pt-2" style={{ color: textFaint }}>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: D ? '#FF4D4D' : '#B02525' }}
+                    />
+                    <span className="font-mono text-[9px] uppercase tracking-[0.3em]">
+                      {i === 0 && 'Drag-drop or pick from camera roll'}
+                      {i === 1 && 'Claude Sonnet 4.6 + custom signal pipeline'}
+                      {i === 2 && 'Shareable on WhatsApp · Print available'}
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* Closing kicker */}
+          <div className="mt-24 pt-12 reveal" style={{ borderTop: `1px solid ${borderColor}` }}>
+            <p
+              className="font-display italic text-center mx-auto max-w-xl"
+              style={{
+                fontSize: 'clamp(16px, 1.5vw, 20px)',
+                color: textMuted,
+                lineHeight: 1.5,
+              }}
+            >
+              "The AI doesn't describe what happened. It names{' '}
+              <em style={{ color: loreAccentColor, fontStyle: 'normal' }}>who's responsible</em> for
+              what happened."
+            </p>
           </div>
         </div>
       </section>
@@ -553,21 +619,35 @@ export default function CinematicLanding() {
         </section>
       )}
 
-      {/* ─── FINAL CTA ────────────────────────────────────── */}
+      {/* ─── FINAL CTA — cinematic closer ────────────────── */}
       <section
-        className="py-24 px-6 text-center"
+        className="relative py-32 md:py-40 px-6 text-center overflow-hidden"
         style={{ background: bg, borderTop: `1px solid ${borderColor}` }}
       >
-        <div className="max-w-2xl mx-auto space-y-7 reveal">
+        {/* Atmospheric glow — pulls the eye toward CTA */}
+        {D && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'radial-gradient(ellipse 55% 55% at 50% 50%, rgba(255,77,77,0.06) 0%, transparent 65%)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        <div className="relative max-w-2xl mx-auto space-y-8 reveal">
           <p
-            className="font-mono text-[9px] uppercase tracking-[0.5em]"
+            className="font-mono text-[9px] uppercase tracking-[0.6em]"
             style={{ color: loreAccentColor }}
           >
             ● YOUR GROUP DESERVES A DOCUMENTARY
           </p>
           <h2
-            className="font-display font-black uppercase leading-[0.9] tracking-tighter"
-            style={{ fontSize: 'clamp(40px, 7vw, 80px)', color: textMain }}
+            className="font-display font-black uppercase leading-[0.88] tracking-tighter"
+            style={{ fontSize: 'clamp(40px, 7.5vw, 88px)', color: textMain }}
           >
             The photos are
             <br />
@@ -579,38 +659,30 @@ export default function CinematicLanding() {
             Upload them here. The AI will write the mythology nobody in your group could put into
             words.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
               onClick={handleEnter}
               disabled={leaving}
-              className="inline-flex items-center justify-center gap-2 px-10 py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 relative overflow-hidden group laser-btn"
+              className="inline-flex items-center justify-center gap-2 px-10 py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 transition-all duration-300 hover:-translate-y-0.5"
               style={{
                 background: ctaBg,
                 color: ctaText,
-                transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s',
+                boxShadow: D ? '0 4px 24px rgba(245,240,232,0.06)' : '0 4px 24px rgba(0,0,0,0.08)',
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translate3d(0,-2px,0)';
                 el.style.boxShadow = D
-                  ? '0 10px 36px rgba(245,240,232,0.15)'
-                  : '0 10px 36px rgba(0,0,0,0.2)';
+                  ? '0 12px 40px rgba(245,240,232,0.18)'
+                  : '0 12px 40px rgba(0,0,0,0.22)';
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translate3d(0,0,0)';
-                el.style.boxShadow = 'none';
+                el.style.boxShadow = D
+                  ? '0 4px 24px rgba(245,240,232,0.06)'
+                  : '0 4px 24px rgba(0,0,0,0.08)';
               }}
             >
-              <span
-                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
-                style={{
-                  background:
-                    'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                  transform: 'translateX(-100%) skewX(-15deg)',
-                }}
-              />
-              <span className="relative z-10">{leaving ? 'ENTERING...' : 'START FOR FREE →'}</span>
+              <span>{leaving ? 'ENTERING…' : 'START FOR FREE →'}</span>
             </button>
             <a
               href="/trips/join"
@@ -643,50 +715,82 @@ export default function CinematicLanding() {
         </div>
       </section>
 
-      {/* ─── Site Footer ───────────────────────────────── */}
+      {/* ─── Site Footer — branded close-out ───────────── */}
       <footer
-        className="py-8 px-6"
+        className="py-16 px-6 lg:px-16 relative"
         style={{
           borderTop: `1px solid ${borderColor}`,
-          background: D ? 'rgba(6,6,4,0.7)' : 'rgba(250,245,237,0.9)',
+          background: D ? 'rgba(6,6,4,0.85)' : 'rgba(250,245,237,0.95)',
           backdropFilter: 'blur(12px)',
           transition: 'background 0.65s',
         }}
       >
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p
-            className="font-display font-black text-sm tracking-[0.15em] uppercase"
-            style={{ color: textMain }}
+        <div className="max-w-5xl mx-auto space-y-12">
+          {/* Brand block — large wordmark + tagline */}
+          <div className="text-center space-y-3">
+            <p
+              className="font-display font-black tracking-tighter leading-none"
+              style={{
+                fontSize: 'clamp(40px, 6vw, 64px)',
+                color: textMain,
+              }}
+            >
+              YAAR
+              <em style={{ color: loreAccentColor, fontStyle: 'italic' }}>LORE</em>
+            </p>
+            <p
+              className="font-display italic text-sm md:text-base mx-auto max-w-xl"
+              style={{ color: textMuted }}
+            >
+              India&apos;s first AI friendship mythology engine. Every chaotic trip becomes
+              documented.
+            </p>
+          </div>
+
+          {/* Link grid + meta */}
+          <div
+            className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6"
+            style={{ borderTop: `1px solid ${borderColor}` }}
           >
-            YAARLORE
-          </p>
-          <nav
-            className="flex items-center gap-5 flex-wrap justify-center"
-            aria-label="Footer navigation"
-          >
-            {[
-              { href: '/privacy', label: 'Privacy' },
-              { href: '/terms', label: 'Terms' },
-              { href: '/contact', label: 'Contact' },
-              { href: '/status', label: 'Status' },
-              { href: '/leaderboard', label: 'Hall of Chaos' },
-            ].map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="font-mono text-[8px] uppercase tracking-[0.35em] hover:opacity-80 transition-opacity"
-                style={{ color: textFaint }}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-          <p
-            className="font-mono text-[8px] uppercase tracking-[0.3em]"
-            style={{ color: textFaint }}
-          >
-            © {new Date().getFullYear()} Yaarlore
-          </p>
+            <p
+              className="font-mono text-[8px] uppercase tracking-[0.3em]"
+              style={{ color: textFaint }}
+            >
+              © {new Date().getFullYear()} YAARLORE · MADE WITH CHAOS IN INDIA
+            </p>
+            <nav
+              className="flex items-center gap-5 flex-wrap justify-center"
+              aria-label="Footer navigation"
+            >
+              {[
+                { href: '/demo', label: 'Demo' },
+                { href: '/leaderboard', label: 'Hall of Chaos' },
+                { href: '/privacy', label: 'Privacy' },
+                { href: '/terms', label: 'Terms' },
+                { href: '/contact', label: 'Contact' },
+                { href: '/status', label: 'Status' },
+              ].map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="font-mono text-[9px] uppercase tracking-[0.3em] hover:opacity-90 transition-opacity"
+                  style={{ color: textMuted }}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <span
+              className="font-mono text-[8px] uppercase tracking-[0.3em] flex items-center gap-2"
+              style={{ color: textFaint }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: '#FF4D4D' }}
+              />
+              SEASON {new Date().getFullYear()}
+            </span>
+          </div>
         </div>
       </footer>
 

@@ -227,6 +227,8 @@ export default function MemoryConstellationHero() {
   const [insightChars, setInsightChars] = useState(0);
   const [ctaVisible, setCtaVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [completePulse, setCompletePulse] = useState(false);
+  const [scrollHintVisible, setScrollHintVisible] = useState(false);
 
   // ── Mount ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -272,7 +274,23 @@ export default function MemoryConstellationHero() {
       }, 5000)
     );
 
+    // Brief peak intensity when the constellation completes — the "moment"
+    timers.push(setTimeout(() => setCompletePulse(true), 4500));
+    timers.push(setTimeout(() => setCompletePulse(false), 5400));
+
+    // Scroll hint appears after the user has had time to read the first insight
+    timers.push(setTimeout(() => setScrollHintVisible(true), 8500));
+
     return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Hide scroll hint once user starts scrolling
+  useEffect(() => {
+    const onScroll = () => {
+      if (window.scrollY > 40) setScrollHintVisible(false);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   // ── Insight typewriter + cycling ────────────────────────────────────────────
@@ -765,6 +783,64 @@ export default function MemoryConstellationHero() {
         </div>
       </div>
 
+      {/* ── Constellation completion pulse — peaks for ~900ms when threads ignite ── */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 5,
+          background:
+            'radial-gradient(ellipse 50% 50% at 50% 45%, rgba(255,160,40,0.10) 0%, rgba(255,100,40,0.04) 40%, transparent 70%)',
+          opacity: completePulse ? 1 : 0,
+          transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1)',
+          mixBlendMode: 'screen',
+        }}
+      />
+
+      {/* ── Subtle scroll-down indicator ──────────────────────────────────── */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 11,
+          opacity: scrollHintVisible ? 0.55 : 0,
+          transition: 'opacity 1.4s cubic-bezier(0.16,1,0.3,1)',
+          pointerEvents: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 8,
+            letterSpacing: '0.45em',
+            textTransform: 'uppercase',
+            color: 'rgba(245,240,232,0.45)',
+          }}
+        >
+          KEEP SCROLLING
+        </span>
+        <span
+          style={{
+            display: 'inline-block',
+            width: 14,
+            height: 14,
+            borderRight: '1.5px solid rgba(245,240,232,0.45)',
+            borderBottom: '1.5px solid rgba(245,240,232,0.45)',
+            transform: 'rotate(45deg) translate(-2px, -2px)',
+            animation: 'scroll-hint-bob 2.4s ease-in-out infinite',
+          }}
+        />
+      </div>
+
       <style jsx>{`
         @keyframes cursor-blink {
           0%,
@@ -773,6 +849,17 @@ export default function MemoryConstellationHero() {
           }
           50% {
             opacity: 0;
+          }
+        }
+        @keyframes scroll-hint-bob {
+          0%,
+          100% {
+            transform: rotate(45deg) translate(-2px, -2px);
+            opacity: 0.8;
+          }
+          50% {
+            transform: rotate(45deg) translate(2px, 2px);
+            opacity: 1;
           }
         }
       `}</style>
