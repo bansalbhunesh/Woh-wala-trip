@@ -186,6 +186,56 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
     }
   };
 
+  const payPrint = async () => {
+    try {
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId, tier: 'print', plan: 'single' }),
+      });
+      if (!orderRes.ok) throw new Error(`Order failed: ${orderRes.status}`);
+      const order = await orderRes.json();
+
+      if (order.amount == null) {
+        throw new Error('Server did not return a payment amount. Cannot proceed.');
+      }
+
+      const rzp = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency ?? 'INR',
+        name: 'Yaarlore',
+        description: 'Physical hardcover book + digital bundle',
+        order_id: order.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handler: async (response: any) => {
+          try {
+            const result = await upgradeTier.mutateAsync({
+              tripId,
+              tier: 'print',
+              paymentId: response.razorpay_payment_id,
+            });
+            if ('pending' in result && result.pending) {
+              setError(
+                'Payment received — confirming with Razorpay. This takes a few seconds; refresh in a moment.'
+              );
+              return;
+            }
+            router.push(`/trips/${tripId}`);
+          } catch (err) {
+            console.error('[upgrade] print activation failed:', err);
+            setError('Payment received but upgrade failed. Contact support at hello@yaarlore.app.');
+          }
+        },
+        theme: { color: '#FF4D4D' },
+      });
+      rzp.open();
+    } catch (err) {
+      console.error('[upgrade] print payment init failed:', err);
+      setError('Could not start payment. Try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#060604] text-[#F5F0E8] relative overflow-hidden">
       <FilmGrain />
@@ -326,7 +376,7 @@ export default function UpgradePage({ params }: { params: Promise<{ tripId: stri
               'Delivered pan-India',
               'Gift packaging available',
             ]}
-            onClick={() => router.push(`/trips/${tripId}/print-order`)}
+            onClick={payPrint}
           />
         </div>
       </div>
