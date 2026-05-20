@@ -146,33 +146,19 @@ export default function CinematicLanding() {
   const [titleChars, setTitleChars] = useState(0);
   const [leaving, setLeaving] = useState(false);
   // Dark mode is the product's primary aesthetic — default to true.
-  // Users can toggle to light via the header button.
   const [darkMode, setDarkMode] = useState(true);
+  // Narrative insight reveals — emerge from the constellation over time
+  const [insight1, setInsight1] = useState(false);
+  const [insight2, setInsight2] = useState(false);
+  const [ctaReady, setCtaReady] = useState(false);
 
   const { data: showcaseTrips } = trpc.trips.getPublicShowcase.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
 
-  // === 3D Animation state ===
-  // All motion uses delta-time (seconds elapsed) so it runs identically at 60, 120, 144hz.
-  const timeRef = useRef(0);
-  const lastFrameRef = useRef<number | null>(null);
-  // Raw mouse position — separate from the smoothed version written to mousePosRef
   const mouseTargetRef = useRef({ x: 0.5, y: 0.5 });
   const mousePosRef = useRef({ x: 0.5, y: 0.5 });
-  const parallaxRef = useRef(ARCHETYPES.map(() => ({ x: 0, y: 0 })));
-  // Per-card spring state — tilt, depth, and scale spring toward targets
-  const springRef = useRef(ARCHETYPES.map(() => ({ tiltX: 0, tiltY: 0, z: 0, scale: 1 })));
-  const cardDivRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const hoveredIndexRef = useRef<number | null>(null);
   const rafRef = useRef(0);
-
-  // Golden angle distribution (2π/φ²): ensures card phases never synchronize visually
-  const PHI = 1.6180339887;
-  const GOLDEN_ANGLE = (2 * Math.PI) / (PHI * PHI); // ≈ 2.3999 radians
-  const PHASE_OFFSETS = ARCHETYPES.map((_, i) => (i * GOLDEN_ANGLE) % (2 * Math.PI));
-  // Each card gets a unique period using φ-spaced multiples — no two cards repeat together
-  const FLOAT_PERIODS = ARCHETYPES.map((_, i) => 5.2 + i * (PHI - 1) * 2.1);
 
   useEffect(() => {
     const t1 = setTimeout(() => setRevealed(true), 80);
@@ -192,7 +178,16 @@ export default function CinematicLanding() {
       setTitleChars(i);
       if (i >= 8) clearInterval(id);
     }, 55);
-    return () => clearInterval(id);
+    // Narrative timing — insights emerge from the constellation
+    const t2 = setTimeout(() => setInsight1(true), 6000);
+    const t3 = setTimeout(() => setInsight2(true), 11000);
+    const t4 = setTimeout(() => setCtaReady(true), 4000);
+    return () => {
+      clearInterval(id);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
   }, [revealed]);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
@@ -208,107 +203,19 @@ export default function CinematicLanding() {
     return () => window.removeEventListener('mousemove', onMouseMove);
   }, [onMouseMove]);
 
+  // Smooth mouse tracking for ParticleUniverse parallax
   useEffect(() => {
-    // Exponential-decay lerp: produces identical results regardless of frame rate.
-    // factor = how much to move per second (e.g. 6 = reaches target in ~0.17s)
     const expLerp = (current: number, target: number, factor: number, dt: number) =>
       current + (target - current) * (1 - Math.exp(-factor * dt));
-
-    // Organic float using two overlapping sine waves — avoids the "bouncing ball" feel
-    // of a single sine, and never exactly repeats (irrational ratio of periods).
-    const organicFloat = (t: number, phase: number, period: number) => {
-      const a = Math.sin(t * ((2 * Math.PI) / period) + phase);
-      const b = Math.sin(t * ((2 * Math.PI) / (period * PHI)) + phase * PHI) * 0.38;
-      // easeInOutSine applied to the sum — gives organic weight at top/bottom of arc
-      const raw = (a + b) / 1.38;
-      return raw * 0.5 + Math.sin(raw * Math.PI * 0.5) * 0.5;
-    };
-
+    let lastFrame: number | null = null;
     const loop = (timestamp: number) => {
       rafRef.current = requestAnimationFrame(loop);
-
-      // Delta time capped at 50ms to prevent jumps after tab focus restore
-      const dt =
-        lastFrameRef.current !== null
-          ? Math.min((timestamp - lastFrameRef.current) / 1000, 0.05)
-          : 1 / 60;
-      lastFrameRef.current = timestamp;
-      timeRef.current += dt;
-      const t = timeRef.current;
-
-      // Smooth mouse position toward raw target — 5 units/s feels natural, not laggy
+      const dt = lastFrame !== null ? Math.min((timestamp - lastFrame) / 1000, 0.05) : 1 / 60;
+      lastFrame = timestamp;
       const mp = mousePosRef.current;
       const mt = mouseTargetRef.current;
       mp.x = expLerp(mp.x, mt.x, 5, dt);
       mp.y = expLerp(mp.y, mt.y, 5, dt);
-      const { x: mx, y: my } = mp;
-
-      const par = parallaxRef.current;
-      const springs = springRef.current;
-
-      ARCHETYPES.forEach((a, i) => {
-        // Parallax: depth factor increases subtly with index using golden ratio spacing
-        const depthFactor = 0.55 + ((i * (PHI - 1)) % 0.9);
-
-        // Parallax targets — different cards respond to different depths
-        const targetX = (mx - 0.5) * 22 * depthFactor;
-        const targetY = (my - 0.5) * 16 * depthFactor;
-
-        // Delta-time normalized exponential lerp — smooth at any refresh rate
-        par[i].x = expLerp(par[i].x, targetX, 4.5, dt);
-        par[i].y = expLerp(par[i].y, targetY, 4.5, dt);
-
-        // Organic float using golden-ratio phase distribution
-        const floatMag = organicFloat(t, PHASE_OFFSETS[i], FLOAT_PERIODS[i]);
-        const floatY = floatMag * 10; // ±10px vertical
-        // Horizontal float is 40% of vertical, phase-shifted by π/2 for elliptical path
-        const floatX = organicFloat(t, PHASE_OFFSETS[i] + Math.PI / 2, FLOAT_PERIODS[i] * PHI) * 4;
-
-        const isHovered = hoveredIndexRef.current === i;
-
-        // Target tilt from mouse — cinematic: mouse at center = no tilt
-        const targetTiltX = (my - 0.5) * -18;
-        const targetTiltY = (mx - 0.5) * 18;
-        const targetZ = isHovered ? 50 : 0;
-        const targetScale = isHovered ? 1.09 : 1;
-
-        // Spring physics: fast on entry (6), gentle on release (3.5)
-        const springSpeed = isHovered ? 8 : 5;
-        springs[i].tiltX = expLerp(springs[i].tiltX, targetTiltX, springSpeed, dt);
-        springs[i].tiltY = expLerp(springs[i].tiltY, targetTiltY, springSpeed, dt);
-        springs[i].z = expLerp(springs[i].z, targetZ, springSpeed, dt);
-        springs[i].scale = expLerp(springs[i].scale, targetScale, springSpeed, dt);
-
-        const { tiltX, tiltY, z, scale } = springs[i];
-
-        const el = cardDivRefs.current[i];
-        if (el) {
-          // Perspective 1000px: more cinematic depth, less distortion than 600px
-          el.style.transform = [
-            `perspective(1000px)`,
-            `translate3d(${(par[i].x + floatX).toFixed(2)}px, ${(par[i].y + floatY).toFixed(2)}px, ${z.toFixed(1)}px)`,
-            `rotateX(${tiltX.toFixed(2)}deg)`,
-            `rotateY(${tiltY.toFixed(2)}deg)`,
-            `rotateZ(${a.rot}deg)`,
-            `scale(${scale.toFixed(4)})`,
-          ].join(' ');
-          el.style.zIndex = isHovered ? '50' : '10';
-
-          const cardInner = el.firstElementChild as HTMLElement;
-          if (cardInner) {
-            if (isHovered) {
-              // Dynamic shadow follows mouse — depth-correct offset
-              const shX = (mx - 0.5) * -16;
-              const shY = (my - 0.5) * -16;
-              cardInner.style.boxShadow = `${shX}px ${shY}px 40px ${a.color}88, 0 0 24px ${a.color}55`;
-              cardInner.style.borderColor = 'rgba(255,255,255,0.35)';
-            } else {
-              cardInner.style.boxShadow = `0 16px 48px ${a.color}38`;
-              cardInner.style.borderColor = 'transparent';
-            }
-          }
-        }
-      });
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
@@ -559,30 +466,34 @@ export default function CinematicLanding() {
           </div>
         </header>
 
-        {/* Hero body */}
-        <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-0">
-          {/* LEFT — editorial title + CTA */}
-          <div className="flex flex-col justify-center px-8 py-10 lg:w-1/2 lg:px-16 lg:py-0 space-y-7">
+        {/* Hero body — centered cinematic scene */}
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 min-h-0 px-6">
+          {/* ── Centered cinematic content ── */}
+          <div className="flex flex-col items-center text-center max-w-2xl mx-auto space-y-8">
+            {/* Observatory label */}
             <p
-              className="font-mono text-[8px] uppercase tracking-[0.6em]"
+              className="font-mono text-[8px] uppercase tracking-[0.7em]"
               style={{
-                color: labelRed,
+                color: D ? 'rgba(255, 200, 140, 0.4)' : labelRed,
                 opacity: revealed ? 1 : 0,
-                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,16px,0)',
+                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,12px,0)',
                 transition:
-                  'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s, color 0.65s',
+                  'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s',
               }}
             >
-              AI FRIENDSHIP ARCHIVE · INDIA-FIRST
+              AI FRIENDSHIP MYTHOLOGY ENGINE
             </p>
 
-            {/* Staggered title */}
+            {/* Title — elegant, confident, not screaming */}
             <h1
-              className="font-display font-black uppercase leading-[0.85] tracking-tighter"
-              style={{ fontSize: 'clamp(56px, 9vw, 120px)' }}
+              className="font-display uppercase leading-[0.88] tracking-tighter"
+              style={{
+                fontSize: 'clamp(48px, 7vw, 96px)',
+                fontWeight: 200,
+              }}
             >
               {['YAAR', 'LORE'].map((word, wi) => (
-                <div key={word} className="block overflow-hidden">
+                <span key={word} className="block overflow-hidden">
                   {word.split('').map((char, ci) => {
                     const idx = wi === 0 ? ci : 4 + ci;
                     const shown = titleChars > idx;
@@ -591,303 +502,163 @@ export default function CinematicLanding() {
                         key={ci}
                         style={{
                           display: 'inline-block',
-                          color: wi === 1 ? loreAccentColor : textMain,
+                          color:
+                            wi === 1
+                              ? D
+                                ? 'rgba(255, 200, 140, 0.85)'
+                                : loreAccentColor
+                              : textMain,
                           fontStyle: wi === 1 ? 'italic' : 'normal',
+                          fontWeight: wi === 1 ? 300 : 200,
                           opacity: shown ? 1 : 0,
-                          transform: shown ? 'translate3d(0,0,0)' : 'translate3d(0,80%,0)',
-                          filter: shown ? 'blur(0)' : 'blur(3px)',
+                          transform: shown ? 'translate3d(0,0,0)' : 'translate3d(0,60%,0)',
+                          filter: shown ? 'blur(0)' : 'blur(4px)',
                           transition:
-                            'transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.3s, filter 0.35s, color 0.55s',
+                            'transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.4s, filter 0.45s',
                         }}
                       >
                         {char}
                       </span>
                     );
                   })}
-                </div>
+                </span>
               ))}
             </h1>
 
-            {/* Specific tagline — not generic */}
-            <div
+            {/* Poetic tagline — one calm sentence */}
+            <p
+              className="font-display italic text-lg md:text-xl leading-relaxed max-w-md"
               style={{
+                color: D ? 'rgba(245, 240, 232, 0.4)' : textMuted,
                 opacity: revealed ? 1 : 0,
-                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,16px,0)',
+                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,10px,0)',
                 transition:
-                  'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.4s',
+                  'opacity 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s, transform 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s',
               }}
             >
-              <p
-                className="font-display italic text-xl leading-snug max-w-sm"
-                style={{ color: textMuted }}
-              >
-                Upload your photo dump. The AI watches, judges, and documents.
-              </p>
-              <p
-                className="font-display italic text-lg leading-snug max-w-sm mt-1.5"
-                style={{ color: textFaint }}
-              >
-                Out comes your group's mythology — character roles, chaos scores, and a story that
-                immediately ends up in the group chat.
-              </p>
-            </div>
+              Upload your memories. The AI discovers your mythology.
+            </p>
 
-            {/* Social proof pill */}
-            {showcaseTrips && showcaseTrips.length > 0 && (
+            {/* ── Narrative insights — emerge from the constellation ── */}
+            <div className="flex flex-col items-center gap-5 mt-8">
+              {/* Insight 1 */}
               <div
-                className="flex items-center gap-3 flex-wrap"
                 style={{
-                  opacity: revealed ? 1 : 0,
-                  transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.5s',
+                  opacity: insight1 ? 1 : 0,
+                  transform: insight1 ? 'translate3d(0,0,0)' : 'translate3d(0,8px,0)',
+                  transition:
+                    'opacity 1.5s cubic-bezier(0.16,1,0.3,1), transform 1.5s cubic-bezier(0.16,1,0.3,1)',
                 }}
               >
                 <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                  className="flex items-center gap-4"
                   style={{
-                    background: 'rgba(255,77,77,0.06)',
-                    border: '1px solid rgba(255,77,77,0.2)',
+                    borderLeft: `1px solid ${D ? 'rgba(255, 200, 140, 0.2)' : 'rgba(90, 58, 22, 0.2)'}`,
+                    paddingLeft: 14,
                   }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF4D4D] animate-pulse" />
-                  <span
-                    className="font-mono text-[9px] uppercase tracking-[0.3em]"
-                    style={{ color: labelRed }}
-                  >
-                    {showcaseTrips.length} trips live
-                  </span>
+                  <div>
+                    <p
+                      className="font-display italic text-sm md:text-base"
+                      style={{ color: D ? 'rgba(255, 200, 140, 0.7)' : textMain }}
+                    >
+                      &ldquo;Always behind the camera.&rdquo;
+                    </p>
+                    <p
+                      className="font-mono text-[8px] uppercase tracking-[0.4em] mt-1"
+                      style={{ color: D ? 'rgba(255, 200, 140, 0.3)' : textFaint }}
+                    >
+                      Confidence: 92%
+                    </p>
+                  </div>
                 </div>
-                {showcaseTrips[0]?.chaosScore && (
-                  <span
-                    className="font-mono text-[9px] uppercase tracking-[0.25em]"
-                    style={{ color: textFaint }}
-                  >
-                    Highest chaos: {Math.max(...showcaseTrips.map(t => t.chaosScore))}/100
-                  </span>
-                )}
               </div>
-            )}
 
-            {/* CTA */}
+              {/* Insight 2 */}
+              <div
+                style={{
+                  opacity: insight2 ? 1 : 0,
+                  transform: insight2 ? 'translate3d(0,0,0)' : 'translate3d(0,8px,0)',
+                  transition:
+                    'opacity 1.5s cubic-bezier(0.16,1,0.3,1), transform 1.5s cubic-bezier(0.16,1,0.3,1)',
+                }}
+              >
+                <div
+                  className="flex items-center gap-4"
+                  style={{
+                    borderLeft: `1px solid ${D ? 'rgba(255, 200, 140, 0.15)' : 'rgba(90, 58, 22, 0.15)'}`,
+                    paddingLeft: 14,
+                  }}
+                >
+                  <div>
+                    <p
+                      className="font-display italic text-sm md:text-base"
+                      style={{ color: D ? 'rgba(255, 200, 140, 0.6)' : textMuted }}
+                    >
+                      &ldquo;Planned 3 trips. Executed none.&rdquo;
+                    </p>
+                    <p
+                      className="font-mono text-[8px] uppercase tracking-[0.4em] mt-1"
+                      style={{ color: D ? 'rgba(255, 200, 140, 0.25)' : textFaint }}
+                    >
+                      Confidence: 87%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── CTA — appears after the scene breathes ── */}
             <div
-              className="flex flex-col sm:flex-row gap-3"
+              className="flex flex-col sm:flex-row items-center gap-4 mt-6"
               style={{
-                opacity: revealed ? 1 : 0,
-                transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,16px,0)',
+                opacity: ctaReady ? 1 : 0,
+                transform: ctaReady ? 'translate3d(0,0,0)' : 'translate3d(0,8px,0)',
                 transition:
-                  'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.6s, transform 0.55s cubic-bezier(0.16,1,0.3,1) 0.6s',
+                  'opacity 1s cubic-bezier(0.16,1,0.3,1), transform 1s cubic-bezier(0.16,1,0.3,1)',
               }}
             >
               <button
                 onClick={handleEnter}
                 disabled={leaving}
-                className="inline-flex items-center justify-center gap-2 px-8 py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 relative overflow-hidden group laser-btn"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-mono text-[10px] uppercase tracking-[0.35em] disabled:opacity-50 transition-all duration-300 hover:translate-y-[-2px]"
                 style={{
-                  background: ctaBg,
-                  color: ctaText,
-                  transition:
-                    'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s, background 0.55s, color 0.55s',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLButtonElement;
-                  el.style.transform = 'translate3d(0,-2px,0)';
-                  el.style.boxShadow = D
-                    ? '0 10px 36px rgba(245,240,232,0.15)'
-                    : '0 10px 36px rgba(0,0,0,0.2)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLButtonElement;
-                  el.style.transform = 'translate3d(0,0,0)';
-                  el.style.boxShadow = 'none';
+                  background: D ? 'rgba(255, 200, 140, 0.08)' : ctaBg,
+                  color: D ? 'rgba(255, 200, 140, 0.8)' : ctaText,
+                  border: `1px solid ${D ? 'rgba(255, 200, 140, 0.15)' : 'rgba(26, 18, 8, 0.15)'}`,
                 }}
               >
-                <span
-                  className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
-                    backgroundSize: '8px 8px',
-                    animation: 'grid-scroll 4s linear infinite',
-                  }}
-                />
-                <span
-                  className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
-                  style={{
-                    background:
-                      'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                    transform: 'translateX(-100%) skewX(-15deg)',
-                  }}
-                />
-                <span className="relative z-10">
-                  {leaving ? 'ENTERING...' : 'START YOUR LORE →'}
-                </span>
+                {leaving ? 'Entering...' : 'Begin Analysis →'}
               </button>
 
-              <a
-                href="/demo"
-                className="inline-flex items-center justify-center gap-2 px-8 py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
-                style={{
-                  background: 'transparent',
-                  border: '1.5px solid rgba(255,165,0,0.35)',
-                  color: 'rgba(255,165,0,0.75)',
-                  transition:
-                    'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.transform = 'translate3d(0,-2px,0)';
-                  el.style.borderColor = 'rgba(255,165,0,0.65)';
-                  el.style.color = 'rgba(255,165,0,1)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.transform = 'translate3d(0,0,0)';
-                  el.style.borderColor = 'rgba(255,165,0,0.35)';
-                  el.style.color = 'rgba(255,165,0,0.75)';
-                }}
-              >
+              {showcaseTrips && showcaseTrips.length > 0 && (
                 <span
-                  className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
-                  style={{
-                    background:
-                      'linear-gradient(90deg, transparent, rgba(255,165,0,0.15), transparent)',
-                    transform: 'translateX(-100%) skewX(-15deg)',
-                  }}
-                />
-                <span className="relative z-10">◎ SEE A DEMO</span>
-              </a>
+                  className="font-mono text-[8px] uppercase tracking-[0.3em]"
+                  style={{ color: D ? 'rgba(255, 200, 140, 0.25)' : textFaint }}
+                >
+                  {showcaseTrips.length} groups analyzed
+                </span>
+              )}
             </div>
 
+            {/* Quiet footnote */}
             <p
-              className="font-mono text-[7.5px] uppercase tracking-[0.45em]"
+              className="font-mono text-[7px] uppercase tracking-[0.5em] mt-4"
               style={{
-                color: textFaint,
-                opacity: revealed ? 1 : 0,
-                transition: 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.75s, color 0.55s',
+                color: D ? 'rgba(245, 240, 232, 0.15)' : textFaint,
+                opacity: ctaReady ? 1 : 0,
+                transition: 'opacity 1s cubic-bezier(0.16,1,0.3,1) 0.5s',
               }}
             >
-              FREE FOR YOUR FIRST TRIP · INDIA-FIRST · WORKS ON WHATSAPP PHOTO DUMPS
+              Free for your first trip · India-first · Works on WhatsApp photo dumps
             </p>
           </div>
 
-          {/* RIGHT — desktop archetype collage */}
-          <div
-            className="hidden lg:block relative lg:w-1/2"
-            style={{ borderLeft: `1px solid ${borderColor}`, transition: 'border-color 0.55s' }}
-          >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: panelRadial,
-                backgroundImage: panelDots,
-                backgroundSize: '22px 22px',
-                transition: 'opacity 0.55s',
-              }}
-            />
-            {/* All archetype cards are decorative — aria-hidden.
-                WCAG 1.4.3 exception: decorative/incidental text not required to meet contrast.
-                Screen-reader users get the same info from the surrounding text + sr-only below. */}
-            <div aria-hidden="true">
-              {ARCHETYPES.map((a, i) => (
-                <div
-                  key={a.label}
-                  ref={el => {
-                    cardDivRefs.current[i] = el;
-                  }}
-                  onMouseEnter={() => {
-                    hoveredIndexRef.current = i;
-                  }}
-                  onMouseLeave={() => {
-                    hoveredIndexRef.current = null;
-                  }}
-                  className="absolute select-none cursor-pointer"
-                  style={{
-                    left: `${(a.x - 56) * 3}%`,
-                    top: `${a.y}%`,
-                    opacity: revealed ? 1 : 0,
-                    animation: revealed
-                      ? `card-emerge 0.8s cubic-bezier(0.16,1,0.3,1) ${a.delay + 0.5}s both`
-                      : undefined,
-                    willChange: 'transform',
-                    transformStyle: 'preserve-3d',
-                  }}
-                >
-                  <div
-                    className="rounded-2xl px-4 py-3 border border-transparent"
-                    style={{
-                      background: a.color,
-                      boxShadow: `0 16px 48px ${a.color}38`,
-                      minWidth: 140,
-                      transition: 'border-color 0.5s cubic-bezier(0.16,1,0.3,1)',
-                    }}
-                  >
-                    <div className="text-xl mb-1.5">{a.emoji}</div>
-                    <div
-                      className="font-mono text-[8px] font-bold uppercase tracking-wider mb-0.5 leading-tight"
-                      style={{ color: 'white' }}
-                    >
-                      {a.label}
-                    </div>
-                    <div className="font-display font-black text-2xl" style={{ color: 'white' }}>
-                      {a.score}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div
-                className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none select-none"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 'clamp(120px, 16vw, 200px)',
-                  color: D ? 'rgba(255,77,77,0.06)' : 'oklch(60% 0.22 25 / 0.06)',
-                  lineHeight: 1,
-                  letterSpacing: '-0.03em',
-                }}
-              >
-                84
-              </div>
-              <div className="absolute bottom-8 left-6 right-6">
-                <p
-                  className="font-mono text-[9px] uppercase tracking-[0.35em]"
-                  style={{ color: textFaint }}
-                >
-                  BEHAVIOURAL ROLES DETECTED IN YOUR GROUP
-                </p>
-              </div>
-            </div>
-            {/* Screen-reader equivalent — conveyed once without visual fluff */}
-            <p className="sr-only">
-              Example character roles this app generates: {ARCHETYPES.map(a => a.label).join(', ')}.
-            </p>
-          </div>
-
-          {/* MOBILE — horizontal card preview (visible only on small screens) */}
-          <div
-            aria-hidden="true"
-            className="lg:hidden px-6 pb-8 overflow-x-auto flex gap-3 snap-x snap-mandatory scrollbar-hide"
-          >
-            {ARCHETYPES.slice(0, 4).map(a => (
-              <div
-                key={a.label}
-                className="snap-start flex-shrink-0 rounded-2xl px-4 py-3"
-                style={{ background: a.color, minWidth: 140, boxShadow: `0 8px 24px ${a.color}40` }}
-              >
-                <div className="text-xl mb-1.5">{a.emoji}</div>
-                <div
-                  className="font-mono text-[8px] font-bold uppercase tracking-wider mb-0.5 leading-tight"
-                  style={{ color: 'rgba(255,255,255,0.95)' }}
-                >
-                  {a.label}
-                </div>
-                <div
-                  className="font-display font-black text-2xl"
-                  style={{ color: 'rgba(255,255,255,0.95)' }}
-                >
-                  {a.score}
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Screen-reader context */}
+          <p className="sr-only">
+            YaarLore analyzes group photos to generate friendship mythology, character roles, and
+            behavioral patterns. Example insights: {ARCHETYPES.map(a => a.label).join(', ')}.
+          </p>
         </div>
 
         {/* Ticker — aria-hidden: content is decorative; repeated 3× for visual loop.

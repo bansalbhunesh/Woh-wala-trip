@@ -9,29 +9,96 @@ interface Props {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   AI Memory Observatory — Deep-Space Volumetric Fog Engine
+   AI Memory Observatory — Living Friendship Constellation
    
-   Design references: Interstellar UI, Apple Weather volumetrics,
-   Spotify Wrapped reveals, Minority Report memory fields.
+   Design philosophy:
+   "Premium products do not animate elements.
+    They animate atmosphere, depth, focus, light, and narrative."
    
-   No grids. No mesh. No chaotic particles.
-   Just slow, breathing, luminous fog — like peering into
-   a dark observatory where memories drift as light.
+   Reference: Interstellar interfaces, HER movie UI,
+   Apple Weather volumetrics, Linear's restraint.
+   
+   Architecture:
+   Layer 1 — Deep black void
+   Layer 2 — 3 atmospheric nebula fog patches (barely visible)
+   Layer 3 — 180 deep-field stars (near-static, twinkling)
+   Layer 4 — 18 memory constellation nodes (deliberate grouping)
+   Layer 5 — 20 constellation threads (friendship connections)
+   Layer 6 — Traveling scan pulses along threads
+   Layer 7 — Cinematic vignette
+   
+   Everything moves as a UNIFIED system.
+   Global rotation: ~0.08°/s.
+   Mouse parallax at depth-correct rates.
+   No independent chaos. No jitter. No bouncing.
    ────────────────────────────────────────────────────────── */
 
-interface Nebula {
-  x: number; // Position as ratio of canvas (0–1)
-  y: number;
-  radius: number; // Base radius in px
-  vx: number; // Drift velocity (very slow)
-  vy: number;
-  hue: number;
-  sat: number;
-  lum: number;
-  alpha: number; // Max alpha
-  phase: number; // Breathing phase offset
-  breathRate: number;
-}
+// Memory constellation — hand-placed for visual storytelling
+// Positions as viewport ratios. Groups represent friend clusters.
+const NODES = [
+  // ── Core cluster (5) — the tight friend group ──
+  { x: 0.47, y: 0.37, r: 7.5, warmth: 0.92, phase: 0.0 },
+  { x: 0.54, y: 0.33, r: 5.5, warmth: 0.8, phase: 1.1 },
+  { x: 0.42, y: 0.44, r: 6.5, warmth: 0.88, phase: 2.3 },
+  { x: 0.57, y: 0.43, r: 5.0, warmth: 0.75, phase: 3.5 },
+  { x: 0.49, y: 0.49, r: 6.0, warmth: 0.95, phase: 4.7 },
+
+  // ── Upper-right cluster (3) — the chaos agents ──
+  { x: 0.7, y: 0.2, r: 6.5, warmth: 0.7, phase: 0.5 },
+  { x: 0.64, y: 0.14, r: 4.5, warmth: 0.6, phase: 1.7 },
+  { x: 0.76, y: 0.26, r: 3.8, warmth: 0.65, phase: 2.9 },
+
+  // ── Left cluster (3) — the planners ──
+  { x: 0.26, y: 0.28, r: 5.5, warmth: 0.82, phase: 0.8 },
+  { x: 0.2, y: 0.36, r: 4.5, warmth: 0.68, phase: 2.0 },
+  { x: 0.31, y: 0.22, r: 3.8, warmth: 0.72, phase: 3.2 },
+
+  // ── Lower scatter (3) — the connectors ──
+  { x: 0.56, y: 0.64, r: 4.5, warmth: 0.78, phase: 1.3 },
+  { x: 0.64, y: 0.7, r: 3.8, warmth: 0.58, phase: 2.5 },
+  { x: 0.38, y: 0.67, r: 4.0, warmth: 0.62, phase: 3.7 },
+
+  // ── Periphery (4) — the quiet observers ──
+  { x: 0.13, y: 0.56, r: 2.8, warmth: 0.48, phase: 0.2 },
+  { x: 0.84, y: 0.5, r: 2.8, warmth: 0.52, phase: 4.1 },
+  { x: 0.33, y: 0.78, r: 3.0, warmth: 0.55, phase: 5.3 },
+  { x: 0.74, y: 0.1, r: 2.5, warmth: 0.42, phase: 1.6 },
+];
+
+// Threads — [fromIndex, toIndex, opacityWeight]
+// Dense within clusters, sparse between. Tells a story.
+const THREADS: [number, number, number][] = [
+  // Core internal (dense — everyone knows everyone)
+  [0, 1, 0.7],
+  [0, 2, 0.65],
+  [0, 3, 0.55],
+  [0, 4, 0.7],
+  [1, 3, 0.5],
+  [2, 4, 0.55],
+  [1, 4, 0.45],
+  [2, 3, 0.35],
+
+  // Upper-right internal
+  [5, 6, 0.55],
+  [5, 7, 0.5],
+  [6, 7, 0.35],
+
+  // Left internal
+  [8, 9, 0.55],
+  [8, 10, 0.5],
+
+  // Lower internal
+  [11, 12, 0.5],
+  [11, 13, 0.4],
+
+  // Cross-cluster bridges (fainter — social bridges)
+  [1, 5, 0.18],
+  [3, 11, 0.15],
+  [2, 8, 0.18],
+  [4, 13, 0.12],
+  [7, 15, 0.08],
+  [10, 8, 0.3],
+];
 
 interface Star {
   x: number;
@@ -42,13 +109,10 @@ interface Star {
   twinklePhase: number;
 }
 
-interface LightThread {
-  points: { x: number; y: number }[]; // Control points (ratio 0–1)
+interface ScanPulse {
+  threadIdx: number;
+  progress: number;
   speed: number;
-  phase: number;
-  hue: number;
-  alpha: number;
-  width: number;
 }
 
 export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
@@ -83,188 +147,38 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     };
     window.addEventListener('resize', onResize);
 
-    // ─── NEBULA FOG CLOUDS ─────────────────────────────────
-    // Large, soft radial gradients that drift extremely slowly.
-    // These ARE the atmosphere. Colors: deep crimson, warm amber,
-    // faint teal — the YaarLore palette.
-    const nebulae: Nebula[] = [
-      // Primary warm crimson cloud — right side, anchoring the archetype cards
-      {
-        x: 0.72,
-        y: 0.55,
-        radius: 380,
-        vx: 0.002,
-        vy: -0.001,
-        hue: 8,
-        sat: 75,
-        lum: 18,
-        alpha: 0.09,
-        phase: 0,
-        breathRate: 0.15,
-      },
-      // Deep amber glow — bottom left, grounding the typography
-      {
-        x: 0.25,
-        y: 0.78,
-        radius: 320,
-        vx: -0.0015,
-        vy: 0.001,
-        hue: 28,
-        sat: 80,
-        lum: 22,
-        alpha: 0.07,
-        phase: 1.2,
-        breathRate: 0.12,
-      },
-      // Teal accent — top right, cool temperature balance
-      {
-        x: 0.82,
-        y: 0.18,
-        radius: 260,
-        vx: -0.001,
-        vy: 0.0008,
-        hue: 175,
-        sat: 55,
-        lum: 20,
-        alpha: 0.045,
-        phase: 2.4,
-        breathRate: 0.18,
-      },
-      // Center warmth — subtle, behind the title
-      {
-        x: 0.38,
-        y: 0.42,
-        radius: 450,
-        vx: 0.001,
-        vy: -0.0005,
-        hue: 18,
-        sat: 65,
-        lum: 14,
-        alpha: 0.055,
-        phase: 3.6,
-        breathRate: 0.1,
-      },
-      // Upper left cool — atmospheric depth
-      {
-        x: 0.12,
-        y: 0.22,
-        radius: 280,
-        vx: 0.0008,
-        vy: 0.0012,
-        hue: 220,
-        sat: 30,
-        lum: 12,
-        alpha: 0.035,
-        phase: 0.8,
-        breathRate: 0.14,
-      },
-      // Bottom right ember — warm accent near CTA
-      {
-        x: 0.65,
-        y: 0.85,
-        radius: 300,
-        vx: -0.0012,
-        vy: -0.0008,
-        hue: 15,
-        sat: 70,
-        lum: 16,
-        alpha: 0.06,
-        phase: 4.2,
-        breathRate: 0.16,
-      },
-      // Very large diffuse center fog — ties everything together
-      {
-        x: 0.5,
-        y: 0.5,
-        radius: 600,
-        vx: 0.0005,
-        vy: 0.0003,
-        hue: 12,
-        sat: 45,
-        lum: 10,
-        alpha: 0.03,
-        phase: 5.0,
-        breathRate: 0.08,
-      },
-      // Ghost teal — mid-left
-      {
-        x: 0.18,
-        y: 0.55,
-        radius: 220,
-        vx: 0.001,
-        vy: -0.0006,
-        hue: 185,
-        sat: 40,
-        lum: 16,
-        alpha: 0.03,
-        phase: 1.8,
-        breathRate: 0.2,
-      },
-    ];
-
-    // ─── DEEP STAR FIELD ────────────────────────────────────
-    // Hundreds of tiny near-static dots. Subtle twinkle.
+    // ─── Star field ─────────────────────────────────────
     const stars: Star[] = [];
-    for (let i = 0; i < 280; i++) {
+    for (let i = 0; i < 180; i++) {
       stars.push({
         x: Math.random(),
         y: Math.random(),
-        size: Math.random() * 1.2 + 0.3,
-        brightness: Math.random() * 0.4 + 0.1,
-        twinkleSpeed: Math.random() * 0.3 + 0.1,
+        size: Math.random() * 1.0 + 0.2,
+        brightness: Math.random() * 0.25 + 0.04,
+        twinkleSpeed: Math.random() * 0.25 + 0.08,
         twinklePhase: Math.random() * Math.PI * 2,
       });
     }
 
-    // ─── LIGHT THREADS ──────────────────────────────────────
-    // Very faint curved aurora-like lines that undulate slowly.
-    // They represent "AI threads connecting memories."
-    const threads: LightThread[] = [
-      {
-        points: [
-          { x: 0.08, y: 0.65 },
-          { x: 0.3, y: 0.4 },
-          { x: 0.55, y: 0.55 },
-          { x: 0.78, y: 0.35 },
-          { x: 0.95, y: 0.5 },
-        ],
-        speed: 0.12,
-        phase: 0,
-        hue: 15,
-        alpha: 0.035,
-        width: 1.5,
-      },
-      {
-        points: [
-          { x: 0.05, y: 0.3 },
-          { x: 0.25, y: 0.6 },
-          { x: 0.5, y: 0.35 },
-          { x: 0.72, y: 0.65 },
-          { x: 0.92, y: 0.4 },
-        ],
-        speed: 0.09,
-        phase: 2.0,
-        hue: 180,
-        alpha: 0.025,
-        width: 1.2,
-      },
-      {
-        points: [
-          { x: 0.1, y: 0.8 },
-          { x: 0.35, y: 0.55 },
-          { x: 0.6, y: 0.7 },
-          { x: 0.85, y: 0.45 },
-        ],
-        speed: 0.15,
-        phase: 4.0,
-        hue: 28,
-        alpha: 0.03,
-        width: 1.0,
-      },
-    ];
+    // ─── Scan pulses (AI analysis signals) ──────────────
+    const pulses: ScanPulse[] = [];
+    function spawnPulse() {
+      if (pulses.length < 4) {
+        pulses.push({
+          threadIdx: Math.floor(Math.random() * THREADS.length),
+          progress: 0,
+          speed: 0.08 + Math.random() * 0.06,
+        });
+      }
+    }
+    // Spawn initial pulses staggered
+    setTimeout(() => spawnPulse(), 4000);
+    setTimeout(() => spawnPulse(), 6500);
+    setTimeout(() => spawnPulse(), 9000);
 
     let t = 0;
     let lastTs = 0;
+    const mountTime = performance.now();
 
     function draw(timestamp: number) {
       stateRef.current.animId = requestAnimationFrame(draw);
@@ -272,134 +186,179 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
       lastTs = timestamp;
       t += dt;
 
+      const elapsed = (timestamp - mountTime) / 1000; // seconds since mount
       const { mouseX: mx, mouseY: my } = stateRef.current;
 
-      // ─── CLEAR: Pure black, no trails ─────────────────────
+      // ─── CLEAR ────────────────────────────────────────
       ctx.fillStyle = '#060604';
       ctx.fillRect(0, 0, W, H);
 
-      // ─── RENDER NEBULA FOG CLOUDS ─────────────────────────
-      // Each nebula is a large soft radial gradient drawn at very
-      // low opacity. They drift slowly and "breathe" (pulse size).
-      nebulae.forEach(n => {
-        // Drift position (wraps softly at edges)
-        n.x += n.vx * dt;
-        n.y += n.vy * dt;
+      // Global constellation rotation (glacially slow — unified body)
+      const globalAngle = t * 0.0014; // ~0.08°/s
 
-        // Soft bounce at boundaries (reverse direction gently)
-        if (n.x < -0.15) n.vx = Math.abs(n.vx);
-        if (n.x > 1.15) n.vx = -Math.abs(n.vx);
-        if (n.y < -0.15) n.vy = Math.abs(n.vy);
-        if (n.y > 1.15) n.vy = -Math.abs(n.vy);
+      // ─── LAYER 2: Atmospheric fog ─────────────────────
+      const fogPatches = [
+        { x: 0.55, y: 0.45, r: 420, h: 15, s: 55, l: 12, a: 0.045 },
+        { x: 0.25, y: 0.65, r: 300, h: 28, s: 50, l: 10, a: 0.035 },
+        { x: 0.75, y: 0.25, r: 250, h: 185, s: 35, l: 12, a: 0.025 },
+      ];
 
-        // Mouse parallax — nebulae shift subtly opposite to cursor
-        const parallaxX = (mx - 0.5) * -30;
-        const parallaxY = (my - 0.5) * -20;
+      fogPatches.forEach(f => {
+        const px = f.x * W + (mx - 0.5) * -18;
+        const py = f.y * H + (my - 0.5) * -12;
+        const breathR = f.r * (1 + Math.sin(t * 0.1) * 0.08);
 
-        // Breathing pulse (slow sine modulation of radius)
-        const breathScale = 1 + Math.sin(t * n.breathRate + n.phase) * 0.12;
-        const r = n.radius * breathScale;
-
-        const cx = n.x * W + parallaxX;
-        const cy = n.y * H + parallaxY;
-
-        // Draw soft radial gradient
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        const color = `hsla(${n.hue}, ${n.sat}%, ${n.lum}%,`;
-        grad.addColorStop(0, `${color} ${n.alpha})`);
-        grad.addColorStop(0.4, `${color} ${n.alpha * 0.55})`);
-        grad.addColorStop(0.7, `${color} ${n.alpha * 0.2})`);
-        grad.addColorStop(1, `${color} 0)`);
-
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, breathR);
+        grad.addColorStop(0, `hsla(${f.h}, ${f.s}%, ${f.l}%, ${f.a})`);
+        grad.addColorStop(0.5, `hsla(${f.h}, ${f.s}%, ${f.l}%, ${f.a * 0.4})`);
+        grad.addColorStop(1, `hsla(${f.h}, ${f.s}%, ${f.l}%, 0)`);
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.arc(px, py, breathR, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // ─── RENDER STAR FIELD ─────────────────────────────────
-      // Near-static tiny dots with soft twinkling.
-      ctx.save();
+      // ─── LAYER 3: Star field ──────────────────────────
       stars.forEach(s => {
         const twinkle = 0.5 + 0.5 * Math.sin(t * s.twinkleSpeed + s.twinklePhase);
         const alpha = s.brightness * twinkle;
-        if (alpha < 0.02) return;
-
-        // Subtle parallax
-        const px = s.x * W + (mx - 0.5) * -8;
-        const py = s.y * H + (my - 0.5) * -6;
-
-        ctx.fillStyle = `rgba(245, 240, 232, ${alpha})`;
+        if (alpha < 0.015) return;
+        const sx = s.x * W + (mx - 0.5) * -4;
+        const sy = s.y * H + (my - 0.5) * -3;
+        ctx.fillStyle = `rgba(240, 235, 225, ${alpha})`;
         ctx.beginPath();
-        ctx.arc(px, py, s.size, 0, Math.PI * 2);
+        ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.restore();
 
-      // ─── RENDER LIGHT THREADS ──────────────────────────────
-      // Slow undulating curves — aurora / memory connections.
-      threads.forEach(thread => {
-        ctx.save();
-        ctx.lineWidth = thread.width;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+      // ─── Compute projected node positions ─────────────
+      // All nodes rotate as one unified body around constellation center.
+      const conCx = 0.49 * W;
+      const conCy = 0.42 * H;
 
-        // Animated control points — each point undulates vertically
-        const animPoints = thread.points.map((p, i) => ({
-          x: p.x * W + (mx - 0.5) * -15,
-          y: p.y * H + Math.sin(t * thread.speed + thread.phase + i * 1.5) * 40 + (my - 0.5) * -10,
-        }));
+      const nodePositions = NODES.map((n, i) => {
+        // Offset from constellation center
+        const rawX = n.x * W - conCx;
+        const rawY = n.y * H - conCy;
 
-        // Pulse alpha along the thread (traveling glow)
-        const pulsePos = (t * 0.08 + thread.phase) % 1.0;
+        // Rotate as unified body
+        const cosA = Math.cos(globalAngle);
+        const sinA = Math.sin(globalAngle);
+        const rx = rawX * cosA - rawY * sinA;
+        const ry = rawX * sinA + rawY * cosA;
 
-        // Draw as smooth quadratic Bézier curve
+        // Mouse parallax (depth-proportional)
+        const depth = 0.6 + n.r / 20; // bigger nodes feel closer
+        const px = conCx + rx + (mx - 0.5) * -22 * depth;
+        const py = conCy + ry + (my - 0.5) * -16 * depth;
+
+        // Staggered fade-in: nodes appear over first 3 seconds
+        const fadeIn = Math.min(1, Math.max(0, (elapsed - i * 0.12) / 1.2));
+
+        // Breathing: very subtle scale pulse
+        const breath = 1 + Math.sin(t * 0.2 + n.phase) * 0.06;
+
+        return { px, py, fadeIn, breath, node: n };
+      });
+
+      // ─── LAYER 5: Constellation threads ───────────────
+      THREADS.forEach((thread, ti) => {
+        const [fi, ti2, strength] = thread;
+        const p1 = nodePositions[fi];
+        const p2 = nodePositions[ti2];
+        if (!p1 || !p2) return;
+
+        // Threads fade in after nodes (starting at ~2.5s)
+        const threadFade = Math.min(1, Math.max(0, (elapsed - 2.5 - ti * 0.08) / 1.5));
+        const alpha = strength * 0.08 * threadFade * Math.min(p1.fadeIn, p2.fadeIn);
+        if (alpha < 0.003) return;
+
+        ctx.strokeStyle = `rgba(255, 200, 140, ${alpha})`;
+        ctx.lineWidth = 0.6;
         ctx.beginPath();
-        ctx.moveTo(animPoints[0].x, animPoints[0].y);
-        for (let i = 1; i < animPoints.length - 1; i++) {
-          const cpx = (animPoints[i].x + animPoints[i + 1].x) / 2;
-          const cpy = (animPoints[i].y + animPoints[i + 1].y) / 2;
-          ctx.quadraticCurveTo(animPoints[i].x, animPoints[i].y, cpx, cpy);
-        }
-        const last = animPoints[animPoints.length - 1];
-        ctx.lineTo(last.x, last.y);
-
-        // Base stroke
-        const h = thread.hue;
-        ctx.strokeStyle = `hsla(${h}, 50%, 55%, ${thread.alpha})`;
+        ctx.moveTo(p1.px, p1.py);
+        ctx.lineTo(p2.px, p2.py);
         ctx.stroke();
+      });
 
-        // Traveling glow dot along the path
-        const glowIdx = Math.floor(pulsePos * (animPoints.length - 1));
-        const glowFrac = pulsePos * (animPoints.length - 1) - glowIdx;
-        const glowPt = {
-          x:
-            animPoints[glowIdx].x +
-            (animPoints[Math.min(glowIdx + 1, animPoints.length - 1)].x - animPoints[glowIdx].x) *
-              glowFrac,
-          y:
-            animPoints[glowIdx].y +
-            (animPoints[Math.min(glowIdx + 1, animPoints.length - 1)].y - animPoints[glowIdx].y) *
-              glowFrac,
-        };
+      // ─── LAYER 6: Traveling scan pulses ───────────────
+      for (let pi = pulses.length - 1; pi >= 0; pi--) {
+        const pulse = pulses[pi];
+        pulse.progress += pulse.speed * dt;
 
-        const glowGrad = ctx.createRadialGradient(glowPt.x, glowPt.y, 0, glowPt.x, glowPt.y, 35);
-        glowGrad.addColorStop(0, `hsla(${h}, 60%, 60%, 0.12)`);
-        glowGrad.addColorStop(1, `hsla(${h}, 60%, 60%, 0)`);
+        if (pulse.progress > 1) {
+          pulses.splice(pi, 1);
+          // Respawn after delay
+          setTimeout(() => spawnPulse(), 2000 + Math.random() * 4000);
+          continue;
+        }
+
+        const thread = THREADS[pulse.threadIdx];
+        if (!thread) continue;
+        const p1 = nodePositions[thread[0]];
+        const p2 = nodePositions[thread[1]];
+        if (!p1 || !p2) continue;
+
+        const prog = pulse.progress;
+        const gpx = p1.px + (p2.px - p1.px) * prog;
+        const gpy = p1.py + (p2.py - p1.py) * prog;
+
+        // Pulse fades in/out at endpoints
+        const pulseAlpha = Math.sin(prog * Math.PI) * 0.35;
+
+        // Soft glow halo
+        const glowGrad = ctx.createRadialGradient(gpx, gpy, 0, gpx, gpy, 28);
+        glowGrad.addColorStop(0, `rgba(255, 210, 160, ${pulseAlpha * 0.5})`);
+        glowGrad.addColorStop(1, 'rgba(255, 210, 160, 0)');
         ctx.fillStyle = glowGrad;
         ctx.beginPath();
-        ctx.arc(glowPt.x, glowPt.y, 35, 0, Math.PI * 2);
+        ctx.arc(gpx, gpy, 28, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.restore();
+        // Bright core dot
+        ctx.fillStyle = `rgba(255, 225, 180, ${pulseAlpha})`;
+        ctx.beginPath();
+        ctx.arc(gpx, gpy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ─── LAYER 4: Memory nodes ────────────────────────
+      nodePositions.forEach(({ px, py, fadeIn, breath, node }) => {
+        if (fadeIn < 0.01) return;
+
+        const r = node.r * breath;
+        const alpha = fadeIn;
+
+        // Warm color based on node warmth
+        const lum = 55 + node.warmth * 20;
+
+        // Outer halo (atmosphere)
+        const haloGrad = ctx.createRadialGradient(px, py, 0, px, py, r * 4.5);
+        haloGrad.addColorStop(0, `hsla(32, 65%, ${lum}%, ${0.12 * alpha})`);
+        haloGrad.addColorStop(0.4, `hsla(32, 65%, ${lum}%, ${0.04 * alpha})`);
+        haloGrad.addColorStop(1, `hsla(32, 65%, ${lum}%, 0)`);
+        ctx.fillStyle = haloGrad;
+        ctx.beginPath();
+        ctx.arc(px, py, r * 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Warm core
+        const coreGrad = ctx.createRadialGradient(px, py, 0, px, py, r);
+        coreGrad.addColorStop(0, `hsla(35, 70%, ${lum + 10}%, ${0.7 * alpha})`);
+        coreGrad.addColorStop(0.6, `hsla(30, 60%, ${lum}%, ${0.35 * alpha})`);
+        coreGrad.addColorStop(1, `hsla(28, 55%, ${lum - 10}%, 0)`);
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
       });
 
-      // ─── CINEMATIC VIGNETTE ────────────────────────────────
-      // Dark edges, bright center — classic film framing.
-      const vigGrad = ctx.createRadialGradient(W / 2, H / 2, W * 0.25, W / 2, H / 2, W * 0.85);
+      // ─── LAYER 7: Cinematic vignette ──────────────────
+      const vigR = Math.max(W, H) * 0.8;
+      const vigGrad = ctx.createRadialGradient(W / 2, H / 2, vigR * 0.35, W / 2, H / 2, vigR);
       vigGrad.addColorStop(0, 'rgba(6, 6, 4, 0)');
-      vigGrad.addColorStop(0.6, 'rgba(6, 6, 4, 0)');
-      vigGrad.addColorStop(1, 'rgba(6, 6, 4, 0.55)');
+      vigGrad.addColorStop(0.5, 'rgba(6, 6, 4, 0)');
+      vigGrad.addColorStop(1, 'rgba(6, 6, 4, 0.6)');
       ctx.fillStyle = vigGrad;
       ctx.fillRect(0, 0, W, H);
     }
