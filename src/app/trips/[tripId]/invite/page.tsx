@@ -95,7 +95,7 @@ export default function InvitePage({ params }: { params: Promise<{ tripId: strin
 
           {/* The code — HERO */}
           <div
-            className="rounded-2xl py-10 px-6 space-y-5"
+            className="rounded-2xl py-10 px-6 space-y-5 overflow-hidden"
             style={{
               background: 'oklch(93.5% 0.012 72)',
               border: '1.5px solid oklch(87% 0.015 72)',
@@ -114,10 +114,18 @@ export default function InvitePage({ params }: { params: Promise<{ tripId: strin
               ACCESS CODE
             </p>
 
-            {/* The invite code — huge and prominent */}
+            {/* Invite code — font-mono guarantees equal char widths so the code
+                never overflows the box regardless of character mix (W, M, I, etc.).
+                clamp caps at 44px: 8 chars × (26px mono width + 0.3em×44px tracking)
+                = 8 × 39px = 312px which fits inside max-w-sm minus px-6 (≈ 336px). */}
             <p
-              className="font-display font-black tracking-[0.22em] leading-none"
-              style={{ fontSize: 'clamp(36px, 10vw, 64px)', color: 'oklch(16% 0.015 60)' }}
+              className="font-mono font-bold tracking-[0.3em] leading-none w-full"
+              style={{
+                fontSize: 'clamp(28px, 8vw, 44px)',
+                color: 'oklch(16% 0.015 60)',
+                overflowWrap: 'break-word',
+                wordBreak: 'break-all',
+              }}
             >
               {inviteCode}
             </p>
