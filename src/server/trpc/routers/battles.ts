@@ -127,53 +127,12 @@ export const battlesRouter = router({
         console.error('[challenge] failed to enqueue judge_battle job:', battleJobError.message);
       }
 
-      // Notify the opponent's trip creator via scheduled_emails so they know they've been challenged.
-      // We fetch the challenger trip name for the email subject and body.
-      try {
-        interface TripWithProfile {
-          creator_id: string;
-          name: string;
-          profiles: { email: string; display_name: string | null } | null;
-        }
-        interface ChallengerTrip {
-          name: string;
-        }
-        const { data: opponentData } = await (battleAdmin as any)
-          .from('trips')
-          .select('creator_id, name, profiles!inner(email, display_name)')
-          .eq('id', input.opponentTripId)
-          .single();
-
-        const { data: challengerData } = await (battleAdmin as any)
-          .from('trips')
-          .select('name')
-          .eq('id', input.myTripId)
-          .single();
-
-        const opponent = opponentData as unknown as TripWithProfile | null;
-        const challenger = challengerData as unknown as ChallengerTrip | null;
-
-        if (opponent?.creator_id && challenger?.name) {
-          const { error: notifErr } = await battleAdmin.from('scheduled_emails').insert({
-            trip_id: input.opponentTripId,
-            user_id: opponent.creator_id,
-            email_type: 'battle_challenge',
-            send_at: new Date().toISOString(),
-            // Store challenger trip name in a note field for the email cron to use.
-            // We embed it in the trip reference — the cron will query it from the battle row.
-          });
-
-          if (notifErr) {
-            console.error(
-              '[challenge] failed to schedule battle_challenge email:',
-              notifErr.message
-            );
-          }
-        }
-      } catch (notifErr) {
-        // Notification failure must never block the battle creation response
-        console.error('[challenge] battle notification scheduling failed:', notifErr);
-      }
+      // NOTE: A battle-challenge notification email was previously scheduled here,
+      // but the anniversaries cron only handles `anniversary_1yr` and
+      // `first_week_followup` email_types — `battle_challenge` rows accumulated
+      // forever and were never sent. The in-app group_pulse_events insert below
+      // already surfaces battles in the opponent crew's feed, so the email path
+      // was removed rather than implemented to keep the surface area small.
 
       // Emit battle_started pulse event so both crews see it in their Group Pulse feed
       try {

@@ -372,6 +372,17 @@ function PortalCanvas({ phase }: { phase: number }) {
   return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }} />;
 }
 
+// Safe relative-path-only redirect target. Prevents open-redirect via
+// /login?redirect=https://evil.com — only same-origin paths are honored.
+function readSafeRedirect(): string {
+  if (typeof window === 'undefined') return '/trips';
+  const raw = new URLSearchParams(window.location.search).get('redirect');
+  if (!raw) return '/trips';
+  // Must start with a single slash (not protocol-relative //)
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/trips';
+  return raw;
+}
+
 export default function CinematicAuth() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -392,12 +403,13 @@ export default function CinematicAuth() {
   const goToTrips = useCallback(() => {
     if (transitionRef.current) return;
     transitionRef.current = true;
+    const target = readSafeRedirect();
     setPhase(3);
     document.body.style.background = '#060604';
     setTimeout(() => {
       router.refresh();
       setPhase(4);
-      setTimeout(() => router.push('/trips'), 700);
+      setTimeout(() => router.push(target), 700);
     }, 1100);
   }, [router]);
 

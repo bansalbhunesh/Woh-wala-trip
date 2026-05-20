@@ -6,15 +6,9 @@ import { createBrowserClient } from '@supabase/ssr';
 import { trpc } from '@/lib/trpc/client';
 import { FilmGrain } from '@/components/ui/atoms';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { RecurringIdentityWidget } from '@/components/experience/RecurringIdentityWidget';
-import { ConfessionInput } from '@/components/experience/ConfessionInput';
 import {
   ArchiveNavbar,
   ArchiveHero,
-  CookedScoreLight,
-  BadFeelingsChart,
-  DonutChart,
-  LightCastWidget,
   ArchiveFooter,
   LoreWrapped,
 } from '@/components/cinematic/ArchiveRoom';
@@ -33,13 +27,18 @@ import {
   StickyChapter,
   EvidenceBoard,
 } from '@/components/cinematic/Documentary';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { analytics } from '@/lib/analytics';
 import { LoreCapsules } from '@/components/experience/LoreCapsules';
-import { ProphecyCard } from '@/components/experience/ProphecyCard';
-import { IncidentButton } from '@/components/experience/GroupPulse';
 import { LoadingState, NotFoundState } from '@/components/experience/LoadingStates';
 import dynamic from 'next/dynamic';
+
+// PROOF-OF-LOVE strip-down: removed DeeperRecord (disputes + memory review +
+// incidents), IncidentButton, ExportArchiveButton, RecurringIdentityWidget,
+// and the entire DECLASSIFY-RAW-DATA toggle (CookedScoreLight, BadFeelingsChart,
+// DonutChart, LightCastWidget). These were speculative retention surfaces with
+// no behavioral evidence. The trip room's only job now is: present the lore,
+// land the share. Everything else moved to /trips/[tripId]/settings or was deleted.
 
 const GeneratingState = dynamic(
   () => import('@/components/experience/GeneratingState').then(mod => mod.GeneratingState),
@@ -53,16 +52,8 @@ const UploadState = dynamic(
   () => import('@/components/experience/UploadState').then(mod => mod.UploadState),
   { ssr: false }
 );
-const DeeperRecord = dynamic(
-  () => import('@/components/experience/DeeperRecord').then(mod => mod.DeeperRecord),
-  { ssr: false }
-);
 const EmotionalDamageScan = dynamic(
   () => import('@/components/experience/EmotionalDamageScan').then(mod => mod.EmotionalDamageScan),
-  { ssr: false }
-);
-const ExportArchiveButton = dynamic(
-  () => import('@/components/experience/TripWidgets').then(mod => mod.ExportArchiveButton),
   { ssr: false }
 );
 const ReferralShareWidget = dynamic(
@@ -79,14 +70,8 @@ export default function TripRoomPage() {
   const router = useRouter();
   const tripId = params.tripId as string;
   const [showWrapped, setShowWrapped] = useState(false); // start false — set true only after localStorage check
-  const [showRawData, setShowRawData] = useState(false);
-  // Tab system removed — content is now linear scroll. The 5-tab abstraction
-  // required users to discover depth through navigation rather than scroll.
-  // All tab content is now always rendered and reachable by scrolling.
-  // Kept as a no-op variable for backwards compatibility with setActiveTab calls
-  // that remain in sub-components pending cleanup.
-  const [activeTab] = useState<'hub'>('hub');
-  const setActiveTab = (_: string) => {}; // no-op
+  // (Tab system removed earlier — content is linear scroll. The section IDs
+  // below are still used as scroll anchors by the Chapter Deck cards in the hub.)
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
   const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
@@ -206,21 +191,17 @@ export default function TripRoomPage() {
 
       {/* Full-width hero outside the grid */}
       <div className="max-w-[1600px] mx-auto px-6 pt-12">
-        {/* Pre-trip prophecy — shows before first lore generation */}
-        {!isReady && !isProcessing && <ProphecyCard tripId={tripId} />}
+        {/* Pre-trip "prophecy" prediction card removed — it added a stacked
+            retention surface before the user had any reason to care about it.
+            Users land on this page to upload photos and unlock lore; that's the
+            only flow that needs to be obvious. */}
 
         {isProcessing ? (
           <GeneratingState tripId={tripId} />
         ) : isFailed ? (
           <FailedState trip={trip} tripId={tripId} onRetry={() => refetch()} />
         ) : !isReady ? (
-          <>
-            <UploadState trip={trip} tripId={tripId} onPhotosChanged={() => refetch()} />
-            {/* Incident button — for flagging moments during an active trip */}
-            <div className="mt-4">
-              <IncidentButton tripId={tripId} />
-            </div>
-          </>
+          <UploadState trip={trip} tripId={tripId} onPhotosChanged={() => refetch()} />
         ) : null}
       </div>
 
@@ -233,14 +214,6 @@ export default function TripRoomPage() {
 
           {/* Lore Capsules — tap-to-unlock reveals (villain, MVP, core memory) */}
           {lore && <LoreCapsules lore={lore} members={members} tripId={tripId} />}
-
-          {/* ── PROGRESSIVE DISCLOSURE: Deeper Record ──────────────────────────
-            Memory review and disputes are shown ONLY when there is activity.
-            Incident log is shown only when incidents have been extracted.
-            These are depth features, not first-visit features.
-            They appear contextually — not as empty sections waiting to be filled.
-          */}
-          <DeeperRecord tripId={tripId} lore={lore} isReady={isReady} />
 
           {/* Letterboxed 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
@@ -372,20 +345,10 @@ export default function TripRoomPage() {
               }
 
               {
-                <div id="section-chaos" className="space-y-6">
-                  {/* Category Header */}
-                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-hub')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
-                    >
-                      ← Return to Scene Hub
-                    </button>
-                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                <div id="section-chaos" className="space-y-6 pt-4">
+                  {/* Section header — scroll IS the nav, no chrome needed. */}
+                  <div className="pb-4 border-b border-white/5">
+                    <div className="text-[8px] font-mono text-white/30 uppercase tracking-[0.35em]">
                       Scene 01 · The Culprits
                     </div>
                   </div>
@@ -415,48 +378,14 @@ export default function TripRoomPage() {
                       </ErrorBoundary>
                     </section>
                   )}
-
-                  {/* Navigation footer */}
-                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-hub')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
-                    >
-                      Exit Scene
-                    </button>
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-evidence')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
-                    >
-                      Next Scene →
-                    </button>
-                  </div>
                 </div>
               }
 
               {
-                <div id="section-evidence" className="space-y-6">
-                  {/* Category Header */}
-                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-hub')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
-                    >
-                      ← Return to Scene Hub
-                    </button>
-                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                <div id="section-evidence" className="space-y-6 pt-4">
+                  {/* Section header — scroll IS the nav, no chrome needed. */}
+                  <div className="pb-4 border-b border-white/5">
+                    <div className="text-[8px] font-mono text-white/30 uppercase tracking-[0.35em]">
                       Scene 02 · Clues & Artifacts
                     </div>
                   </div>
@@ -523,48 +452,14 @@ export default function TripRoomPage() {
                       <PlotTwistMoment lore={lore} />
                     </div>
                   )}
-
-                  {/* Navigation footer */}
-                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-chaos')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
-                    >
-                      ← Previous Scene
-                    </button>
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-timeline')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
-                    >
-                      Next Scene →
-                    </button>
-                  </div>
                 </div>
               }
 
               {
-                <div id="section-timeline" className="space-y-6">
-                  {/* Category Header */}
-                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-hub')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
-                    >
-                      ← Return to Scene Hub
-                    </button>
-                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                <div id="section-timeline" className="space-y-6 pt-4">
+                  {/* Section header — scroll IS the nav, no chrome needed. */}
+                  <div className="pb-4 border-b border-white/5">
+                    <div className="text-[8px] font-mono text-white/30 uppercase tracking-[0.35em]">
                       Scene 03 · Timeline Reconstructed
                     </div>
                   </div>
@@ -588,48 +483,14 @@ export default function TripRoomPage() {
                       </div>
                     </section>
                   )}
-
-                  {/* Navigation footer */}
-                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-evidence')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
-                    >
-                      ← Previous Scene
-                    </button>
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-verdict')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
-                    >
-                      Next Scene →
-                    </button>
-                  </div>
                 </div>
               }
 
               {
-                <div id="section-verdict" className="space-y-6">
-                  {/* Category Header */}
-                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-hub')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-white/45 hover:text-white transition-colors"
-                    >
-                      ← Return to Scene Hub
-                    </button>
-                    <div className="text-[8px] font-mono text-white/25 uppercase tracking-[0.3em]">
+                <div id="section-verdict" className="space-y-6 pt-4">
+                  {/* Section header — scroll IS the nav, no chrome needed. */}
+                  <div className="pb-4 border-b border-white/5">
+                    <div className="text-[8px] font-mono text-white/30 uppercase tracking-[0.35em]">
                       Scene 04 · Verdict Decree
                     </div>
                   </div>
@@ -672,30 +533,6 @@ export default function TripRoomPage() {
                       <ClosingVerdict lore={lore} />
                     </ErrorBoundary>
                   )}
-
-                  {/* Navigation footer */}
-                  <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-timeline')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="text-[9px] font-mono uppercase tracking-widest text-white/35 hover:text-white transition-colors"
-                    >
-                      ← Previous Scene
-                    </button>
-                    <button
-                      onClick={() =>
-                        document
-                          .getElementById('section-hub')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                      className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-[9px] font-mono uppercase tracking-wider hover:bg-white/90 active:scale-95 transition-all"
-                    >
-                      Exit to Scene Hub 🎬
-                    </button>
-                  </div>
                 </div>
               }
             </div>
@@ -748,9 +585,13 @@ export default function TripRoomPage() {
                 })()}
               </div>
 
-              <ConfessionInput tripId={tripId} />
+              {/*
+                ConfessionInput removed from the post-lore panel: confessions only
+                affect generation, and at this point lore is already locked. Leaving
+                the input here suggested it would change the lore, which it cannot.
+              */}
 
-              {/* WhatsApp-first share — primary action for India */}
+              {/* WhatsApp-first share — the entire trip room exists to drive this tap. */}
               {lore && trip?.invite_code && (
                 <div className="space-y-2">
                   {/* Primary: WhatsApp with AI-generated caption — highest virality */}
@@ -803,40 +644,20 @@ export default function TripRoomPage() {
                 </>
               )}
 
-              {/* REFERRAL-01: Referral share widget — invite a friend, both get lore */}
+              {/* REFERRAL-01: Referral share widget — this IS the viral loop, kept. */}
               <ReferralShareWidget />
 
-              {/* EXPORT-01: Download full trip archive as JSON */}
-              <ExportArchiveButton tripId={tripId} />
-
-              {!showRawData ? (
-                <button
-                  onClick={() => setShowRawData(true)}
-                  className="w-full py-4 mt-6 rounded-[1.5rem] border border-dashed border-black/20 text-black/40 text-[10px] font-mono uppercase tracking-[0.3em] hover:bg-black/5 hover:text-black/60 hover:border-black/30 transition-all active:scale-95"
-                >
-                  [ DECLASSIFY RAW DATA ]
-                </button>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-3 mt-4"
-                >
-                  <CookedScoreLight trip={trip} />
-                  <BadFeelingsChart trip={trip} />
-                  <DonutChart trip={trip} />
-                  <LightCastWidget trip={trip} />
-                  <RecurringIdentityWidget tripId={tripId} />
-
-                  <button
-                    onClick={() => setShowRawData(false)}
-                    className="w-full py-3 mt-4 text-[9px] font-mono text-black/30 hover:text-black/60 uppercase tracking-[0.2em] transition-colors"
-                  >
-                    Hide Raw Data
-                  </button>
-                </motion.div>
-              )}
+              {/*
+                Removed in PROOF-OF-LOVE strip-down:
+                  - ExportArchiveButton (low-frequency utility, distracts from share)
+                  - DECLASSIFY RAW DATA toggle and its child widgets
+                    (CookedScoreLight, BadFeelingsChart, DonutChart, LightCastWidget,
+                    RecurringIdentityWidget). These were dashboard surfaces with no
+                    behavioral evidence of use. The lore IS the data presentation.
+                  - DeeperRecord (disputes / memory review / incidents).
+                Settings still surface the export and visibility controls for the
+                creator who needs them; the default view stays focused on the share.
+              */}
             </div>
           </div>
 

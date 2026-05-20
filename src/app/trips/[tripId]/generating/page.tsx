@@ -104,17 +104,21 @@ export default function GeneratingPage() {
     return () => clearTimeout(timeout);
   }, [loreStatus]);
 
-  // Progress simulation
+  // Progress simulation — deterministic eased curve.
+  // Replaces the previous Math.random-jitter (which felt manic on screen) with
+  // a smooth ease-out approaching 95% over the expected pipeline duration.
+  // Real 100% is set when the realtime DB subscription reports lore_status='ready'.
   useEffect(() => {
+    const startedAt = Date.now();
+    const EXPECTED_MS = 120_000; // matches the median real pipeline duration
     const id = setInterval(() => {
-      setProgress(p => {
-        const inc =
-          p < 70 ? Math.random() * 2.5 : p < 90 ? Math.random() * 0.8 : Math.random() * 0.2;
-        const next = Math.min(p + inc, 95);
-        setStage(Math.min(Math.floor((next / 95) * STAGES.length), STAGES.length - 1));
-        return next;
-      });
-    }, 150);
+      const t = Math.min(1, (Date.now() - startedAt) / EXPECTED_MS);
+      // easeOutQuart — fast at the start, gentle approach to the ceiling.
+      const eased = 1 - Math.pow(1 - t, 4);
+      const next = Math.min(95, eased * 95);
+      setProgress(next);
+      setStage(Math.min(Math.floor((next / 95) * STAGES.length), STAGES.length - 1));
+    }, 250);
     return () => clearInterval(id);
   }, []);
 

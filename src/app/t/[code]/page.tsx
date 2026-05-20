@@ -1,10 +1,9 @@
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { LoreJson } from '@/lib/types';
 import { FilmGrain, AtmosphericBlob, CinematicText } from '@/components/ui/atoms';
 import { ArchiveFooter } from '@/components/cinematic/ArchiveRoom';
-import { Play, Shield, Users, Calendar } from 'lucide-react';
+import { Image as ImageIcon, Film, Users, Calendar } from 'lucide-react';
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -51,16 +50,25 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
   const { data: tripData } = await supabase
     .from('trips')
     .select(
-      'id, name, destination, chaos_score, member_count, lore_json, tier, invite_code, trip_start_date, trip_end_date'
+      'id, name, destination, chaos_score, member_count, total_photos, lore_json, tier, invite_code, trip_start_date, trip_end_date'
     )
     .eq('invite_code', code.toUpperCase())
     .single();
 
-  if (!tripData) redirect('/');
+  if (!tripData) {
+    // Invite code doesn't exist. Show a real not-found state instead of bouncing
+    // the visitor home with no explanation.
+    return <PublicNotFound code={code} />;
+  }
   const trip = tripData as any;
 
   const lore = trip.lore_json as LoreJson | null;
-  if (!lore) redirect(`/trips/join?code=${code}`);
+  if (!lore) {
+    // The trip exists but the AI hasn't written its story yet. Don't redirect
+    // anon visitors into the auth-walled /trips/join — show a clear "story
+    // still being written" placeholder with the trip name they were sent.
+    return <PublicLorePending tripName={trip.name} inviteCode={trip.invite_code} />;
+  }
 
   const cookedLevel = lore.cooked_level ?? trip.chaos_score ?? 60;
   const duration = computeDays(trip.trip_start_date, trip.trip_end_date);
@@ -80,15 +88,16 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
           className="bottom-[10%] left-[-10%] w-[400px] h-[400px] opacity-10"
         />
 
-        {/* Parallax Background Tease */}
-        <div className="absolute inset-0 grayscale contrast-125 opacity-20 pointer-events-none">
-          <img
-            src="https://images.unsplash.com/photo-1544620347-c4fd403d5957?q=80&w=2069"
-            alt=""
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-        </div>
+        {/* Brand-coherent gradient background — no stock photography pretending
+            to be the user's trip. The trip's own cover/portrait art (when
+            generated) is surfaced by the OG card route. */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(255,77,77,0.08), transparent 70%), radial-gradient(ellipse 60% 80% at 50% 100%, rgba(212,158,45,0.05), transparent 70%)',
+          }}
+        />
 
         <div className="relative z-10 max-w-4xl mx-auto w-full space-y-12">
           <div className="space-y-6">
@@ -137,16 +146,23 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
             </div>
           </div>
 
-          {/* Quick Stats Grid */}
+          {/* Quick Stats Grid — every card is a real number from the trip.
+              The previous "Security: Encrypted" and "Status: Live Lore" cards
+              were decoration; they've been replaced with photo and chapter
+              counts so visitors see actual scale of the archive. */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              icon={<Users size={14} />}
-              label="Cast"
-              value={`${trip.member_count} Members`}
-            />
+            <StatCard icon={<Users size={14} />} label="Cast" value={`${trip.member_count ?? 0}`} />
             <StatCard icon={<Calendar size={14} />} label="Runtime" value={`${duration} Days`} />
-            <StatCard icon={<Shield size={14} />} label="Security" value="Encrypted" />
-            <StatCard icon={<Play size={14} />} label="Status" value="Live Lore" />
+            <StatCard
+              icon={<ImageIcon size={14} />}
+              label="Photos"
+              value={`${trip.total_photos ?? 0}`}
+            />
+            <StatCard
+              icon={<Film size={14} />}
+              label="Chapters"
+              value={`${lore.trip_eras?.length ?? 0}`}
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-6 pt-12">
@@ -230,5 +246,66 @@ function computeDays(start: string | null, end: string | null): number {
   return Math.max(
     1,
     Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1
+  );
+}
+
+// Shown when a shared invite code doesn't match any trip.
+// Anon-visitor safe: no auth wall, no silent /home bounce.
+function PublicNotFound({ code }: { code: string }) {
+  return (
+    <div className="min-h-screen bg-[#060604] text-[#F5F0E8] flex flex-col items-center justify-center px-6 text-center font-mono">
+      <FilmGrain />
+      <p className="text-[10px] uppercase tracking-[0.6em] text-[rgba(255,77,77,0.5)] mb-6">
+        ● ARCHIVE NOT FOUND
+      </p>
+      <h1 className="text-3xl font-black uppercase tracking-tighter text-[#F5F0E8] mb-3">
+        No such trip
+      </h1>
+      <p className="text-sm text-white/40 max-w-xs leading-relaxed mb-8">
+        The link <span className="text-white/70">/t/{code.toUpperCase()}</span> isn&apos;t a trip we
+        know about. Check the code with whoever sent it.
+      </p>
+      <Link
+        href="/"
+        className="px-7 py-3.5 rounded-full text-[10px] uppercase tracking-widest text-white/55 border border-white/10 hover:bg-white/5 transition-all"
+      >
+        ← Yaarlore
+      </Link>
+    </div>
+  );
+}
+
+// Shown when the trip exists but the AI hasn't finished writing the story.
+// Replaces a redirect to the auth-walled /trips/join so anon visitors aren't
+// silently bounced into login.
+function PublicLorePending({
+  tripName,
+  inviteCode,
+}: {
+  tripName: string | null;
+  inviteCode: string | null;
+}) {
+  return (
+    <div className="min-h-screen bg-[#060604] text-[#F5F0E8] flex flex-col items-center justify-center px-6 text-center font-mono">
+      <FilmGrain />
+      <p className="text-[10px] uppercase tracking-[0.6em] text-[rgba(212,158,45,0.6)] mb-6 animate-pulse">
+        ◌ STILL WRITING
+      </p>
+      <h1 className="text-3xl font-black uppercase tracking-tighter text-[#F5F0E8] mb-3 max-w-md">
+        {tripName ?? 'This trip'} doesn&apos;t have its story yet
+      </h1>
+      <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-8">
+        Yaarlore is still reading the photos. Come back in a couple of minutes — once the
+        documentary drops you&apos;ll see it here.
+      </p>
+      {inviteCode && (
+        <Link
+          href={`/trips/join?code=${inviteCode}`}
+          className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white/70 transition-colors"
+        >
+          On this trip? Join to upload photos →
+        </Link>
+      )}
+    </div>
   );
 }

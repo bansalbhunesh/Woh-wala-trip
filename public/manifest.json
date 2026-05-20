@@ -1,13 +1,13 @@
 {
-  "name": "Woh Wala Trip",
-  "short_name": "WWT",
-  "description": "Your trips, narrated.",
+  "name": "Yaarlore",
+  "short_name": "Yaarlore",
+  "description": "Your friend group, narrated. AI turns your trip photos into a cinematic documentary.",
   "start_url": "/trips",
   "display": "standalone",
-  "background_color": "#FAF8F4",
-  "theme_color": "#000000",
+  "background_color": "#060604",
+  "theme_color": "#FF4D4D",
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }

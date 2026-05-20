@@ -118,7 +118,7 @@ export function StoryVisibilityToggle({
   onToggled?: () => void;
 }) {
   const [visible, setVisible] = useState(initialVisible);
-  const update = trpc.trips.updateStoryVisibility.useMutation({
+  const update = trpc.trips.setStoryVisible.useMutation({
     onSuccess: data => {
       setVisible(data.visible);
       onToggled?.();

@@ -160,6 +160,64 @@ def validate_lore_json(lore: dict):
         if label in _generic_stat_labels:
             raise ValueError(f"Generic receipt stat detected: {stat.get('label')!r}")
 
+    # Whatsapp caption — the literal line a member will paste into their group chat.
+    # Reject template-y openings that scream "this is from a marketing app".
+    caption = lore.get("whatsapp_caption", "")
+    if caption:
+        cl = caption.lower().strip()
+        _caption_red_flags = [
+            "check this out",
+            "you guys",
+            "you all",
+            "made memories",
+            "look what we",
+            "look at this",
+            "amazing trip",
+            "best trip ever",
+        ]
+        for flag in _caption_red_flags:
+            if flag in cl:
+                raise ValueError(f"whatsapp_caption contains generic phrasing: {flag!r}")
+        # Length sanity — prompt says max 25 words.
+        if len(caption.split()) > 35:
+            raise ValueError(f"whatsapp_caption too long: {len(caption.split())} words")
+
+    # Screenshot moment — must reference SOMETHING. Reject the hedged generic.
+    screenshot_line = lore.get("screenshot_moment_line", "").lower()
+    if screenshot_line:
+        _hedge_words = ["sometimes", "often", "usually", "most of the time", "every now and then"]
+        for hedge in _hedge_words:
+            if hedge in screenshot_line:
+                raise ValueError(
+                    f"screenshot_moment_line uses hedge word {hedge!r} — must be declarative present tense"
+                )
+
+    # Dead archetype labels — the prompt now forbids these in any field. Defend at
+    # the validator layer too, because schema-followers love resurrecting them.
+    _dead_archetypes = {
+        "black cat", "golden retriever", "main character",
+        "chaos source", "emotional support npc",
+    }
+    # Plain "NPC" is too short to safely substring-match (matches "NPCs in the chat"),
+    # but the case-exact label as a standalone word is checked below.
+    def _archetype_text(value):
+        if isinstance(value, str):
+            return value.lower().strip()
+        return ""
+    for sup in lore.get("superlatives", []) or []:
+        arch = _archetype_text(sup.get("archetype"))
+        if arch in _dead_archetypes or arch == "npc":
+            raise ValueError(
+                f"superlative.archetype uses dead platform label {arch!r} — must be specific"
+            )
+    # Character roles (rendered inline by the trip room) — same rule.
+    for role in lore.get("character_roles", []) or []:
+        arch = _archetype_text(role.get("archetype"))
+        if arch in _dead_archetypes or arch == "npc":
+            raise ValueError(
+                f"character_role.archetype uses dead platform label {arch!r} — must be specific"
+            )
+
 
 def scan_forbidden_phrases(lore: dict) -> list[str]:
     """Return list of forbidden phrases detected. Empty list = clean."""

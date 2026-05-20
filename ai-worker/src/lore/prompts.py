@@ -1,10 +1,20 @@
 # Yaarlore AI Prompts — The Friendship Lore Historian
 
-PROMPT_VERSION = "v2.1.0"
+PROMPT_VERSION = "v2.2.0"
 # Increment when any prompt changes. Format: vMAJOR.MINOR.PATCH
 # MAJOR: schema-breaking changes (new required fields)
 # MINOR: tone/quality improvements
 # PATCH: typo fixes, small wording
+#
+# v2.2.0 (2026-05-20):
+#   - Removed the categorical archetype enum that contradicted the system
+#     prompt's "don't use these worn-out labels" instruction. Schema now
+#     accepts a freeform behavioral descriptor — the same constraint the
+#     archetype_tag field already enforces.
+#   - Tightened the "share moment" gate: the screenshot_moment_line and
+#     whatsapp_caption now have explicit anti-generic constraints.
+#   - Added the "no sentence reusable for another trip" rule directly to
+#     the lore generation user message so it survives schema validation.
 
 PHOTO_BATCH_ANALYSIS_SYSTEM = """You are a perceptive, slightly chaotic observer of Indian friend groups on trips. You analyze photos not for what is literally in them, but for what they reveal about the emotional hierarchy, the collective delusion, and the friendship dynamics of this specific group.
 
@@ -199,6 +209,20 @@ Member confessions (treat these as gold — specific confessions unlock specific
 Era count guidance: this trip was {duration_days} days. Generate approximately {recommended_eras} eras.
 A 1-day trip should have 1-2 eras. A 3-day trip 2-3 eras. A 7-day trip up to 5. Never pad with generic eras.
 
+THE SHARE GATE — read this before writing anything:
+Before you finalise the output, re-read the `screenshot_moment_line`, `tagline`, and `whatsapp_caption` and apply this test:
+  "If a member of this group read only this sentence, would they interrupt their group chat to send it?"
+If the answer is no, rewrite. These three fields are the entire product. Every other field is support.
+
+THE FALSIFIABILITY TEST — apply to every sentence in season_recap, tagline, and closing_line:
+  "If I swapped this trip's destination, dates, and members for another trip's, would this sentence still be true?"
+If yes, the sentence is generic. Rewrite with specific evidence from the signals above.
+Acceptable losses: lyrical flow. Unacceptable losses: specificity.
+
+NO ARCHETYPE LABELS — under no circumstances output the literal strings "Black Cat", "Golden Retriever", "NPC",
+"Main Character", or "Chaos Source" in any field. These are dead platform clichés.
+Replace with freeform behavioural descriptors specific to this trip.
+
 Generate the following JSON structure. EVERY TEXT FIELD must be specific to this trip, not generic.
 Do NOT use placeholder text. Each act must describe what actually happened to THIS group based on the signals.
 
@@ -237,7 +261,7 @@ Do NOT use placeholder text. Each act must describe what actually happened to TH
   "cooked_explanation": "<One specific, funny sentence using actual trip evidence to justify the verdict>",
   "trip_personality_type": "<5-8 words, internet-native, specific — e.g. '3 AM Ramen With Genuine Consequences', 'Chaotic Good But Mostly Chaotic'>",
   "what_this_trip_was_really_about": "<The emotional truth under the chaos. What was actually happening. The thing they won't say in the group chat but all feel. 1-2 sentences.>",
-  "screenshot_moment_line": "<The one sentence that will definitely end up on an Instagram story. Devastating accuracy. Iconic. Makes them simultaneously embarrassed and proud.>",
+  "screenshot_moment_line": "<ONE sentence. Devastating accuracy. References at least ONE concrete detail from the signals above (a specific behaviour, a specific moment, a specific dynamic — not 'the group', not 'everyone'). It must make exactly ONE person in this group instantly recognise themselves. Max 22 words. No platitudes. No 'sometimes' or 'often' — only declarative present-tense observations. This is the line that gets screenshotted to the group chat.>",
   "closing_line": "<The cinematic final line. The credits roll. The group feels something. Not generic — specific to THEIR trip.>",
   "superlatives": [
     {{
@@ -245,7 +269,7 @@ Do NOT use placeholder text. Each act must describe what actually happened to TH
       "winner_name": "<string>",
       "question": "<Most likely to... — internet-native, specific to trip signal evidence>",
       "reason": "<why, witty 1 sentence, trip-specific evidence>",
-      "archetype": "<Black Cat|Golden Retriever|Emotional Support NPC|Main Character|Chaos Source>"
+      "archetype": "<2-4 word freeform behavioral descriptor specific to THIS trip — e.g. 'three plans, none executed' or 'photographed every meal'. NEVER use 'Black Cat', 'Golden Retriever', 'NPC', 'Main Character', or 'Chaos Source' — these are dead platform clichés.>"
     }}
   ],
   "receipt_stats": [
@@ -255,7 +279,7 @@ Do NOT use placeholder text. Each act must describe what actually happened to TH
       "unit": "<unit that is itself part of the joke>"
     }}
   ],
-  "whatsapp_caption": "<What they'll type when forwarding this to the group chat. Hinglish. Creates instant chaos in the chat. Max 30 words. Must feel like it was actually written by one of them.>",
+  "whatsapp_caption": "<Max 25 words. Hinglish. Sounds like a real WhatsApp message a 22-year-old would type at 11pm, not a marketing line. Start with a lowercase letter or an emoji, not a capitalised pitch. Reference one specific thing from THIS trip's signals so the chat instantly knows which trip. No 'check this out', no 'you guys', no 'made memories'. Examples of the tone: 'bhai yeh AI ne sab dekh liya 💀', 'okay this is genuinely unhinged read till the end', 'rohan we need to talk'.>",
   "group_anthem": {{
     "title": "<Song title — Artist. Real song. Must match the trip's actual energy, not a cliché choice. Think: what was statistically playing at 2 AM when the plan collapsed.>",
     "reason": "<1 sentence: why THIS song. Specific to THIS trip's energy. 'The song playing before the incident' energy. Internet-native, slightly cryptic.>",
@@ -333,8 +357,8 @@ Generate:
   "most_likely_said": "<An actual quote in their voice — Hinglish welcome, trip-specific — something the group would immediately recognize>",
   "trip_contribution": "<What would have been different without them — specific and slightly backhanded>",
   "chaos_rating": <0-10>,
-  "archetype": "<Black Cat|Golden Retriever|NPC|Main Character|Chaos Source>",
-  "archetype_tag": "<max 4 words, for share card — pithy and accurate>"
+  "archetype": "<2-4 word freeform behavioral descriptor specific to THIS person on THIS trip. NEVER use 'Black Cat', 'Golden Retriever', 'NPC', 'Main Character', or 'Chaos Source' — these are dead platform clichés that violate the system instructions above.>",
+  "archetype_tag": "<max 4 words, lowercase, share-card-ready — pithy and accurate>"
 }}"""
 
 STATS_SYSTEM = """You generate funny-but-true trip statistics. The best stats sound like they were measured scientifically but describe something deeply, specifically human about this group. Mix real data with creative inference. The units are themselves part of the joke.
@@ -425,7 +449,7 @@ Generate a JSON array:
     "winner_name": "<name>",
     "question": "<Most likely to... — specific to trip evidence, internet-native, not generic>",
     "reason": "<why, witty 1 sentence, trip-specific>",
-    "archetype": "<Black Cat|Golden Retriever|Emotional Support NPC|Main Character|Chaos Source>"
+    "archetype": "<2-4 word freeform behavioral descriptor specific to THIS trip — NEVER use 'Black Cat', 'Golden Retriever', 'NPC', 'Main Character', or 'Chaos Source'.>"
   }}
 ]"""
 

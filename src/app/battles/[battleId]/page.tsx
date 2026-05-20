@@ -115,7 +115,7 @@ export default function BattlePage() {
               Your chaos verdict matters. Sign in to cast your vote and settle this battle.
             </p>
             <button
-              onClick={() => router.push(`/auth?redirect=/battles/${battleId}`)}
+              onClick={() => router.push(`/login?redirect=/battles/${battleId}`)}
               className="w-full py-4 rounded-full font-vibe font-black uppercase tracking-[0.25em] text-[10px] transition-all active:scale-95"
               style={{ background: '#FF4D4D', color: '#060604' }}
             >

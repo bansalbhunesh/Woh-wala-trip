@@ -89,7 +89,7 @@ async def poll_background_jobs():
                 lambda: supabase.table("background_jobs")
                     .select("id, trip_id, job_type, payload, trace_id")
                     .eq("status", "pending")
-                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle", "embed_photo"])
+                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle", "embed_photo", "yearly_wrap"])
                     .order("created_at")
                     .limit(1)
                     .execute()
@@ -142,6 +142,17 @@ async def poll_background_jobs():
                             raise ValueError("embed_photo job missing photo_id in payload")
                         from .embeddings import embed_photo
                         await embed_photo(photo_id)
+
+                    elif job_type == "yearly_wrap":
+                        # Queue fallback for trips.generateYearlyWrap when the HTTP
+                        # trigger fails (cold start, transient network, missing env).
+                        # payload carries user_id / year / trip_ids inserted by the tRPC mutation.
+                        wrap_user_id = payload.get("user_id")
+                        wrap_year = payload.get("year")
+                        wrap_trip_ids = payload.get("trip_ids") or []
+                        if not wrap_user_id or not wrap_year or not wrap_trip_ids:
+                            raise ValueError("yearly_wrap job missing user_id / year / trip_ids in payload")
+                        await generate_yearly_wrap(wrap_trip_ids, wrap_user_id, int(wrap_year))
 
                     else:
                         # Unknown job type — mark failed so it doesn't block the queue
@@ -348,7 +359,13 @@ Return only the JSON object, no markdown."""
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}]
         )
-        wrap_json = json.loads(resp.content[0].text)
+        # Tolerate Claude wrapping JSON in a ```json ... ``` fence.
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            # Strip the first line (```json or ```) and the trailing fence
+            lines = raw.split("\n")
+            raw = "\n".join(lines[1:]).rstrip("` \n")
+        wrap_json = json.loads(raw)
         wrap_json["chaos_average"] = avg_chaos
         wrap_json["trip_count"] = len(trips_data)
         wrap_json["destinations"] = destinations

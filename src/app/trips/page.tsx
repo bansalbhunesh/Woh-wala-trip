@@ -426,6 +426,9 @@ export default function TripsPage() {
                   background: 'rgba(245,240,232,0.03)',
                   border: '1.5px solid rgba(245,240,232,0.08)',
                   minHeight: 220,
+                  // Stagger pulse phase so the three skeletons don't beat in
+                  // lockstep — feels more like real content streaming in.
+                  animationDelay: `${i * 0.18}s`,
                 }}
               >
                 {/* Coloured header strip */}

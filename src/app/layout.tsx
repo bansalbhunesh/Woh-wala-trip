@@ -23,6 +23,11 @@ const firaMono = Fira_Mono({
   display: 'swap',
 });
 
+// Absolute URLs are required by OG scrapers. NEXT_PUBLIC_SITE_URL is the
+// authoritative production URL; fall back to yaarlore.app to match the README.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://yaarlore.app';
+const OG_IMAGE = `${SITE_URL}/og-image.png`;
+
 export const metadata = {
   title: "Yaarlore — Your Friend Group's Trip Documentary",
   description:
@@ -47,14 +52,17 @@ export const metadata = {
     description:
       "Upload your trip photos → AI generates character roles, chaos scores, trip eras, and a cinematic story you'll actually want to share.",
     type: 'website',
-    url: 'https://yaarlore.com',
+    url: SITE_URL,
     siteName: 'Yaarlore',
     images: [
       {
-        url: 'https://yaarlore.com/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Yaarlore — AI Trip Documentary',
+        // 1:1 brand poster — works in WhatsApp, iMessage, Twitter, and most
+        // OG scrapers. Square aspect renders cleanly across platforms even
+        // though some (Twitter summary_large_image) prefer landscape.
+        url: OG_IMAGE,
+        width: 1254,
+        height: 1254,
+        alt: 'Yaarlore — Every trip becomes legend',
       },
     ],
   },
@@ -63,7 +71,7 @@ export const metadata = {
     title: "Yaarlore — Your Friend Group's Trip Documentary",
     description:
       "AI turns your trip photos into a cinematic documentary. India's first AI friendship mythology platform.",
-    images: ['https://yaarlore.com/og-image.png'],
+    images: [OG_IMAGE],
     creator: '@yaarlore',
   },
   robots: {
@@ -79,7 +87,8 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // maximumScale removed — locking zoom violates WCAG 1.4.4 and provides no
+  // real benefit. iOS Safari will still respect the cinematic layout.
   themeColor: '#FAF8F3',
 };
 

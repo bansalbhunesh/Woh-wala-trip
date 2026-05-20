@@ -190,6 +190,20 @@ export async function GET(req: NextRequest) {
 
 // ─── Email builders ────────────────────────────────────────────────────────────
 
+// Minimal HTML escape for user-controlled values (display_name, trip.name,
+// lore.trip_title, etc) interpolated into the email template. Prevents an
+// attacker who puts <img onerror=...> in their display name from injecting
+// active content into every recipient's inbox.
+function esc(value: unknown): string {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface EmailContext {
   name: string;
   trip: any;
@@ -207,8 +221,10 @@ interface FirstWeekEmailContext extends EmailContext {
 
 function buildAnniversaryEmail(ctx: EmailContext): { subject: string; html: string } {
   const { name, trip, lore, cookedLevel, storyUrl, tripYear } = ctx;
+  // All user-controlled interpolations are escaped. storyUrl is server-built
+  // from a UUID + invite_code so it's already URL-safe.
   return {
-    subject: `One year ago, ${name} was ${lore.cooked_verdict?.toLowerCase() ?? 'historically cooked'} 🔥`,
+    subject: `One year ago, ${esc(name)} was ${esc(lore.cooked_verdict?.toLowerCase() ?? 'historically cooked')} 🔥`,
     html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -220,30 +236,30 @@ function buildAnniversaryEmail(ctx: EmailContext): { subject: string; html: stri
 
     <div style="background:#0e0e0c;border:1px solid rgba(255,77,77,0.15);border-radius:16px;padding:40px;text-align:center;margin-bottom:32px;">
       <p style="font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(245,240,232,0.3);margin:0 0 12px;">
-        ${tripYear} &mdash; ${trip.name}
+        ${tripYear} &mdash; ${esc(trip.name)}
       </p>
       <h1 style="font-size:28px;font-weight:900;color:#F5F0E8;margin:0 0 8px;line-height:1.2;">
-        ${lore.trip_title ?? trip.name}
+        ${esc(lore.trip_title ?? trip.name)}
       </h1>
       <p style="font-size:14px;font-style:italic;color:rgba(245,240,232,0.5);margin:0 0 24px;">
-        &ldquo;${lore.tagline ?? ''}&rdquo;
+        &ldquo;${esc(lore.tagline ?? '')}&rdquo;
       </p>
       <div style="font-size:64px;font-weight:900;color:#FF4D4D;line-height:1;margin:0 0 8px;">
-        ${cookedLevel}
+        ${esc(cookedLevel)}
       </div>
       <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,77,77,0.7);margin:0;">
-        ${lore.cooked_verdict ?? 'Historically Cooked'}
+        ${esc(lore.cooked_verdict ?? 'Historically Cooked')}
       </p>
     </div>
 
     <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.6;margin:0 0 8px;">
-      ${name}, one year ago you and your crew created friendship mythology.
+      ${esc(name)}, one year ago you and your crew created friendship mythology.
     </p>
     <p style="font-size:13px;color:rgba(245,240,232,0.35);line-height:1.6;margin:0 0 32px;font-style:italic;">
-      &ldquo;${lore.closing_line ?? lore.cooked_verdict ?? ''}&rdquo;
+      &ldquo;${esc(lore.closing_line ?? lore.cooked_verdict ?? '')}&rdquo;
     </p>
 
-    <a href="${storyUrl}" style="display:block;background:rgba(255,77,77,0.12);border:1px solid rgba(255,77,77,0.4);color:rgba(255,77,77,0.9);text-align:center;padding:16px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.35em;text-transform:uppercase;text-decoration:none;margin-bottom:32px;">
+    <a href="${esc(storyUrl)}" style="display:block;background:rgba(255,77,77,0.12);border:1px solid rgba(255,77,77,0.4);color:rgba(255,77,77,0.9);text-align:center;padding:16px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.35em;text-transform:uppercase;text-decoration:none;margin-bottom:32px;">
       RELIVE THE STORY &rarr;
     </a>
 
@@ -273,36 +289,36 @@ function buildFirstWeekEmail(ctx: FirstWeekEmailContext): { subject: string; htm
 
     <div style="background:#0e0e0c;border:1px solid rgba(255,77,77,0.15);border-radius:16px;padding:40px;text-align:center;margin-bottom:32px;">
       <p style="font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(245,240,232,0.3);margin:0 0 12px;">
-        ${tripYear} &mdash; ${trip.name}
+        ${tripYear} &mdash; ${esc(trip.name)}
       </p>
       <h1 style="font-size:28px;font-weight:900;color:#F5F0E8;margin:0 0 8px;line-height:1.2;">
-        ${lore.trip_title ?? trip.name}
+        ${esc(lore.trip_title ?? trip.name)}
       </h1>
       <p style="font-size:14px;font-style:italic;color:rgba(245,240,232,0.5);margin:0 0 24px;">
-        &ldquo;${lore.tagline ?? ''}&rdquo;
+        &ldquo;${esc(lore.tagline ?? '')}&rdquo;
       </p>
       <div style="font-size:64px;font-weight:900;color:#FF4D4D;line-height:1;margin:0 0 8px;">
-        ${cookedLevel}
+        ${esc(cookedLevel)}
       </div>
       <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,77,77,0.7);margin:0;">
-        ${lore.cooked_verdict ?? 'Historically Cooked'}
+        ${esc(lore.cooked_verdict ?? 'Historically Cooked')}
       </p>
     </div>
 
     <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.6;margin:0 0 8px;">
-      ${name}, your crew&apos;s documentary dropped 7 days ago. Has everyone seen it?
+      ${esc(name)}, your crew&apos;s documentary dropped 7 days ago. Has everyone seen it?
     </p>
     <p style="font-size:13px;color:rgba(245,240,232,0.35);line-height:1.6;margin:0 0 32px;">
       Share the story &mdash; the chaos score, the verdicts, the memories. Your friends will lose it.
     </p>
 
     <!-- Primary CTA: view story -->
-    <a href="${storyUrl}" style="display:block;background:#FF4D4D;color:#060604;text-align:center;padding:18px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.35em;text-transform:uppercase;text-decoration:none;margin-bottom:12px;">
+    <a href="${esc(storyUrl)}" style="display:block;background:#FF4D4D;color:#060604;text-align:center;padding:18px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.35em;text-transform:uppercase;text-decoration:none;margin-bottom:12px;">
       VIEW THE STORY &rarr;
     </a>
 
     <!-- Secondary CTA: WhatsApp share -->
-    <a href="${whatsappUrl}" style="display:block;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);color:rgba(37,211,102,0.85);text-align:center;padding:14px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.3em;text-transform:uppercase;text-decoration:none;margin-bottom:32px;">
+    <a href="${esc(whatsappUrl)}" style="display:block;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);color:rgba(37,211,102,0.85);text-align:center;padding:14px;border-radius:12px;font-size:11px;font-weight:bold;letter-spacing:0.3em;text-transform:uppercase;text-decoration:none;margin-bottom:32px;">
       &#128172; SHARE ON WHATSAPP
     </a>
 

@@ -63,14 +63,14 @@ export default function NewTripPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const generateProphecy = trpc.trips.generatePretripProphecy.useMutation();
-
+  // Pretrip prophecy auto-generation removed: the ProphecyCard surface was
+  // pulled from the trip room (it was retention noise before the user had any
+  // reason to engage with it). Keeping the mutation fire here would burn AI
+  // tokens producing content that has no UI to render it.
   const createTrip = trpc.trips.create.useMutation({
     onSuccess: trip => {
       analytics.tripCreated(trip.id, trip.name);
       triggerChime(1.5);
-      // Fire prophecy generation for returning crews — non-blocking
-      generateProphecy.mutate({ tripId: trip.id });
       router.push(`/trips/${trip.id}/invite`);
     },
   });

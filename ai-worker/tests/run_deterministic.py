@@ -289,20 +289,31 @@ for sup in GOLDEN.get("superlatives", []):
         )
 
 # ── Archetype validity ────────────────────────────────────────────────────────
-print("\n── Archetype Validity ──")
+# v2.2.0 reversed the spec: archetypes are now FREEFORM behavioural descriptors,
+# not enum-constrained labels. The old "Black Cat / Golden Retriever / NPC /
+# Main Character / Chaos Source / Emotional Support NPC" set is explicitly
+# FORBIDDEN — these are dead platform clichés. The new rule: archetype must be
+# specific, non-empty, and NOT in the dead-label set.
+print("\n── Archetype Validity (freeform, no dead labels) ──")
 
-VALID_ARCHETYPES = {
-    "Black Cat", "Golden Retriever", "NPC", "Main Character",
-    "Chaos Source", "Emotional Support NPC",
+DEAD_ARCHETYPES = {
+    "black cat", "golden retriever", "npc", "main character",
+    "chaos source", "emotional support npc",
 }
 
 for sup in GOLDEN.get("superlatives", []):
     arch = sup.get("archetype", "")
+    arch_norm = arch.strip().lower()
     check(
-        f"superlative archetype '{arch}' is valid",
-        lambda a=arch: (
-            (_ for _ in ()).throw(AssertionError(f"'{a}' not in valid set"))
-            if a not in VALID_ARCHETYPES else None
+        f"superlative archetype '{arch}' is non-empty and not a dead label",
+        lambda a=arch, an=arch_norm: (
+            (_ for _ in ()).throw(AssertionError(f"empty archetype"))
+            if not a.strip()
+            else (
+                (_ for _ in ()).throw(AssertionError(f"'{a}' is a dead platform label"))
+                if an in DEAD_ARCHETYPES
+                else None
+            )
         )
     )
 

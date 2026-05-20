@@ -910,49 +910,6 @@ export const tripsRouter = router({
 
   // PROD-02: Allow trip creator to show/hide the public /t/[code]/story page.
   // Only the trip creator can toggle this; members cannot hide someone else's story.
-  updateStoryVisibility: protectedProcedure
-    .input(
-      z.object({
-        tripId: z.string().uuid(),
-        visible: z.boolean(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Verify caller is the trip creator before touching story_visible.
-      const { data: tripVisRaw } = await ctx.supabase
-        .from('trips')
-        .select('creator_id')
-        .eq('id', input.tripId)
-        .single();
-
-      const tripVisCheck = tripVisRaw as TripCreatorRow | null;
-      if (!tripVisCheck || tripVisCheck.creator_id !== ctx.user.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only the trip creator can change story visibility.',
-        });
-      }
-
-      // StoryVisibilityUpdateClient uses StoryVisibilityUpdate from supabase-extended.types.ts.
-      type StoryVisibilityUpdateClient = {
-        from: (t: 'trips') => {
-          update: (d: StoryVisibilityUpdate) => {
-            eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
-          };
-        };
-      };
-      const adminVis = createSupabaseServiceClient();
-      const { error: visError } = await (adminVis as unknown as StoryVisibilityUpdateClient)
-        .from('trips')
-        .update({ story_visible: input.visible })
-        .eq('id', input.tripId);
-
-      if (visError)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: visError.message });
-
-      return { success: true, visible: input.visible };
-    }),
-
   setStoryVisible: protectedProcedure
     .input(
       z.object({
@@ -1433,27 +1390,77 @@ export const tripsRouter = router({
       );
 
       const workerUrl = process.env.AI_WORKER_URL;
+      const tripIds = yearTrips.map(t => t.id);
+
+      // Try the HTTP trigger first (fast path). The worker's /generate-yearly-wrap
+      // endpoint requires the same HMAC signature as /generate-lore.
+      let httpOk = false;
       if (workerUrl && !workerUrl.includes('localhost')) {
         try {
           const body = JSON.stringify({
-            trip_ids: yearTrips.map(t => t.id),
+            trip_ids: tripIds,
             user_id: ctx.user.id,
             year: input.year,
           });
-          await fetch(`${workerUrl}/generate-yearly-wrap`, {
+          const { signature, timestamp } = await signWorkerRequest(
+            'POST',
+            '/generate-yearly-wrap',
+            body
+          );
+          const resp = await fetch(`${workerUrl}/generate-yearly-wrap`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${process.env.AI_WORKER_SECRET!}`,
+              'X-Timestamp': timestamp,
+              'X-Signature': signature,
             },
             body,
             signal: AbortSignal.timeout(8000),
           });
+          httpOk = resp.ok;
+          if (!httpOk) {
+            logger.warn(
+              { procedure: 'trips.generateYearlyWrap', userId: ctx.user.id, status: resp.status },
+              'worker http trigger returned non-OK'
+            );
+          }
         } catch (err) {
-          // Non-fatal: worker is queued via the 'processing' upsert above
           logger.warn(
             { procedure: 'trips.generateYearlyWrap', userId: ctx.user.id },
-            `worker trigger failed, status row already set: ${(err as Error).message}`
+            `worker http trigger failed: ${(err as Error).message}`
+          );
+        }
+      }
+
+      // Durable queue fallback: if the HTTP trigger failed (cold start, network
+      // hiccup, missing env), enqueue a background_jobs row that the worker's
+      // poll loop will pick up on its next tick (≤60s). Without this, a stuck
+      // worker leaves users polling "Processing…" forever.
+      if (!httpOk) {
+        type BackgroundJobInsertClient = {
+          from: (t: 'background_jobs') => {
+            insert: (d: BackgroundJobInsert) => Promise<{ error: { message: string } | null }>;
+          };
+        };
+        const { error: jobErr } = await (admin as unknown as BackgroundJobInsertClient)
+          .from('background_jobs')
+          .insert({
+            // background_jobs.trip_id is NOT NULL; use the first trip of the year.
+            // The actual scope is in payload.trip_ids.
+            trip_id: tripIds[0],
+            job_type: 'yearly_wrap',
+            status: 'pending',
+            payload: {
+              user_id: ctx.user.id,
+              year: input.year,
+              trip_ids: tripIds,
+            },
+          });
+        if (jobErr) {
+          logger.error(
+            { procedure: 'trips.generateYearlyWrap', userId: ctx.user.id, year: input.year },
+            `failed to enqueue yearly_wrap fallback job: ${jobErr.message}`
           );
         }
       }
@@ -2491,28 +2498,4 @@ Raw JSON only. No markdown.`;
 
     return { entries, totalTrips: trips.length };
   }),
-
-  // Relationship dynamics — data is populated by _update_social_graph in the AI worker
-  // but no UI surface has been built yet. Stub returns empty until UI is ready.
-  getRelationshipDynamics: protectedProcedure
-    .input(z.object({ otherUserId: z.string().uuid() }))
-    .query(async () => {
-      return {
-        otherName: null,
-        sharedTrips: 0,
-        totalAlliances: 0,
-        totalConflicts: 0,
-        polarity: 0,
-        dynamics: [],
-      };
-    }),
-
-  // Group Lore OS — data is populated by _update_social_graph but no UI surface yet.
-  // Kept as a stub until a mythology explorer view is built.
-  getGroupLoreOS: protectedProcedure
-    .input(z.object({ tripId: z.string().uuid() }))
-    .query(async () => {
-      // TODO: build mythology explorer UI before activating this route.
-      return null;
-    }),
 });
