@@ -1,15 +1,10 @@
 // Vercel build trigger stub
 'use client';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import dynamic from 'next/dynamic';
-
-const ParticleUniverse = dynamic(() => import('./ParticleUniverse'), {
-  ssr: false,
-  loading: () => null,
-});
 
 const MemoryConstellationHero = dynamic(() => import('./MemoryConstellationHero'), {
   ssr: false,
@@ -147,83 +142,19 @@ const OUTPUT_TEASER = [
 
 export default function CinematicLanding() {
   const router = useRouter();
-  const [revealed, setRevealed] = useState(false);
-  const [titleChars, setTitleChars] = useState(0);
   const [leaving, setLeaving] = useState(false);
-  // Dark mode is the product's primary aesthetic — default to true.
   const [darkMode, setDarkMode] = useState(true);
-  // Narrative insight reveals — emerge from the constellation over time
-  const [insight1, setInsight1] = useState(false);
-  const [insight2, setInsight2] = useState(false);
-  const [ctaReady, setCtaReady] = useState(false);
 
   const { data: showcaseTrips } = trpc.trips.getPublicShowcase.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
 
-  const mouseTargetRef = useRef({ x: 0.5, y: 0.5 });
-  const mousePosRef = useRef({ x: 0.5, y: 0.5 });
-  const rafRef = useRef(0);
-
+  // Capture referral code from URL params on mount
   useEffect(() => {
-    const t1 = setTimeout(() => setRevealed(true), 80);
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const ref = params.get('ref');
+      const ref = new URLSearchParams(window.location.search).get('ref');
       if (ref) localStorage.setItem('yaarlore_referrer', ref);
     }
-    return () => clearTimeout(t1);
-  }, []);
-
-  useEffect(() => {
-    if (!revealed) return;
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      setTitleChars(i);
-      if (i >= 8) clearInterval(id);
-    }, 55);
-    // Narrative timing — insights emerge from the constellation
-    const t2 = setTimeout(() => setInsight1(true), 6000);
-    const t3 = setTimeout(() => setInsight2(true), 11000);
-    const t4 = setTimeout(() => setCtaReady(true), 4000);
-    return () => {
-      clearInterval(id);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-    };
-  }, [revealed]);
-
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    // Write to target only — the rAF loop smoothly lerps mousePosRef toward this
-    mouseTargetRef.current = {
-      x: e.clientX / window.innerWidth,
-      y: e.clientY / window.innerHeight,
-    };
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('mousemove', onMouseMove);
-    return () => window.removeEventListener('mousemove', onMouseMove);
-  }, [onMouseMove]);
-
-  // Smooth mouse tracking for ParticleUniverse parallax
-  useEffect(() => {
-    const expLerp = (current: number, target: number, factor: number, dt: number) =>
-      current + (target - current) * (1 - Math.exp(-factor * dt));
-    let lastFrame: number | null = null;
-    const loop = (timestamp: number) => {
-      rafRef.current = requestAnimationFrame(loop);
-      const dt = lastFrame !== null ? Math.min((timestamp - lastFrame) / 1000, 0.05) : 1 / 60;
-      lastFrame = timestamp;
-      const mp = mousePosRef.current;
-      const mt = mouseTargetRef.current;
-      mp.x = expLerp(mp.x, mt.x, 5, dt);
-      mp.y = expLerp(mp.y, mt.y, 5, dt);
-    };
-    rafRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
   const handleEnter = () => {

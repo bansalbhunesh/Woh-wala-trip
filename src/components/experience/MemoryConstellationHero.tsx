@@ -331,7 +331,19 @@ export default function MemoryConstellationHero() {
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Pause loop when tab is hidden — prevents wasted CPU in background
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        lastTime = null; // reset dt so there's no jump on resume
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     const draw = (timestamp: number) => {
+      if (document.hidden) {
+        rafRef.current = requestAnimationFrame(draw);
+        return; // skip frame, but keep the loop alive to resume automatically
+      }
       if (!reduceMotion) {
         rafRef.current = requestAnimationFrame(draw);
       }
@@ -428,7 +440,10 @@ export default function MemoryConstellationHero() {
     };
 
     rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [mounted, threadsOpacity]);
 
   // ── Canvas resize ────────────────────────────────────────────────────────────
