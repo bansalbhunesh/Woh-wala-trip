@@ -287,7 +287,13 @@ export default function GeneratingPage() {
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ background: '#060604' }}>
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden="true" />
+      {/* pointer-events:none prevents hit-test cost — canvas has no event handlers */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
+        aria-hidden="true"
+        style={{ pointerEvents: 'none' }}
+      />
 
       {/* Screen reader live region — announces stage changes as they happen */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
