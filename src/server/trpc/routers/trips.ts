@@ -2534,4 +2534,55 @@ Raw JSON only. No markdown.`;
 
     return { entries, totalTrips: trips.length };
   }),
+
+  getSlambookUrl: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      // Gate: only print-tier members can access the slambook.
+      const { data: memberRaw } = await ctx.supabase
+        .from('trip_members')
+        .select('id')
+        .eq('trip_id', input.tripId)
+        .eq('user_id', ctx.user.id)
+        .single();
+      if (!memberRaw) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this trip' });
+      }
+
+      const { data: tripRaw } = await ctx.supabase
+        .from('trips')
+        .select('tier, slambook_path' as never)
+        .eq('id', input.tripId)
+        .single();
+
+      type SlambookTripRow = { tier: string; slambook_path: string | null };
+      const trip = tripRaw as SlambookTripRow | null;
+
+      if (!trip || trip.tier !== 'print') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Slambook is only available on the Print tier (₹799)',
+        });
+      }
+
+      if (!trip.slambook_path) {
+        // Generation is in progress or pending — return status without URL.
+        return { status: 'generating', url: null };
+      }
+
+      // Generate a signed URL valid for 24 hours.
+      const admin = createSupabaseServiceClient();
+      const { data: signed, error } = await admin.storage
+        .from('trip-photos')
+        .createSignedUrl(trip.slambook_path, 86400);
+
+      if (error || !signed?.signedUrl) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error?.message ?? 'Failed to generate slambook URL',
+        });
+      }
+
+      return { status: 'ready', url: signed.signedUrl };
+    }),
 });

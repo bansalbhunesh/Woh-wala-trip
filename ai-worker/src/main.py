@@ -89,7 +89,7 @@ async def poll_background_jobs():
                 lambda: supabase.table("background_jobs")
                     .select("id, trip_id, job_type, payload, trace_id")
                     .eq("status", "pending")
-                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle", "embed_photo", "yearly_wrap"])
+                    .in_("job_type", ["image_generation", "missing_person_card", "judge_battle", "embed_photo", "yearly_wrap", "generate_thumbnail", "generate_slambook"])
                     .order("created_at")
                     .limit(1)
                     .execute()
@@ -159,6 +159,23 @@ async def poll_background_jobs():
                         if not wrap_user_id or not wrap_year or not wrap_trip_ids:
                             raise ValueError("yearly_wrap job missing user_id / year / trip_ids in payload")
                         await generate_yearly_wrap(wrap_trip_ids, wrap_user_id, int(wrap_year))
+
+                    elif job_type == "generate_thumbnail":
+                        # Reliable fallback for photo thumbnails — runs after HTTP fast-path.
+                        # generate_thumbnail() is idempotent; skips if thumbnail_path already set.
+                        photo_id = payload.get("photo_id")
+                        if not photo_id:
+                            raise ValueError("generate_thumbnail job missing photo_id in payload")
+                        await generate_thumbnail(photo_id)
+
+                    elif job_type == "generate_slambook":
+                        # Triggered by payments webhook after print tier upgrade.
+                        # Generates a PDF slambook for the trip and stores it in Supabase Storage.
+                        slam_trip_id = payload.get("trip_id")
+                        if not slam_trip_id:
+                            raise ValueError("generate_slambook job missing trip_id in payload")
+                        from .slambook import generate_slambook
+                        await generate_slambook(slam_trip_id)
 
                     else:
                         # Unknown job type — mark failed so it doesn't block the queue
@@ -321,6 +338,9 @@ class YearlyWrapRequest(BaseModel):
     trip_ids: list[str]
     user_id: str
     year: int = 2025
+
+class SlambookRequest(BaseModel):
+    trip_id: str
 
 
 async def generate_yearly_wrap(trip_ids: list[str], user_id: str, year: int):
@@ -531,6 +551,19 @@ async def gen_portraits(
     verify_auth(authorization)
     from .image_gen import generate_character_portraits
     bg.add_task(generate_character_portraits, req.trip_id, True)
+    return {"status": "queued", "trip_id": req.trip_id}
+
+
+@app.post("/generate-slambook")
+async def generate_slambook_endpoint(
+    req: SlambookRequest,
+    bg: BackgroundTasks,
+    authorization: str = Header(...),
+    _hmac: None = Depends(verify_hmac_signature),
+):
+    verify_auth(authorization)
+    from .slambook import generate_slambook
+    bg.add_task(generate_slambook, req.trip_id)
     return {"status": "queued", "trip_id": req.trip_id}
 
 

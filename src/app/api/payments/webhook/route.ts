@@ -132,6 +132,39 @@ async function handlePaymentCaptured(
     `[payments/webhook] upgraded trip ${tripId} to tier "${tier}" via payment ${paymentId} ` +
       `(webhook_payment_id stamped — tRPC gate unlocked)`
   );
+
+  // Print tier: enqueue slambook generation.
+  // The background_jobs worker picks this up and generates a PDF slambook
+  // for the trip, storing it at {tripId}/slambook.pdf in Supabase Storage.
+  if (tier === 'print') {
+    type BgJobInsert = {
+      trip_id: string;
+      job_type: string;
+      status: string;
+      payload: Record<string, unknown>;
+    };
+    type BgJobClient = {
+      from: (t: string) => {
+        insert: (d: BgJobInsert) => Promise<{ error: { message: string } | null }>;
+      };
+    };
+    const { error: slamErr } = await (admin as unknown as BgJobClient)
+      .from('background_jobs')
+      .insert({
+        trip_id: tripId,
+        job_type: 'generate_slambook',
+        status: 'pending',
+        payload: { trip_id: tripId },
+      });
+    if (slamErr) {
+      console.warn(
+        `[payments/webhook] failed to enqueue generate_slambook for ${tripId}: ${slamErr.message}`
+      );
+    } else {
+      console.info(`[payments/webhook] generate_slambook job enqueued for trip ${tripId}`);
+    }
+  }
+
   return NextResponse.json({ received: true });
 }
 

@@ -261,8 +261,9 @@ export const photosRouter = router({
       // total_photos is now maintained atomically by a Postgres trigger (see
       // supabase/migrations/002_total_photos_trigger.sql) — no app-level increment needed.
 
-      // Fire-and-forget thumbnail — stays as HTTP for fast UX (users see thumbnail quickly).
-      // Never block/fail the upload if worker is down.
+      // Thumbnail: fast HTTP path (user sees thumbnail immediately if worker is warm) +
+      // reliable background_jobs fallback (worker polls every 60s and retries on failure).
+      // The worker skips the job if thumbnail_path is already set (idempotent).
       const workerUrl = process.env.AI_WORKER_URL;
       if (workerUrl && !workerUrl.includes('localhost')) {
         const photoBody = JSON.stringify({ photo_id: data.id });
@@ -292,6 +293,37 @@ export const photosRouter = router({
             )
           );
       }
+      // Reliable fallback: enqueue generate_thumbnail in background_jobs so the
+      // thumbnail is (re)generated even if the HTTP call above failed or timed out.
+      const thumbAdmin = createSupabaseServiceClient();
+      const thumbJob: BackgroundJobInsert = {
+        trip_id: input.tripId,
+        job_type: 'generate_thumbnail',
+        status: 'pending',
+        payload: { photo_id: data.id },
+      };
+      (
+        thumbAdmin as unknown as {
+          from: (t: string) => {
+            insert: (d: BackgroundJobInsert) => Promise<{ error: { message: string } | null }>;
+          };
+        }
+      )
+        .from('background_jobs')
+        .insert(thumbJob)
+        .then(({ error: thumbJobErr }) => {
+          if (thumbJobErr)
+            logger.warn(
+              { procedure: 'photos.confirmUpload', photoId: data.id, tripId: input.tripId },
+              `failed to enqueue generate_thumbnail background job: ${thumbJobErr.message}`
+            );
+        })
+        .catch(e =>
+          logger.warn(
+            { procedure: 'photos.confirmUpload', tripId: input.tripId },
+            `thumbnail background job insert error: ${(e as Error).message}`
+          )
+        );
 
       // PERF-05: CLIP embedding moved from per-photo HTTP fire-and-forget to background_jobs queue.
       // The worker's poll_background_jobs loop picks up 'embed_photo' jobs every 30s,

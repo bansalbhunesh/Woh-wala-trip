@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/database.types';
 
 // Columns read from the trips table — typed explicitly because the Supabase
 // select() generic doesn't narrow correctly for cross-table queries.
@@ -19,6 +20,74 @@ interface BattleRow {
   id: string;
   [key: string]: unknown;
 }
+
+// TYPE-02: trip_vs_trip, group_pulse_events, and cast_vs_vote were added after the last
+// Supabase codegen. These typed wrappers replace `as any` until TYPE-01 is re-run.
+
+type BackgroundJobInsert = Database['public']['Tables']['background_jobs']['Insert'];
+
+type TripVsTripInsert = {
+  trip_a_id: string;
+  trip_b_id: string;
+  status: string;
+  voting_ends_at: string;
+};
+
+type TripVsTripCountClient = {
+  from: (t: 'trip_vs_trip') => {
+    select: (
+      col: string,
+      opts: { count: 'exact'; head: true }
+    ) => {
+      or: (filter: string) => {
+        gte: (col: string, val: string) => Promise<{ count: number | null }>;
+      };
+    };
+  };
+};
+
+type TripVsTripInsertClient = {
+  from: (t: 'trip_vs_trip') => {
+    insert: (d: TripVsTripInsert) => {
+      select: () => {
+        single: () => Promise<{ data: BattleRow | null; error: { message: string } | null }>;
+      };
+    };
+  };
+};
+
+type TripVsTripSelectClient = {
+  from: (t: 'trip_vs_trip') => {
+    select: (cols: string) => {
+      eq: (
+        c: string,
+        v: string
+      ) => {
+        single: () => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+    };
+  };
+};
+
+type GroupPulseInsert = {
+  trip_id: string;
+  event_type: string;
+  actor_user_id: string;
+  payload: Record<string, unknown>;
+  visible_to: string[];
+};
+type GroupPulseClient = {
+  from: (t: 'group_pulse_events') => {
+    insert: (d: GroupPulseInsert) => Promise<{ error: { message: string } | null }>;
+  };
+};
+
+type BattleRpcClient = {
+  rpc: (
+    fn: 'cast_vs_vote',
+    args: { p_battle_id: string; p_voted_for_trip_id: string; p_fingerprint: string }
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+};
 
 export const battlesRouter = router({
   challenge: protectedProcedure
@@ -66,7 +135,7 @@ export const battlesRouter = router({
       const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const ownedList = ownedIds.join(',');
 
-      const { count: recentBattles } = await (ctx.supabase as any)
+      const { count: recentBattles } = await (ctx.supabase as unknown as TripVsTripCountClient)
         .from('trip_vs_trip')
         .select('id', { count: 'exact', head: true })
         .or(`trip_a_id.in.(${ownedList}),trip_b_id.in.(${ownedList})`)
@@ -94,7 +163,7 @@ export const battlesRouter = router({
         });
       }
 
-      const { data: battle, error } = await (ctx.supabase as any)
+      const { data: battle, error } = await (ctx.supabase as unknown as TripVsTripInsertClient)
         .from('trip_vs_trip')
         .insert({
           trip_a_id: input.myTripId,
@@ -116,12 +185,13 @@ export const battlesRouter = router({
       // payload carries battle_id so the worker's judge_battle() call has it.
       // Must use service client — background_jobs has service-role-only RLS.
       const battleAdmin = createSupabaseServiceClient();
-      const { error: battleJobError } = await battleAdmin.from('background_jobs').insert({
+      const battleJob: BackgroundJobInsert = {
         trip_id: input.myTripId,
         job_type: 'judge_battle',
         status: 'pending',
-        payload: { battle_id: (battle as BattleRow).id } as any,
-      });
+        payload: { battle_id: (battle as BattleRow).id },
+      };
+      const { error: battleJobError } = await battleAdmin.from('background_jobs').insert(battleJob);
 
       if (battleJobError) {
         console.error('[challenge] failed to enqueue judge_battle job:', battleJobError.message);
@@ -142,15 +212,18 @@ export const battlesRouter = router({
           .in('trip_id', [input.myTripId, input.opponentTripId]);
 
         const allMemberIds = [
-          ...new Set(((bothTripsMembers as any[]) ?? []).map((m: any) => m.user_id as string)),
+          ...new Set(((bothTripsMembers ?? []) as { user_id: string }[]).map(m => m.user_id)),
         ];
 
         if (allMemberIds.length > 0) {
-          await (battleAdmin as any).from('group_pulse_events').insert({
+          await (battleAdmin as unknown as GroupPulseClient).from('group_pulse_events').insert({
             trip_id: input.myTripId,
             event_type: 'battle_started',
             actor_user_id: ctx.user.id,
-            payload: { battle_id: (battle as any).id, opponent_trip_id: input.opponentTripId },
+            payload: {
+              battle_id: (battle as BattleRow).id,
+              opponent_trip_id: input.opponentTripId,
+            },
             visible_to: allMemberIds,
           });
         }
@@ -165,14 +238,12 @@ export const battlesRouter = router({
   get: publicProcedure
     .input(z.object({ battleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await (ctx.supabase as any)
+      const { data, error } = await (ctx.supabase as unknown as TripVsTripSelectClient)
         .from('trip_vs_trip')
         .select(
-          `
-          *,
+          `*,
           trip_a:trip_a_id (id, name, destination, chaos_score, lore_json, total_photos),
-          trip_b:trip_b_id (id, name, destination, chaos_score, lore_json, total_photos)
-        `
+          trip_b:trip_b_id (id, name, destination, chaos_score, lore_json, total_photos)`
         )
         .eq('id', input.battleId)
         .single();
@@ -195,11 +266,14 @@ export const battlesRouter = router({
       // Use server-authoritative user ID as the deduplication key.
       // Client-supplied fingerprints are not accepted for authenticated sessions —
       // they can be faked to bypass deduplication.
-      const { data, error } = await (ctx.supabase as any).rpc('cast_vs_vote', {
-        p_battle_id: input.battleId,
-        p_voted_for_trip_id: input.votedForTripId,
-        p_fingerprint: ctx.user.id,
-      });
+      const { data, error } = await (ctx.supabase as unknown as BattleRpcClient).rpc(
+        'cast_vs_vote',
+        {
+          p_battle_id: input.battleId,
+          p_voted_for_trip_id: input.votedForTripId,
+          p_fingerprint: ctx.user.id,
+        }
+      );
 
       const res = data as unknown as BattleVoteResult | null;
       if (error || res?.error) {

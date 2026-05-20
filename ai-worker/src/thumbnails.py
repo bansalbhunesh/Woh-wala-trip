@@ -13,6 +13,12 @@ async def generate_thumbnail(photo_id: str):
             log.error(f"[{photo_id}] photo not found")
             return
 
+        # Idempotency: background_jobs fallback may run after the HTTP fast-path already
+        # generated the thumbnail. Skip re-generation if thumbnail_path is already set.
+        if photo.get("thumbnail_path"):
+            log.info(f"[{photo_id}] thumbnail already exists, skipping")
+            return
+
         original_bytes = supabase.storage.from_("trip-photos").download(photo["storage_path"])
 
         try:
