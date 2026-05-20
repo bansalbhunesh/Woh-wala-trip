@@ -56,11 +56,17 @@ export default function NewTripPage() {
     ],
   };
 
+  const [todayStr, setTodayStr] = useState('');
+
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveHintIndex(idx => (idx + 1) % 4);
     }, 4000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setTodayStr(new Date().toLocaleDateString('sv'));
   }, []);
 
   // Pretrip prophecy auto-generation removed: the ProphecyCard surface was
@@ -78,8 +84,14 @@ export default function NewTripPage() {
   const handleNext = () => {
     // Validation checks per step
     if (step === 1 && !fields.name.trim()) return;
-    if (step === 3 && !fields.startDate) return;
-    if (step === 4 && !fields.endDate) return;
+
+    const today = new Date().toLocaleDateString('sv');
+    if (step === 3) {
+      if (!fields.startDate || fields.startDate > today) return;
+    }
+    if (step === 4) {
+      if (!fields.endDate || fields.endDate > today || fields.endDate < fields.startDate) return;
+    }
 
     triggerChime(1.0 + step * 0.08);
     setStep(s => s + 1);
@@ -103,13 +115,28 @@ export default function NewTripPage() {
 
   const isStepValid = () => {
     if (step === 1) return fields.name.trim().length > 0;
-    if (step === 3) return !!fields.startDate;
-    if (step === 4) return !!fields.endDate;
+    if (step === 3) {
+      if (!fields.startDate) return false;
+      const today = new Date().toLocaleDateString('sv');
+      return fields.startDate <= today;
+    }
+    if (step === 4) {
+      if (!fields.endDate) return false;
+      const today = new Date().toLocaleDateString('sv');
+      return fields.endDate <= today && fields.endDate >= fields.startDate;
+    }
     return true;
   };
 
   const isFormFullyReady =
-    fields.name.trim() && fields.startDate && fields.endDate && !createTrip.isPending;
+    fields.name.trim() &&
+    fields.startDate &&
+    fields.endDate &&
+    (!todayStr ||
+      (fields.startDate <= todayStr &&
+        fields.endDate <= todayStr &&
+        fields.endDate >= fields.startDate)) &&
+    !createTrip.isPending;
 
   return (
     <div
@@ -363,6 +390,7 @@ export default function NewTripPage() {
                   <input
                     ref={inputRef}
                     type="date"
+                    max={todayStr}
                     value={fields.startDate}
                     onChange={e => setFields(f => ({ ...f, startDate: e.target.value }))}
                     onKeyDown={handleKeyDown}
@@ -422,6 +450,7 @@ export default function NewTripPage() {
                     ref={inputRef}
                     type="date"
                     min={fields.startDate}
+                    max={todayStr}
                     value={fields.endDate}
                     onChange={e => setFields(f => ({ ...f, endDate: e.target.value }))}
                     onKeyDown={handleKeyDown}

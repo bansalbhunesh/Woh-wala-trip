@@ -744,6 +744,36 @@ export const tripsRouter = router({
       return { reset: true };
     }),
 
+  resetLoreStatusToUpload: protectedProcedure
+    .input(z.object({ tripId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { data: tripRaw } = await ctx.supabase
+        .from('trips')
+        .select('creator_id')
+        .eq('id', input.tripId)
+        .single();
+      const trip = tripRaw as { creator_id: string } | null;
+
+      if (!trip || trip.creator_id !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      type TripStatusResetSingleClient = {
+        from: (t: 'trips') => {
+          update: (d: TripStatusUpdate) => {
+            eq: (c: string, v: string) => Promise<unknown>;
+          };
+        };
+      };
+
+      await (ctx.supabase as unknown as TripStatusResetSingleClient)
+        .from('trips')
+        .update({ lore_status: null, processing_started_at: null })
+        .eq('id', input.tripId);
+
+      return { success: true };
+    }),
+
   upgradeTier: protectedProcedure
     .input(
       z.object({

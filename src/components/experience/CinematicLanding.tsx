@@ -242,25 +242,86 @@ export default function CinematicLanding() {
       {/* Grain overlay — lighter in light mode, heavier in dark */}
       <div className={D ? 'film-grain' : 'light-grain'} />
 
-      {/* Dark/light mode toggle — top-right corner */}
-      <button
-        onClick={() => setDarkMode(dm => !dm)}
-        className="absolute top-6 right-8 z-20 font-mono text-[7.5px] uppercase tracking-[0.4em] px-3 py-1.5 rounded-full"
+      {/* Premium responsive top navbar header */}
+      <header
+        className="relative w-full z-20 flex justify-between items-center px-6 lg:px-12 py-5"
         style={{
-          color: D ? 'rgba(245,240,232,0.45)' : 'oklch(60% 0.015 60)',
-          border: `1px solid ${D ? 'rgba(245,240,232,0.12)' : 'oklch(82% 0.015 72)'}`,
-          background: D ? 'rgba(245,240,232,0.04)' : 'transparent',
-          transition: 'color 0.4s, border-color 0.4s, background 0.4s',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLButtonElement).style.opacity = '0.6';
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+          borderBottom: `1px solid ${D ? 'rgba(245,240,232,0.05)' : 'oklch(82% 0.015 72 / 0.3)'}`,
+          background: D ? 'rgba(6,6,4,0.3)' : 'rgba(245,240,232,0.3)',
+          backdropFilter: 'blur(12px)',
         }}
       >
-        {D ? '◑ LIGHT' : '◐ DARK'}
-      </button>
+        {/* Brand logo & status */}
+        <div className="flex items-center gap-4">
+          <span className="font-display font-black text-base tracking-[0.1em] uppercase">
+            YAARLORE
+          </span>
+          <span
+            className="hidden md:inline-block font-mono text-[9px] uppercase tracking-[0.3em] px-2 py-0.5 rounded border"
+            style={{
+              borderColor: D ? 'rgba(255,77,77,0.3)' : 'rgba(255,77,77,0.15)',
+              color: '#FF4D4D',
+              background: 'rgba(255,77,77,0.04)',
+            }}
+          >
+            ● SEASON 2026
+          </span>
+        </div>
+
+        {/* Navigation links (hidden/responsive-safe or subtle on smaller screens) */}
+        <nav className="hidden md:flex items-center gap-6">
+          <button
+            onClick={() => setShowFeatures(true)}
+            className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] transition-opacity hover:opacity-75"
+            style={{ color: textMain }}
+          >
+            FEATURES
+          </button>
+          <button
+            onClick={() => setShowLiveLore(true)}
+            className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] transition-opacity hover:opacity-75"
+            style={{ color: textMain }}
+          >
+            LIVE LORE
+          </button>
+          <a
+            href="/leaderboard"
+            className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] transition-opacity hover:opacity-75"
+            style={{ color: textMain }}
+          >
+            LEADERBOARD
+          </a>
+        </nav>
+
+        {/* Right side controls */}
+        <div className="flex items-center gap-3">
+          {/* Dark / Light Toggle */}
+          <button
+            onClick={() => setDarkMode(dm => !dm)}
+            className="font-mono text-[9px] uppercase tracking-[0.25em] px-3.5 py-1.5 rounded-full border transition-all duration-300 hover:scale-[1.03]"
+            style={{
+              color: D ? 'rgba(245,240,232,0.65)' : 'oklch(40% 0.015 60)',
+              borderColor: D ? 'rgba(245,240,232,0.15)' : 'oklch(82% 0.015 72)',
+              background: D ? 'rgba(245,240,232,0.02)' : 'transparent',
+            }}
+          >
+            {D ? '◑ LIGHT' : '◐ DARK'}
+          </button>
+
+          {/* Join / Enter secondary action */}
+          <a
+            href="/trips/join"
+            className="hidden sm:inline-flex items-center justify-center px-4 py-1.5 rounded-full font-mono text-[9px] uppercase tracking-[0.25em] border transition-all duration-300 hover:scale-[1.03]"
+            style={{
+              color: textMain,
+              borderColor: D ? 'rgba(245,240,232,0.15)' : 'oklch(82% 0.015 72)',
+              background: 'transparent',
+            }}
+          >
+            JOIN TRIP
+          </a>
+        </div>
+      </header>
 
       {/* ── MAIN LAYOUT: left editorial | right card collage ── */}
       <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-0">
@@ -328,7 +389,7 @@ export default function CinematicLanding() {
 
           {/* CTA stack */}
           <div
-            className="flex flex-col sm:flex-row gap-3"
+            className="flex flex-col sm:flex-row gap-3 pt-2"
             style={{
               opacity: revealed ? 1 : 0,
               transform: revealed ? 'translate3d(0,0,0)' : 'translate3d(0,16px,0)',
@@ -340,7 +401,7 @@ export default function CinematicLanding() {
               onClick={handleEnter}
               disabled={leaving}
               aria-label="Enter Yaarlore — go to login"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 relative overflow-hidden group laser-btn"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] disabled:opacity-50 relative overflow-hidden group laser-btn"
               style={{
                 background: ctaBg,
                 color: ctaText,
@@ -381,10 +442,11 @@ export default function CinematicLanding() {
               />
               <span className="relative z-10">{leaving ? 'ENTERING...' : 'ENTER THE LORE →'}</span>
             </button>
+
             {/* Demo CTA — shows value before sign-up */}
             <a
               href="/demo"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
               style={{
                 background: 'transparent',
                 border: `1.5px solid rgba(255,165,0,0.35)`,
@@ -415,150 +477,6 @@ export default function CinematicLanding() {
                 }}
               />
               <span className="relative z-10">◎ SEE A DEMO</span>
-            </a>
-            <a
-              href="/trips/join"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
-              style={{
-                background: 'transparent',
-                border: `1.5px solid ${ghostBorder}`,
-                color: ghostText,
-                transition:
-                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = 'translate3d(0,-2px,0)';
-                el.style.borderColor = 'oklch(60% 0.22 25)';
-                el.style.color = 'oklch(60% 0.22 25)';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = 'translate3d(0,0,0)';
-                el.style.borderColor = ghostBorder;
-                el.style.color = ghostText;
-              }}
-            >
-              {/* Scanning Grid Overlay */}
-              <span
-                className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"
-                style={{
-                  backgroundImage: D
-                    ? 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)'
-                    : 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
-                  backgroundSize: '8px 8px',
-                  animation: 'grid-scroll 4s linear infinite',
-                }}
-              />
-              {/* Laser swipe */}
-              <span
-                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
-                style={{
-                  background: D
-                    ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)'
-                    : 'linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent)',
-                  transform: 'translateX(-100%) skewX(-15deg)',
-                }}
-              />
-              <span className="relative z-10">JOIN A SEASON</span>
-            </a>
-            <button
-              onClick={() => setShowFeatures(true)}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
-              style={{
-                background: 'transparent',
-                border: `1.5px solid ${ghostBorder}`,
-                color: ghostText,
-                transition:
-                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translate3d(0,-2px,0)';
-                el.style.borderColor = 'oklch(60% 0.22 25)';
-                el.style.color = 'oklch(60% 0.22 25)';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translate3d(0,0,0)';
-                el.style.borderColor = ghostBorder;
-                el.style.color = ghostText;
-              }}
-            >
-              {/* Scanning Grid Overlay */}
-              <span
-                className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"
-                style={{
-                  backgroundImage: D
-                    ? 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)'
-                    : 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
-                  backgroundSize: '8px 8px',
-                  animation: 'grid-scroll 4s linear infinite',
-                }}
-              />
-              {/* Laser swipe */}
-              <span
-                className="absolute inset-0 w-full h-full pointer-events-none laser-swipe"
-                style={{
-                  background: D
-                    ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)'
-                    : 'linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent)',
-                  transform: 'translateX(-100%) skewX(-15deg)',
-                }}
-              />
-              <span className="relative z-10">FEATURES</span>
-            </button>
-            {/* VIRAL-03: Live Lore CTA */}
-            <button
-              onClick={() => setShowLiveLore(true)}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
-              style={{
-                background: 'transparent',
-                border: `1.5px solid ${ghostBorder}`,
-                color: ghostText,
-                transition:
-                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translate3d(0,-2px,0)';
-                el.style.borderColor = '#FF4D4D';
-                el.style.color = '#FF4D4D';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translate3d(0,0,0)';
-                el.style.borderColor = ghostBorder;
-                el.style.color = ghostText;
-              }}
-            >
-              <span className="relative z-10">LIVE LORE</span>
-            </button>
-            {/* FEAT: Hall of Chaos leaderboard link */}
-            <a
-              href="/leaderboard"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] relative overflow-hidden group laser-btn"
-              style={{
-                background: 'transparent',
-                border: `1.5px solid ${ghostBorder}`,
-                color: ghostText,
-                transition:
-                  'transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s, border-color 0.55s',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = 'translate3d(0,-2px,0)';
-                el.style.borderColor = '#D49E2D';
-                el.style.color = '#D49E2D';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = 'translate3d(0,0,0)';
-                el.style.borderColor = ghostBorder;
-                el.style.color = ghostText;
-              }}
-            >
-              <span className="relative z-10">HALL OF CHAOS</span>
             </a>
           </div>
 
@@ -605,7 +523,7 @@ export default function CinematicLanding() {
               }}
               className="absolute select-none cursor-pointer"
               style={{
-                left: `${a.x - 58}%`,
+                left: `${(a.x - 56) * 3}%`,
                 top: `${a.y}%`,
                 opacity: revealed ? 1 : 0,
                 animation: revealed

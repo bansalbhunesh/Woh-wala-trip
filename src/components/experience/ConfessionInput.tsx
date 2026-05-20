@@ -4,9 +4,10 @@ import { trpc } from '@/lib/trpc/client';
 
 interface Props {
   tripId: string;
+  disabled?: boolean;
 }
 
-export function ConfessionInput({ tripId }: Props) {
+export function ConfessionInput({ tripId, disabled = false }: Props) {
   const [text, setText] = useState('');
   const [heard, setHeard] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +48,7 @@ export function ConfessionInput({ tripId }: Props) {
           onChange={setText}
           onSubmit={fire}
           isPending={submit.isPending}
+          disabled={disabled}
           error={submit.error?.message}
         />
       )}
@@ -72,6 +74,7 @@ function Booth({
   onChange,
   onSubmit,
   isPending,
+  disabled = false,
   error,
 }: {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -79,6 +82,7 @@ function Booth({
   onChange: (v: string) => void;
   onSubmit: () => void;
   isPending: boolean;
+  disabled?: boolean;
   error?: string;
 }) {
   const [focused, setFocused] = useState(false);
@@ -87,8 +91,8 @@ function Booth({
     <div className="space-y-2">
       {/* PROD-01: Explicit disclosure shown before the user types — cannot claim surprise */}
       <p
-        className="font-mono text-[8px] uppercase tracking-wider leading-relaxed"
-        style={{ color: 'rgba(255,200,100,0.55)' }}
+        className="font-mono text-[8px] uppercase tracking-wider leading-relaxed transition-opacity"
+        style={{ color: disabled ? 'rgba(255,200,100,0.2)' : 'rgba(255,200,100,0.55)' }}
       >
         ⚠ Your confession may appear in the AI-generated story shared with all trip members and
         publicly via the invite link.
@@ -113,10 +117,15 @@ function Booth({
               onSubmit();
             }
           }}
-          placeholder="Something the group would never admit out loud…"
+          disabled={disabled || isPending}
+          placeholder={
+            disabled
+              ? 'Lore generation in progress...'
+              : 'Something the group would never admit out loud…'
+          }
           maxLength={500}
           autoComplete="off"
-          className="w-full bg-transparent text-[13px] font-cinematic italic py-3 pr-10 outline-none leading-snug placeholder-white/20"
+          className="w-full bg-transparent text-[13px] font-cinematic italic py-3 pr-10 outline-none leading-snug placeholder-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ color: 'rgba(245,240,232,0.6)', caretColor: '#FF4D4D' }}
         />
 
@@ -132,11 +141,12 @@ function Booth({
                 animation: 'cf-spin 0.7s linear infinite',
               }}
             />
-          ) : value.length >= 10 ? (
+          ) : value.length >= 10 && !disabled ? (
             <button
               onClick={onSubmit}
+              disabled={disabled}
               tabIndex={-1}
-              className="font-mono text-[9px] transition-opacity"
+              className="font-mono text-[9px] transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ color: 'rgba(255,77,77,0.45)', letterSpacing: '0.05em', lineHeight: 1 }}
             >
               ↵

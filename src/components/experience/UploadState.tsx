@@ -24,19 +24,37 @@ interface Props {
 
 export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
   const router = useRouter();
+  const utils = trpc.useUtils();
   const [active, setActive] = useState<ActiveUpload | null>(null);
   const [queue, setQueue] = useState<File[]>([]);
+  const { data: photoData, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
+
+  const generateLore = trpc.trips.generateLore.useMutation({
+    onSuccess: () => {
+      utils.trips.getFull.setData({ tripId }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          trip: {
+            ...old.trip,
+            lore_status: 'processing',
+          },
+        };
+      });
+      router.push(`/trips/${tripId}/generating`);
+    },
+  });
+
+  const canUpload =
+    !generateLore.isPending &&
+    (!trip || (trip.lore_status !== 'processing' && trip.lore_status !== 'ready'));
   const [errorMsg, setErrorMsg] = useState('');
   const [optimisticCount, setOptimisticCount] = useState(0); // immediate count update
   const [batchTotal, setBatchTotal] = useState(0);
   const [batchDone, setBatchDone] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { data: photoData, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
   const getUploadUrl = trpc.photos.getUploadUrl.useMutation();
   const confirmUpload = trpc.photos.confirmUpload.useMutation();
-  const generateLore = trpc.trips.generateLore.useMutation({
-    onSuccess: () => router.push(`/trips/${tripId}/generating`),
-  });
   const warmupWorker = trpc.trips.warmupWorker.useMutation();
   const warmupFiredRef = useRef(false);
 
@@ -150,7 +168,7 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
   const dash = active ? C * (active.progress / 100) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center py-16 px-6 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-start py-16 px-6 relative overflow-hidden">
       {/* Atmospheric background glow that pulses during upload */}
       <div
         className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
@@ -165,10 +183,10 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
       </div>
 
       {/* Header */}
-      <div className="text-center space-y-3 mb-12 relative z-10">
+      <div className="text-center space-y-3 mb-12 relative z-10 w-full">
         <p
-          className="font-mono text-[8px] uppercase tracking-[0.5em]"
-          style={{ color: 'rgba(255,77,77,0.5)' }}
+          className="font-mono text-[11px] font-semibold uppercase tracking-[0.4em]"
+          style={{ color: 'rgba(255,77,77,0.6)' }}
         >
           ● FEEDING THE LORE ENGINE
         </p>
@@ -178,483 +196,486 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
         >
           {trip.name}
         </h2>
-        <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.3)' }}>
+        <p
+          className="font-display italic text-base opacity-40 mt-2"
+          style={{ color: 'rgba(245,240,232,0.7)' }}
+        >
           &ldquo;Upload your recovered memories. The archive is hungry.&rdquo;
         </p>
       </div>
 
-      {/* ONBOARDING: Photo requirement guidance shown from the very start */}
-      {photoCount === 0 && (
-        <div className="w-full max-w-md mb-10 z-10 px-4 space-y-6">
-          {/* Minimum requirement callout */}
-          <div
-            className="px-5 py-4 rounded-2xl text-center"
-            style={{
-              background: 'rgba(255,77,77,0.05)',
-              border: '1px solid rgba(255,77,77,0.15)',
-            }}
-          >
-            <p
-              className="font-mono text-[9px] uppercase tracking-[0.4em] mb-2"
-              style={{ color: 'rgba(255,77,77,0.7)' }}
-            >
-              ● MINIMUM REQUIREMENT
-            </p>
-            <p
-              className="font-display italic text-sm leading-relaxed"
-              style={{ color: 'rgba(245,240,232,0.6)' }}
-            >
-              Add at least{' '}
-              <span style={{ color: '#F5F0E8', fontStyle: 'normal', fontWeight: 700 }}>
-                5 photos
-              </span>{' '}
-              to unlock lore generation. More photos = richer story.
-            </p>
-          </div>
-
-          {/* Progress bar from zero */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span
-                className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
-                style={{ color: 'rgba(245,240,232,0.3)' }}
-              >
-                ARCHIVE PROGRESS
-              </span>
-              <span className="font-mono text-[7.5px]" style={{ color: 'rgba(245,240,232,0.3)' }}>
-                0 / 5
-              </span>
-            </div>
-            <div className="flex gap-1.5">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 h-1.5 rounded-full"
-                  style={{ background: 'rgba(245,240,232,0.08)' }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Best-photo tips */}
-          <div
-            className="px-5 py-4 rounded-2xl space-y-3"
-            style={{
-              background: 'rgba(245,240,232,0.02)',
-              border: '1px solid rgba(245,240,232,0.07)',
-            }}
-          >
-            <p
-              className="font-mono text-[8px] uppercase tracking-[0.45em]"
-              style={{ color: 'rgba(245,240,232,0.35)' }}
-            >
-              BEST PHOTOS TO UPLOAD
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { icon: '👥', tip: 'Group shots' },
-                { icon: '😂', tip: 'Candid moments' },
-                { icon: '🌅', tip: 'Scenic locations' },
-                { icon: '🍜', tip: 'Food & drinks' },
-                { icon: '🎉', tip: 'Activities' },
-                { icon: '🌙', tip: 'Night moments' },
-              ].map(({ icon, tip }) => (
-                <div key={tip} className="flex items-center gap-2">
-                  <span className="text-sm">{icon}</span>
-                  <span
-                    className="font-mono text-[8px] uppercase tracking-wider"
-                    style={{ color: 'rgba(245,240,232,0.45)' }}
-                  >
-                    {tip}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Teaser: what they'll unlock */}
-          <div
-            className="px-5 py-4 rounded-2xl"
-            style={{
-              background: 'rgba(45,158,139,0.04)',
-              border: '1px solid rgba(45,158,139,0.12)',
-            }}
-          >
-            <p
-              className="font-mono text-[8px] uppercase tracking-[0.45em] mb-3"
-              style={{ color: 'rgba(45,158,139,0.6)' }}
-            >
-              ✦ WHAT YOU&apos;LL UNLOCK
-            </p>
-            <div className="space-y-1.5">
-              {[
-                'AI-written trip documentary',
-                'Character roles for each member',
-                'Chaos score & percentile ranking',
-                'Shareable story slides',
-              ].map(item => (
-                <div key={item} className="flex items-center gap-2">
-                  <div
-                    className="w-1 h-1 rounded-full flex-shrink-0"
-                    style={{ background: 'rgba(45,158,139,0.5)' }}
-                  />
-                  <p
-                    className="font-display italic text-[11px]"
-                    style={{ color: 'rgba(245,240,232,0.4)' }}
-                  >
-                    {item}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Central upload slot — this is the cinematic core */}
-      <div className="relative flex flex-col items-center gap-8 mb-12 z-10">
-        {/* The upload portal */}
-        <div className="relative" style={{ width: 160, height: 160 }}>
-          {/* Progress ring SVG */}
-          {isActive && (
-            <svg className="absolute inset-0 w-full h-full -rotate-90" style={{ zIndex: 3 }}>
-              {/* Track */}
-              <circle
-                cx="80"
-                cy="80"
-                r={R}
-                fill="none"
-                stroke="rgba(255,77,77,0.12)"
-                strokeWidth="2.5"
-              />
-              {/* Progress */}
-              <circle
-                cx="80"
-                cy="80"
-                r={R}
-                fill="none"
-                stroke={active?.phase === 'absorbing' ? '#2D9E8B' : '#FF4D4D'}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeDasharray={`${dash} ${C}`}
-                style={{
-                  transition: 'stroke-dasharray 0.2s ease, stroke 0.4s ease',
-                  filter: 'drop-shadow(0 0 4px rgba(255,77,77,0.5))',
-                }}
-              />
-            </svg>
-          )}
-
-          {/* The slot itself */}
-          <label
-            className="absolute inset-3 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer"
-            style={{
-              background: isActive ? 'transparent' : 'rgba(245,240,232,0.03)',
-              border: isActive ? 'none' : '1.5px dashed rgba(245,240,232,0.1)',
-              transition: 'all 0.4s ease',
-            }}
-          >
-            {/* Active upload — image preview */}
-            {active && active.preview && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  opacity: active.phase === 'absorbing' ? 0 : 1,
-                  transform: active.phase === 'absorbing' ? 'scale(0.1)' : 'scale(1)',
-                  transition:
-                    'opacity 0.7s cubic-bezier(0.4,0,1,1), transform 0.7s cubic-bezier(0.4,0,1,1)',
-                }}
-              >
-                {/* Photo */}
-                <img src={active.preview} alt="" className="w-full h-full object-cover" />
-
-                {/* Dark overlay during upload */}
-                <div
-                  className="absolute inset-0 transition-opacity duration-500"
-                  style={{
-                    background: 'rgba(6,6,4,0.45)',
-                    opacity: active.phase === 'uploading' ? 1 : 0,
-                  }}
-                />
-
-                {/* Scan line sweep */}
-                {active.phase === 'scanning' && (
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div
-                      className="absolute left-0 right-0 h-0.5"
-                      style={{
-                        background:
-                          'linear-gradient(90deg, transparent, rgba(255,77,77,0.8), transparent)',
-                        boxShadow: '0 0 8px rgba(255,77,77,0.6)',
-                        animation: 'scan-sweep 0.9s ease-in-out forwards',
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Idle — "+" plus */}
-            {!active && (
-              <>
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all group-hover:scale-110"
-                  style={{
-                    border: '1px solid rgba(245,240,232,0.1)',
-                    background: 'rgba(245,240,232,0.04)',
-                  }}
-                >
-                  <Plus size={16} style={{ color: 'rgba(245,240,232,0.25)' }} />
-                </div>
-                <span
-                  className="font-mono text-[7px] uppercase tracking-[0.35em]"
-                  style={{ color: 'rgba(245,240,232,0.55)' }}
-                >
-                  Upload
-                </span>
-              </>
-            )}
-
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={e => e.target.files && handleFiles(e.target.files)}
-            />
-          </label>
-
-          {/* Phase label below ring */}
-          {active && (
-            <div className="absolute -bottom-8 left-0 right-0 text-center">
-              <span
-                className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
-                key={active.phase}
-                style={{
-                  color:
-                    active.phase === 'absorbing'
-                      ? 'rgba(45,158,139,0.7)'
-                      : active.phase === 'error'
-                        ? 'rgba(255,77,77,0.7)'
-                        : 'rgba(255,77,77,0.5)',
-                  animation: 'fade-in 0.3s ease',
-                }}
-              >
-                {active.phase === 'scanning' && '● SCANNING'}
-                {active.phase === 'uploading' && `● ${active.progress}% ARCHIVED`}
-                {active.phase === 'absorbing' && '● FRAGMENT ABSORBED'}
-                {active.phase === 'error' && '● SIGNAL LOST'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Batch progress bar — shown when uploading multiple files */}
-        {batchTotal > 1 && (
-          <div className="w-full max-w-[200px] mt-5">
-            <div className="flex justify-between items-center mb-1.5">
-              <span
-                className="font-mono text-[7px] uppercase tracking-[0.3em]"
-                style={{ color: 'rgba(245,240,232,0.22)' }}
-              >
-                ARCHIVING
-              </span>
-              <span className="font-mono text-[7px]" style={{ color: 'rgba(245,240,232,0.32)' }}>
-                {batchDone} / {batchTotal}
-              </span>
-            </div>
-            <div
-              className="w-full h-px rounded-full overflow-hidden"
-              style={{ background: 'rgba(245,240,232,0.07)' }}
-            >
-              <motion.div
-                className="h-full rounded-full"
-                style={{
-                  background: '#FF4D4D',
-                  boxShadow: '0 0 4px rgba(255,77,77,0.5)',
-                  originX: 0,
-                }}
-                animate={{
-                  width: `${batchTotal > 0 ? Math.round((batchDone / batchTotal) * 100) : 0}%`,
-                }}
-                transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Queue indicator */}
-        {queue.length > 0 && batchTotal <= 1 && (
-          <p
-            className="font-mono text-[7.5px] uppercase tracking-[0.3em]"
-            style={{ color: 'rgba(245,240,232,0.2)', marginTop: 16 }}
-          >
-            {queue.length} FRAGMENT{queue.length !== 1 ? 'S' : ''} QUEUED
-          </p>
-        )}
-
-        {errorMsg && (
-          <p
-            className="font-mono text-[8px] uppercase tracking-[0.25em] cursor-pointer hover:opacity-80"
-            onClick={() => {
-              setActive(null);
-              setErrorMsg('');
-            }}
-            style={{ color: 'rgba(255,77,77,0.7)', marginTop: 8 }}
-          >
-            {errorMsg}
-          </p>
-        )}
-      </div>
-
-      {/* Archived fragments grid — confirmed photos */}
-      {photoCount > 0 && (
-        <div className="w-full max-w-md px-4 mb-10 z-10">
-          <p
-            className="font-mono text-[7.5px] uppercase tracking-[0.5em] mb-4 text-center"
-            style={{ color: 'rgba(245,240,232,0.2)' }}
-          >
-            {photoCount} FRAGMENT{photoCount !== 1 ? 'S' : ''} IN ARCHIVE
-          </p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {(photos ?? []).map(photo => (
-              <div
-                key={photo.id}
-                className="rounded-xl overflow-hidden relative"
-                style={{
-                  width: 48,
-                  height: 48,
-                  border: '1px solid rgba(245,240,232,0.08)',
-                  background: 'rgba(245,240,232,0.04)',
-                  animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
-                }}
-              >
-                {photo.thumbnailUrl || photo.url ? (
-                  <img
-                    src={photo.thumbnailUrl || photo.url || undefined}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  // Placeholder — photo uploaded but thumbnail not generated yet
-                  <div
-                    className="w-full h-full flex items-center justify-center"
-                    style={{ background: 'rgba(255,77,77,0.06)' }}
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{
-                        background: 'rgba(255,77,77,0.3)',
-                        animation: 'pulse-soft 1.5s ease-in-out infinite',
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Confessional booth — pre-generation */}
-      {photoCount >= 1 && (
-        <div className="w-full max-w-xs mb-10 z-10 px-4">
-          <ConfessionInput tripId={tripId} />
-        </div>
-      )}
-
-      {/* Progress toward lore generation — updated dot bar with count */}
-      {needed > 0 && photoCount > 0 && (
-        <div className="w-full max-w-md px-4 mb-8 z-10 space-y-2">
-          <div className="flex items-center justify-between">
-            <span
-              className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
-              style={{ color: 'rgba(245,240,232,0.3)' }}
-            >
-              ARCHIVE PROGRESS
-            </span>
-            <span className="font-mono text-[7.5px]" style={{ color: 'rgba(245,240,232,0.45)' }}>
-              {photoCount} / 5
-            </span>
-          </div>
-          <div className="flex gap-1.5">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="flex-1 h-1.5 rounded-full transition-all duration-500"
-                style={{
-                  background: i < photoCount ? '#FF4D4D' : 'rgba(245,240,232,0.1)',
-                  boxShadow: i < photoCount ? '0 0 4px rgba(255,77,77,0.4)' : 'none',
-                }}
-              />
-            ))}
-          </div>
-          <p
-            className="font-mono text-[7.5px] uppercase tracking-[0.3em] text-center"
-            style={{ color: 'rgba(245,240,232,0.55)' }}
-          >
-            {needed} more photo{needed !== 1 ? 's' : ''} to unlock lore generation
-          </p>
-        </div>
-      )}
-
-      {/* Lore engine CTA */}
-      <div className="z-10">
-        {canGenerate && photoCount < 8 && (
-          <div className="text-xs text-amber-400/80 mb-2 font-mono uppercase tracking-wider text-center">
-            ⚠ Add {8 - photoCount} more photos for richer lore
-          </div>
-        )}
-        <button
-          onClick={() => generateLore.mutate({ tripId })}
-          disabled={!canGenerate || generateLore.isPending || isActive}
-          className="px-12 py-5 rounded-full font-ui font-black text-[10px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-20 flex items-center gap-3"
+      {/* Grid Container */}
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-10 items-start relative z-10">
+        {/* LEFT COLUMN: Upload Portal, Confession, and CTA */}
+        <div
+          className="lg:col-span-5 flex flex-col items-center justify-center p-6 rounded-3xl border space-y-8"
           style={{
-            background: canGenerate ? 'rgba(255,77,77,0.12)' : 'rgba(245,240,232,0.04)',
-            border: `1px solid ${canGenerate ? 'rgba(255,77,77,0.4)' : 'rgba(245,240,232,0.08)'}`,
-            color: canGenerate ? 'rgba(255,77,77,0.95)' : 'rgba(245,240,232,0.2)',
-            boxShadow: canGenerate ? '0 0 30px rgba(255,77,77,0.12)' : 'none',
-          }}
-          onMouseEnter={e => {
-            if (canGenerate)
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                '0 0 50px rgba(255,77,77,0.3)';
-          }}
-          onMouseLeave={e => {
-            if (canGenerate)
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                '0 0 30px rgba(255,77,77,0.12)';
+            background: 'rgba(245,240,232,0.015)',
+            borderColor: 'rgba(245,240,232,0.05)',
           }}
         >
-          {generateLore.isPending ? (
-            <>
+          <div className="text-center space-y-1">
+            <h3
+              className="font-mono text-[10px] uppercase tracking-[0.25em]"
+              style={{ color: 'rgba(245,240,232,0.4)' }}
+            >
+              UPLOAD TERMINAL
+            </h3>
+            <p className="font-display italic text-xs" style={{ color: 'rgba(245,240,232,0.25)' }}>
+              Drag & drop or tap the portal to select files
+            </p>
+          </div>
+
+          {/* Portal (increased size to 210x210) */}
+          <div className="relative" style={{ width: 210, height: 210 }}>
+            {/* Progress ring SVG */}
+            {isActive && (
+              <svg className="absolute inset-0 w-full h-full -rotate-90" style={{ zIndex: 3 }}>
+                <circle
+                  cx="105"
+                  cy="105"
+                  r={82}
+                  fill="none"
+                  stroke="rgba(255,77,77,0.12)"
+                  strokeWidth="3.5"
+                />
+                <circle
+                  cx="105"
+                  cy="105"
+                  r={82}
+                  fill="none"
+                  stroke={active?.phase === 'absorbing' ? '#2D9E8B' : '#FF4D4D'}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeDasharray={`${active ? 2 * Math.PI * 82 * (active.progress / 100) : 0} ${2 * Math.PI * 82}`}
+                  style={{
+                    transition: 'stroke-dasharray 0.2s ease, stroke 0.4s ease',
+                    filter: 'drop-shadow(0 0 6px rgba(255,77,77,0.5))',
+                  }}
+                />
+              </svg>
+            )}
+
+            {/* The slot itself */}
+            <label
+              className={`absolute inset-4 rounded-3xl overflow-hidden flex flex-col items-center justify-center group ${
+                canUpload ? 'cursor-pointer' : 'pointer-events-none opacity-40 cursor-not-allowed'
+              }`}
+              style={{
+                background: isActive ? 'transparent' : 'rgba(245,240,232,0.03)',
+                border: isActive ? 'none' : '1.5px dashed rgba(245,240,232,0.12)',
+                transition: 'all 0.4s ease',
+              }}
+            >
+              {/* Active upload — image preview */}
+              {active && active.preview && (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    opacity: active.phase === 'absorbing' ? 0 : 1,
+                    transform: active.phase === 'absorbing' ? 'scale(0.1)' : 'scale(1)',
+                    transition:
+                      'opacity 0.7s cubic-bezier(0.4,0,1,1), transform 0.7s cubic-bezier(0.4,0,1,1)',
+                  }}
+                >
+                  <img src={active.preview} alt="" className="w-full h-full object-cover" />
+                  <div
+                    className="absolute inset-0 transition-opacity duration-500"
+                    style={{
+                      background: 'rgba(6,6,4,0.45)',
+                      opacity: active.phase === 'uploading' ? 1 : 0,
+                    }}
+                  />
+                  {active.phase === 'scanning' && (
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div
+                        className="absolute left-0 right-0 h-0.5"
+                        style={{
+                          background:
+                            'linear-gradient(90deg, transparent, rgba(255,77,77,0.8), transparent)',
+                          boxShadow: '0 0 8px rgba(255,77,77,0.6)',
+                          animation: 'scan-sweep 0.9s ease-in-out forwards',
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Idle — "+" plus */}
+              {!active && (
+                <>
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center mb-2.5 transition-all group-hover:scale-110"
+                    style={{
+                      border: '1px solid rgba(245,240,232,0.12)',
+                      background: 'rgba(245,240,232,0.04)',
+                    }}
+                  >
+                    <Plus size={18} style={{ color: 'rgba(245,240,232,0.35)' }} />
+                  </div>
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-[0.35em]"
+                    style={{ color: 'rgba(245,240,232,0.6)' }}
+                  >
+                    Upload
+                  </span>
+                </>
+              )}
+
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                disabled={!canUpload}
+                onChange={e => e.target.files && handleFiles(e.target.files)}
+              />
+            </label>
+
+            {/* Phase label */}
+            {active && (
+              <div className="absolute -bottom-8 left-0 right-0 text-center">
+                <span
+                  className="font-mono text-[10px] uppercase tracking-[0.4em]"
+                  key={active.phase}
+                  style={{
+                    color:
+                      active.phase === 'absorbing'
+                        ? 'rgba(45,158,139,0.8)'
+                        : active.phase === 'error'
+                          ? 'rgba(255,77,77,0.8)'
+                          : 'rgba(255,77,77,0.65)',
+                    animation: 'fade-in 0.3s ease',
+                  }}
+                >
+                  {active.phase === 'scanning' && '● SCANNING'}
+                  {active.phase === 'uploading' && `● ${active.progress}% ARCHIVED`}
+                  {active.phase === 'absorbing' && '● FRAGMENT ABSORBED'}
+                  {active.phase === 'error' && '● SIGNAL LOST'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Batch progress */}
+          {batchTotal > 1 && (
+            <div className="w-full max-w-[200px] pt-4">
+              <div className="flex justify-between items-center mb-1.5">
+                <span
+                  className="font-mono text-[9px] uppercase tracking-[0.3em]"
+                  style={{ color: 'rgba(245,240,232,0.3)' }}
+                >
+                  ARCHIVING
+                </span>
+                <span className="font-mono text-[9px]" style={{ color: 'rgba(245,240,232,0.45)' }}>
+                  {batchDone} / {batchTotal}
+                </span>
+              </div>
               <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  border: '1px solid rgba(255,77,77,0.3)',
-                  borderTopColor: '#FF4D4D',
-                  animation: 'spin 0.8s linear infinite',
-                }}
-              />{' '}
-              IGNITING...
-            </>
-          ) : generateLore.error ? (
-            '⚠ ' + (generateLore.error.message?.slice(0, 40) ?? 'Error')
-          ) : (
-            'IGNITE THE LORE ENGINE →'
+                className="w-full h-px rounded-full overflow-hidden"
+                style={{ background: 'rgba(245,240,232,0.07)' }}
+              >
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{
+                    background: '#FF4D4D',
+                    boxShadow: '0 0 4px rgba(255,77,77,0.5)',
+                    originX: 0,
+                  }}
+                  animate={{
+                    width: `${batchTotal > 0 ? Math.round((batchDone / batchTotal) * 100) : 0}%`,
+                  }}
+                  transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
+                />
+              </div>
+            </div>
           )}
-        </button>
-        {needed === 0 && (
-          <p
-            className="text-center font-mono text-[7.5px] uppercase tracking-[0.3em] mt-3"
-            style={{ color: 'rgba(245,240,232,0.50)' }}
-          >
-            {photoCount} FRAGMENTS READY
-          </p>
-        )}
+
+          {/* Queue & Error Indicators */}
+          {queue.length > 0 && batchTotal <= 1 && (
+            <p
+              className="font-mono text-[9px] uppercase tracking-[0.3em] opacity-40 pt-2"
+              style={{ color: 'rgba(245,240,232,0.5)' }}
+            >
+              {queue.length} FRAGMENT{queue.length !== 1 ? 'S' : ''} QUEUED
+            </p>
+          )}
+
+          {errorMsg && (
+            <p
+              className="font-mono text-[10px] uppercase tracking-[0.25em] cursor-pointer hover:opacity-85 text-center px-4"
+              onClick={() => {
+                setActive(null);
+                setErrorMsg('');
+              }}
+              style={{ color: 'rgba(255,77,77,0.8)', marginTop: 8 }}
+            >
+              {errorMsg}
+            </p>
+          )}
+
+          {/* Confessional */}
+          {photoCount >= 1 && (
+            <div className="w-full pt-4">
+              <ConfessionInput tripId={tripId} disabled={!canUpload} />
+            </div>
+          )}
+
+          {/* CTA controls */}
+          <div className="w-full flex flex-col items-center pt-4">
+            {canGenerate && photoCount < 8 && (
+              <div className="text-[10px] text-amber-400/80 mb-3.5 font-mono uppercase tracking-wider text-center animate-pulse">
+                ⚠ Add {8 - photoCount} more photos for richer lore
+              </div>
+            )}
+
+            <button
+              onClick={() => generateLore.mutate({ tripId })}
+              disabled={!canGenerate || generateLore.isPending || isActive}
+              className="w-full py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-25 flex items-center justify-center gap-3"
+              style={{
+                background: canGenerate ? 'rgba(255,77,77,0.12)' : 'rgba(245,240,232,0.04)',
+                border: `1px solid ${canGenerate ? 'rgba(255,77,77,0.4)' : 'rgba(245,240,232,0.08)'}`,
+                color: canGenerate ? 'rgba(255,77,77,0.95)' : 'rgba(245,240,232,0.2)',
+                boxShadow: canGenerate ? '0 0 30px rgba(255,77,77,0.12)' : 'none',
+              }}
+              onMouseEnter={e => {
+                if (canGenerate)
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    '0 0 50px rgba(255,77,77,0.3)';
+              }}
+              onMouseLeave={e => {
+                if (canGenerate)
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    '0 0 30px rgba(255,77,77,0.12)';
+              }}
+            >
+              {generateLore.isPending ? (
+                <>
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      border: '1px solid rgba(255,77,77,0.3)',
+                      borderTopColor: '#FF4D4D',
+                      animation: 'spin 0.8s linear infinite',
+                    }}
+                  />{' '}
+                  IGNITING...
+                </>
+              ) : generateLore.error ? (
+                '⚠ ' + (generateLore.error.message?.slice(0, 35) ?? 'Error')
+              ) : (
+                'IGNITE THE LORE ENGINE →'
+              )}
+            </button>
+
+            {needed === 0 && (
+              <p
+                className="text-center font-mono text-[9px] uppercase tracking-[0.3em] mt-3.5"
+                style={{ color: 'rgba(245,240,232,0.50)' }}
+              >
+                {photoCount} FRAGMENTS READY
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Instructions, Tips, and Gallery Grid */}
+        <div className="lg:col-span-7 space-y-8 flex flex-col justify-start">
+          {/* ONBOARDING section */}
+          {photoCount === 0 && (
+            <div className="space-y-6 w-full">
+              {/* Minimum requirement callout */}
+              <div
+                className="px-5 py-4 rounded-2xl text-center"
+                style={{
+                  background: 'rgba(255,77,77,0.04)',
+                  border: '1px solid rgba(255,77,77,0.15)',
+                }}
+              >
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[0.4em] mb-2"
+                  style={{ color: 'rgba(255,77,77,0.8)' }}
+                >
+                  ● MINIMUM REQUIREMENT
+                </p>
+                <p
+                  className="font-display italic text-sm leading-relaxed"
+                  style={{ color: 'rgba(245,240,232,0.6)' }}
+                >
+                  Add at least{' '}
+                  <span style={{ color: '#F5F0E8', fontStyle: 'normal', fontWeight: 700 }}>
+                    5 photos
+                  </span>{' '}
+                  to unlock lore generation. More photos = richer story.
+                </p>
+              </div>
+
+              {/* Tips & Teaser Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Best-photo tips */}
+                <div
+                  className="px-5 py-4 rounded-2xl space-y-3"
+                  style={{
+                    background: 'rgba(245,240,232,0.02)',
+                    border: '1px solid rgba(245,240,232,0.07)',
+                  }}
+                >
+                  <p
+                    className="font-mono text-[10px] uppercase tracking-[0.45em]"
+                    style={{ color: 'rgba(245,240,232,0.45)' }}
+                  >
+                    BEST PHOTOS TO UPLOAD
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { icon: '👥', tip: 'Group shots' },
+                      { icon: '😂', tip: 'Candid moments' },
+                      { icon: '🌅', tip: 'Scenic spots' },
+                      { icon: '🍜', tip: 'Food & drinks' },
+                      { icon: '🎉', tip: 'Activities' },
+                      { icon: '🌙', tip: 'Night moments' },
+                    ].map(({ icon, tip }) => (
+                      <div key={tip} className="flex items-center gap-2">
+                        <span className="text-sm">{icon}</span>
+                        <span
+                          className="font-mono text-[10px] uppercase tracking-wider"
+                          style={{ color: 'rgba(245,240,232,0.55)' }}
+                        >
+                          {tip}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Teaser */}
+                <div
+                  className="px-5 py-4 rounded-2xl"
+                  style={{
+                    background: 'rgba(45,158,139,0.03)',
+                    border: '1px solid rgba(45,158,139,0.12)',
+                  }}
+                >
+                  <p
+                    className="font-mono text-[10px] uppercase tracking-[0.45em] mb-3"
+                    style={{ color: 'rgba(45,158,139,0.75)' }}
+                  >
+                    ✦ WHAT YOU&apos;LL UNLOCK
+                  </p>
+                  <div className="space-y-1.5">
+                    {[
+                      'AI-written trip documentary',
+                      'Character roles for each member',
+                      'Chaos score & percentile ranking',
+                      'Shareable story slides',
+                    ].map(item => (
+                      <div key={item} className="flex items-center gap-2">
+                        <div
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: 'rgba(45,158,139,0.5)' }}
+                        />
+                        <p
+                          className="font-display italic text-[12px]"
+                          style={{ color: 'rgba(245,240,232,0.55)' }}
+                        >
+                          {item}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Archive progress bar for mid-uploads */}
+          {needed > 0 && photoCount > 0 && (
+            <div className="w-full space-y-2.5 px-4 lg:px-0">
+              <div className="flex items-center justify-between">
+                <span
+                  className="font-mono text-[10px] uppercase tracking-[0.4em]"
+                  style={{ color: 'rgba(245,240,232,0.45)' }}
+                >
+                  ARCHIVE PROGRESS
+                </span>
+                <span className="font-mono text-[10px]" style={{ color: 'rgba(245,240,232,0.6)' }}>
+                  {photoCount} / 5
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 h-2 rounded-full transition-all duration-500"
+                    style={{
+                      background: i < photoCount ? '#FF4D4D' : 'rgba(245,240,232,0.1)',
+                      boxShadow: i < photoCount ? '0 0 5px rgba(255,77,77,0.4)' : 'none',
+                    }}
+                  />
+                ))}
+              </div>
+              <p
+                className="font-mono text-[10px] uppercase tracking-[0.3em] text-center lg:text-left opacity-60"
+                style={{ color: 'rgba(245,240,232,0.6)' }}
+              >
+                {needed} more photo{needed !== 1 ? 's' : ''} to unlock lore generation
+              </p>
+            </div>
+          )}
+
+          {/* Archived fragments gallery grid (increased thumbnail size to 80x80) */}
+          {photoCount > 0 && (
+            <div className="w-full space-y-4 px-4 lg:px-0">
+              <p
+                className="font-mono text-[10px] uppercase tracking-[0.5em] text-center lg:text-left"
+                style={{ color: 'rgba(245,240,232,0.3)' }}
+              >
+                {photoCount} FRAGMENT{photoCount !== 1 ? 'S' : ''} IN ARCHIVE
+              </p>
+              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 justify-items-center lg:justify-items-start">
+                {(photos ?? []).map(photo => (
+                  <div
+                    key={photo.id}
+                    className="rounded-2xl overflow-hidden relative shadow-lg group hover:scale-[1.03] transition-transform duration-300"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      border: '1.5px solid rgba(245,240,232,0.08)',
+                      background: 'rgba(245,240,232,0.04)',
+                      animation: 'fragment-in 0.5s cubic-bezier(0.16,1,0.3,1)',
+                    }}
+                  >
+                    {photo.thumbnailUrl || photo.url ? (
+                      <img
+                        src={photo.thumbnailUrl || photo.url || undefined}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center"
+                        style={{ background: 'rgba(255,77,77,0.06)' }}
+                      >
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{
+                            background: 'rgba(255,77,77,0.3)',
+                            animation: 'pulse-soft 1.5s ease-in-out infinite',
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <style jsx>{`

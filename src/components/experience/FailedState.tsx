@@ -11,10 +11,39 @@ interface Props {
 
 export function FailedState({ trip, tripId, onRetry }: Props) {
   const router = useRouter();
+  const utils = trpc.useUtils();
+
   const generateLore = trpc.trips.generateLore.useMutation({
     onSuccess: () => {
+      utils.trips.getFull.setData({ tripId }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          trip: {
+            ...old.trip,
+            lore_status: 'processing',
+          },
+        };
+      });
       onRetry();
       router.push(`/trips/${tripId}/generating`);
+    },
+  });
+
+  const resetLoreStatus = trpc.trips.resetLoreStatusToUpload.useMutation({
+    onSuccess: () => {
+      utils.trips.getFull.setData({ tripId }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          trip: {
+            ...old.trip,
+            lore_status: null,
+          },
+        };
+      });
+      onRetry();
+      router.push(`/trips/${tripId}`);
     },
   });
 
@@ -95,11 +124,12 @@ export function FailedState({ trip, tripId, onRetry }: Props) {
         )}
 
         <button
-          onClick={() => router.push(`/trips/${tripId}`)}
-          className="font-mono text-[7.5px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+          onClick={() => resetLoreStatus.mutate({ tripId })}
+          disabled={resetLoreStatus.isPending}
+          className="font-mono text-[10px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity disabled:opacity-30"
           style={{ color: 'rgba(245,240,232,0.45)' }}
         >
-          ← BACK TO ARCHIVE
+          {resetLoreStatus.isPending ? 'RESETTING...' : '← UPLOAD MORE PHOTOS / EDIT ARCHIVE'}
         </button>
       </div>
 

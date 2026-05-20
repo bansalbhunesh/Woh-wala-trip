@@ -209,6 +209,7 @@ class LoreEvaluator:
 # ---------------------------------------------------------------------------
 
 _GLOBAL_RATE_LIMITER = PipelineRateLimiter(max_concurrent=8)
+_ACTIVE_RUNS: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -249,18 +250,24 @@ class LoreOrchestrator:
 
         log.info(f"[{trip_id}][{trace_id}] pipeline start — model={settings.CLAUDE_MODEL} proxy={bool(settings.ANTHROPIC_BASE_URL)}")
 
-        try:
-            # Idempotency guard: skip if already done or in flight
-            current = supabase.table("trips").select("lore_status").eq("id", trip_id).single().execute().data
-            if current and current.get("lore_status") in ("ready", "processing"):
-                log.info(f"[{trip_id}][{trace_id}] skipping — lore_status={current['lore_status']}")
-                return
+        if trip_id in _ACTIVE_RUNS:
+            log.info(f"[{trip_id}][{trace_id}] skipping — already processing this trip_id in-flight in this worker")
+            return
 
-            supabase.table("trips").update({
-                "lore_status": "processing",
-                "lore_trace_id": trace_id,
-                "processing_started_at": datetime.now(timezone.utc).isoformat(),
-            }).eq("id", trip_id).execute()
+        _ACTIVE_RUNS.add(trip_id)
+        try:
+            try:
+                # Idempotency guard: skip only if already completed
+                current = supabase.table("trips").select("lore_status").eq("id", trip_id).single().execute().data
+                if current and current.get("lore_status") == "ready":
+                    log.info(f"[{trip_id}][{trace_id}] skipping — lore_status is already ready")
+                    return
+
+                supabase.table("trips").update({
+                    "lore_status": "processing",
+                    "lore_trace_id": trace_id,
+                    "processing_started_at": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", trip_id).execute()
 
             # Step 1: fetch
             self._update_pipeline_state(trip_id, "fetch", "running")
@@ -468,22 +475,24 @@ class LoreOrchestrator:
             # Schedule enrichment as a background task — returns immediately
             asyncio.create_task(_run_enrichment())
 
-        except Exception as e:
-            log.exception(f"[{trip_id}][{trace_id}] pipeline failed at step={self._current_step}: {e}")
-            supabase.table("trips").update({
-                "lore_status": "failed",
-                "lore_error": {
-                    "step": self._current_step,
-                    "message": str(e)[:1000],
-                    "trace_id": trace_id,
-                },
-                "lore_pipeline_state": {
-                    "step": self._current_step,
-                    "status": "failed",
-                    "trace_id": trace_id,
-                },
-            }).eq("id", trip_id).execute()
-            raise
+            except Exception as e:
+                log.exception(f"[{trip_id}][{trace_id}] pipeline failed at step={self._current_step}: {e}")
+                supabase.table("trips").update({
+                    "lore_status": "failed",
+                    "lore_error": {
+                        "step": self._current_step,
+                        "message": str(e)[:1000],
+                        "trace_id": trace_id,
+                    },
+                    "lore_pipeline_state": {
+                        "step": self._current_step,
+                        "status": "failed",
+                        "trace_id": trace_id,
+                    },
+                }).eq("id", trip_id).execute()
+                raise
+        finally:
+            _ACTIVE_RUNS.discard(trip_id)
 
     # -------------------------------------------------------------------------
     # Retention Machine: identity snapshots
@@ -522,13 +531,11 @@ class LoreOrchestrator:
                 lore_json_summary=lore_summary_str,
             )
 
-            response = await asyncio.to_thread(
-                lambda: _anthropic.Anthropic().messages.create(
-                    model="claude-haiku-20241022",
-                    max_tokens=2048,
-                    system=prompts.INCIDENT_EXTRACTION_SYSTEM,
-                    messages=[{"role": "user", "content": prompt}],
-                )
+            response = await anthropic_client.messages.create(
+                model="claude-haiku-20241022",
+                max_tokens=2048,
+                system=prompts.INCIDENT_EXTRACTION_SYSTEM,
+                messages=[{"role": "user", "content": prompt}],
             )
 
             raw = response.content[0].text

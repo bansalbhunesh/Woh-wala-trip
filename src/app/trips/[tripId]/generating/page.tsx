@@ -38,13 +38,18 @@ export default function GeneratingPage() {
 
   const resetStuckLore = trpc.trips.resetStuckLore.useMutation();
 
+  // Single shared Supabase browser client — prevents duplicate WebSocket connections.
+  const supabaseRef = useRef(
+    createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  );
+
   // Supabase Realtime — push update when lore_status changes instead of polling
   useEffect(() => {
     let mounted = true;
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = supabaseRef.current;
     const channel = supabase
       .channel(`trip-lore-${tripId}`)
       .on(
