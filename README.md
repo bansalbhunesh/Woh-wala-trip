@@ -2,508 +2,215 @@
 
 # YAARLORE
 
-### _Your friendships, narrated._
+### _Friendships, narrated. Memories, archived. Nostalgia, monetized._
 
-**The AI-powered friendship documentary. Spotify Wrapped for the trips you'll never forget.**
+**The collaborative AI documentary platform that turns chaotic group photo dumps into viral digital archives and physical coffee-table books.**
 
 [![Live](https://img.shields.io/badge/LIVE-yaarlore.app-FF4D4D?style=for-the-badge&logoColor=white)](https://yaarlore.app)
 [![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
-[![Claude](https://img.shields.io/badge/Claude_Sonnet_4-FF6B00?style=for-the-badge&logoColor=white)](https://anthropic.com)
+[![Claude](https://img.shields.io/badge/Claude_Sonnet_4.6-FF6B00?style=for-the-badge&logoColor=white)](https://anthropic.com)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 
 ---
 
-> _"Some products show you data. This one shows you who you really are."_
+> _"In a world where millions of photos sit forgotten in cloud storage, Yaarlore converts passive digital media into active social capital."_
 
 </div>
 
 ---
 
-## What Is This?
+## 🚀 The One-Liner
 
-You went on a trip. Someone started drama on Day 1. Someone claimed to be "fine" until 2 AM. There were three near-disasters and one conversation that will never be spoken of again.
-
-**Yaarlore turns all of that into mythology.**
-
-Upload your photo dump. The AI watches, judges, and documents. Out comes a cinematic, roasting, brutally honest **Friendship Lore Archive** — character archetypes, chaos scores, season recaps, and superlatives that will immediately end up in the group chat.
-
-This is not a travel app. It's a **friendship documentary reconstructed from recovered memories.**
+Yaarlore is a collaborative storytelling platform where groups upload photo dumps, contribute anonymous confessions, and receive a cinematic, A24-style roasted "Friendship Lore Archive"—accessible as a web story and orderable as a high-quality physical hardcover book.
 
 ---
 
-## Features
+## ⚡ Why it Matters: The Opportunity & Market
 
-### The Lore Engine
-
-Claude Sonnet 4 runs full behavioral analysis on your trip photos — not _what's_ in them, but _what they reveal._
-
-| Output               | Description                                                   |
-| -------------------- | ------------------------------------------------------------- |
-| **Trip Title**       | A cinematic name worthy of an A24 poster                      |
-| **Tagline**          | One sentence that captures the collective delusion            |
-| **Cooked Score**     | 0–100 chaos rating. 84+ = historically cooked                 |
-| **Cooked Verdict**   | "Zen Retreat" · "Certified Disaster" · "Institutionalized"    |
-| **Season Recap**     | Full narrative of what _really_ happened                      |
-| **Trip Eras**        | The phases your group went through, with timestamps           |
-| **Character Cards**  | Every member's role title + chaos rating + defining moment    |
-| **Superlatives**     | "Most likely to..." — assigned to the actual guilty person    |
-| **Closing Line**     | The one sentence that defines the entire trip                 |
-| **AI-Generated Art** | Trip cover, character portraits, era thumbnails via image gen |
-
-The AI is instructed to think like an _"internet-native historian."_ It looks for who's carrying the group's social battery, who is pretending to be normal, and what the collective delusion was. Generic travel writing gets auto-rejected.
+1. **The Photo Dump Friction**: People take millions of photos on trips, but sorting, sharing, and reliving them is a high-friction process.
+2. **Collaborative Storytelling**: Modern consumers crave interactive, shared digital experiences. Spotify Wrapped proved that personalized, data-backed nostalgia is one of the most viral formats on the internet.
+3. **The Nostalgia Economy**: There is a high willingness to pay for physical keepsakes. By converting digital stories into immediate print-ready books, Yaarlore merges modern generative AI with high-margin physical printing and fulfillment.
 
 ---
 
-### Tap-Through Story Player
+## 📈 The Viral Growth Loop (Flywheel)
 
-Every trip becomes a **cinematic tap-through experience** — like Instagram Stories but for your mythology.
+Yaarlore’s growth model is built directly into the product lifecycle:
 
-- Progress bars showing exactly where you are
-- Directional slide-in transitions (`←` retreat / `→` advance)
-- Cooked score slams in and counts up from 0 with a visual shockwave
-- Character cards flip in with a 3D perspective reveal
-- Superlative winners slam in oversized coral text
-- The closing verdict arrives cinematic, with teal dividers
+```mermaid
+flowchart TD
+    A[Host creates Trip] -->|Generates 8-char Code| B[Friends Join without Signup]
+    B -->|Upload Photos & Confessions| C[AI Generates Cinematic Story]
+    C -->|Share cards to WhatsApp/Instagram| D[Public Teaser Viewers /t/:code]
+    D -->|Click 'Create Your Trip'| A
+    C -->|Upgrade Tier ($3 - $15)| E[High-Margin Print Orders]
+```
 
----
-
-### 🌐 Public Gateways & Interactive Routing
-
-Every trip archive, teaser, and profile is generated with unique, permanently shareable routing paths that require **no login** for visitors.
-
-| Experience Endpoint                   | Visual Format          | Deep-Link Experience                                                                                          |
-| :------------------------------------ | :--------------------- | :------------------------------------------------------------------------------------------------------------ |
-| <kbd>**`/t/:inviteCode`**</kbd>       | **The Dossier Teaser** | High-fidelity briefing dashboard featuring the title, cooked score, group tagline, and core stats.            |
-| <kbd>**`/t/:inviteCode/story`**</kbd> | **The Cinematic Reel** | Immersive, full-screen tap-through narrative utilizing directional slide physics and Web Audio track syncing. |
-| <kbd>**`/wrap/:year`**</kbd>          | **The Retrospective**  | Spotify Wrapped-style annual group overview showcasing cumulative stats and year-wide behaviors.              |
-| <kbd>**`/u/:username`**</kbd>         | **The Lore Profile**   | A sleek, high-contrast digital portfolio showing a user's complete trip index and chaos sparklines.           |
+1. **Host Creates a Trip**: Generates an 8-character invite code.
+2. **Zero-Friction Co-creation**: Friends join using the code (no account creation required), drop photos, and submit anonymous "confessions" that provide context for the AI.
+3. **Cinematic Story Generation**: Out comes a tap-through slide deck containing character archetypes, chaos scores, and superlatives.
+4. **Organic Sharing**: Users share custom-generated Instagram/WhatsApp summary cards and public teaser links (`/t/:code`).
+5. **The Loop Restarts**: Teaser viewers land on the teaser page, experience the product value, click "Create a Trip", and launch their own campaign.
+6. **Monetization Event**: Group members order physical coffee-table books of their archive (Pan-India delivery via Razorpay checkout).
 
 ---
 
-### ⚔️ Chaos Clash (Battle Mode)
+## 🛠️ System Architecture
 
-Two trips enter. One leaves. The ultimate arena for friendship bragging rights.
+Yaarlore is architected as a lightweight, modern web client supported by an async background processing worker:
 
-> [!TIP]
-> **Who is truly the most cooked?** Trips can be submitted to head-to-head public battles where the community decides the winner in real time.
->
-> - **🗳️ Zero-Friction Voting** — Open voting bars that animate dynamically with instantaneous client-side updates.
-> - **⚖️ The AI Arbitrator** — Claude acts as the arena judge, analyzing the photos and stories from both trips to deliver a hilarious, definitive verdict.
-> - **⚡ Live Stat Modulators** — Dynamic, real-time vote percentage sweeps that respond instantly to database changes.
+```mermaid
+graph TB
+    subgraph Frontend [Next.js App Router & Serverless Layer]
+        A[Next.js Client v16] <-->|tRPC v11 / React Query| B[Serverless API Routes]
+        B -->|Auth / OTP / Payments| C[Razorpay & Resend APIs]
+    end
+
+    subgraph Database [Supabase Realtime & Storage]
+        D[Supabase Database + RLS] <-->|Row Level Security| B
+        E[Supabase Storage] <-->|Public Image CDN| A
+        D -->|Claims queue skip locked| F[Job Queue Table]
+    end
+
+    subgraph AIWorker [Python Worker - FastAPI]
+        G[FastAPI Process Runner] <-->|Polls| F
+        G -->|1. Multimodal Embeddings| H[Voyage AI API]
+        G -->|2. Narrative & Evaluation| I[Claude 3.5 Sonnet / Haiku]
+        G -->|3. Image Generation| J[Fal.ai Sana Sprint]
+    end
+
+    style Frontend fill:#fef08a,stroke:#eab308,stroke-width:2px
+    style Database fill:#bbf7d0,stroke:#22c55e,stroke-width:2px
+    style AIWorker fill:#bfdbfe,stroke:#3b82f6,stroke-width:2px
+```
 
 ---
 
-### 🎬 Year Wrap Retrospective &middot; `[ /wrap/:year ]`
+## 💎 Product Features
 
-<kbd><b>Dynamic Spotify Wrapped for Friendships</b></kbd>
+### 1. The Multi-Modal Vision Lore Engine
+
+Instead of just tagging or captioning images, the engine reads the social battery and behavioral dynamics of the group.
+
+- **Vision Batching**: Photos are analyzed in context-rich batches to detect late-night ratios, chaos markers, and group energy.
+- **Signal Aggregation**: Synthesizes vision reports and anonymous text confessions into a coherent narrative arc.
+- **The Friendship Dossier**:
+  - **Cooked Score**: A 0–100 rating calibrating the trip's absolute chaos.
+  - **Season Recap**: A Hinglish-native, internet-culture-aware three-act story of the trip.
+  - **Role Archetypes**: Individual character cards assigned to each member (e.g. _Chaos Source_, _Black Cat_, _Golden Retriever_, _NPC_).
+  - **Superlatives**: Programmatic awards referencing actual events from the trip.
+
+---
+
+### 2. Immersive Tap-Through Story Player (`/t/:inviteCode/story`)
+
+A custom, mobile-first cinematic presentation wrapper that brings the generated story to life:
+
+- **Slide Physics**: Directional slide transitions that adapt based on tap location.
+- **Score Sweeps**: The "Cooked Score" page initiates a visual rumble and counts up to the target score dynamically.
+- **Realtime Reactions**: Watchers can react in real time using animated emojis (`🔥`, `😂`, `💔`, `👑`, `😭`). Updates use optimistic states and sync over Supabase.
+- **Dynamic Audio Engine**: Integrated audio synthesis mapping story mood parameters directly to physical synthesizer filters and low-pass sweeps in the browser.
+
+---
+
+### 3. Chaos Clash (Competitive Arena)
+
+Groups can pitch their trips against each other in head-to-head voting battles.
+
+- **Live Arbitrator**: Claude evaluates the materials of both trips and writes a detailed judgment comparing their level of chaos.
+- **Interactive Voting**: Instant, zero-friction community voting with live updating SVG percentage meters.
+
+---
+
+### 4. Spotify-Style Ambient Soundtrack Matcher
+
+A client-side emulation of the **Contrastive Language-Audio Pretraining (CLAP)** framework inside [MoodSoundtrack.tsx](file:///c:/Users/bhune/Woh-wala-trip/src/components/experience/MoodSoundtrack.tsx):
+
+$$\text{Sim}(Audio, Text) = \frac{E_{Audio} \cdot E_{Text}}{\|E_{Audio}\| \|E_{Text}\|}$$
+
+Users type natural language queries (e.g. _"deep house for driving late at night"_), and the system matches the query to the best-suited soundscape from our hybrid synthesizer & YouTube Audio Library index.
+
+---
+
+### 5. Year Wrapped Retrospective (`/wrap/:year`)
+
+A dynamic group retrospective compiling an entire year's worth of trips, behaviors, and chaos markers into a shareable film-strip deck.
+
+---
+
+## 🔒 Reliability, Security & Budget Controls
+
+### 💸 Pipeline Cost Safeguards
+
+- **PipelineBudget**: A strict 60k-token ceiling checked before API execution to prevent runaways.
+- **Fal.ai Daily Budgets**: Hard daily budget caps stored in Supabase `fal_budget` to block API billing abuse.
+- **Per-Trip Limits**: Strict daily generation rate limits per trip ID to prevent DDOS-style looping.
+
+### 🛡️ Hardened Database Security
+
+- **Supabase RLS Hardening**: All views are configured with `security_invoker = true` to guarantee that they respect underlying Row Level Security policies.
+- **Anonymous Verification**: Non-authenticated users can view public teasers and react, but cannot access private member data or execute administrative mutations.
+- **Passwordless OTP Salts**: OTP codes are hashed using `HMAC-SHA256` with server-only environment salts before database storage to secure user credentials.
+
+### 🤖 Quality Gate Evaluation
+
+- **LoreEvaluator**: A Claude Haiku engine scores every generated lore output on five dimensions: _specificity_, _coherence_, _tone_, _differentiation_, and _schema completeness_.
+- **Auto-Correction Loop**: Outputs scoring below a 0.55 threshold are rejected and regenerated once, injecting the exact evaluation feedback back into the prompt.
+
+---
+
+## 📁 Repository Directory Structure
 
 ```text
-  ┌──────────────────────────────────────────────────────────┐
-  │  YAARLORE WRAP 2026                                      │
-  ├──────────────────────────────────────────────────────────┤
-  │  Collective Delusion: "We are definitely coming back"   │
-  │  Total Trips: 14  ·  Cooked Rating: 84% [Historically]   │
-  │                                                          │
-  │  [|||||||||||||||||||||||||||||||||||..........] 72%     │
-  │  Group Social Battery Trajectory (Q1-Q4)                 │
-  └──────────────────────────────────────────────────────────┘
-```
-
-An epic, cinematic retrospection that compiles an entire year of trips, chaos, and collective delusions into a single immersive walk down memory lane.
-
-> [!IMPORTANT]
-> **Your year in friendship mythology, analyzed.** The Wrap page runs aggregate models across all your trips for the year to build a premium interactive slide deck:
->
-> - **📊 Chaos Trajectory** — Interactive bar charts detailing the cooked rating over time, rendered with smooth SVG progress indicators.
-> - **👑 The Summit of Chaos** — Crown the single highest cooked trip of the year with visual trophy animations.
-> - **🧠 Long-Term Behavior Analysis** — Surfaces recurring behavioral patterns, chronic photo-dump offenders, and evolving group dynamics.
-> - **🎞️ Shareable Film Strip** — A mobile-responsive summary slide styled like an analogue film-negative frame, perfect for social sharing.
-
----
-
-### Physical Print Orders
-
-Your lore as a hardcover book, delivered pan-India.
-
-- Hardcover, 20–40 pages, AI-designed layout
-- Every era gets its own spread
-- Character cards and receipt page printed inside
-- Join the waitlist from any trip page
-
----
-
-### Upgrade Tiers — Razorpay
-
-- **Digital** — unlocks full AI image generation (portraits, covers, era art)
-- **Print** — physical book + digital bundle
-
----
-
-### Emoji Reactions
-
-On the final verdict slide, anyone can react — no account needed.
-
-```
-🔥  😂  💔  👑  😭
-```
-
-Optimistic update — feels instant, syncs in background. Counts are visible to everyone.
-
----
-
-### Anniversary Emails — One Year Later
-
-A year after lore drops, everyone on the trip gets a cinematic email:
-
-```
-ONE YEAR ANNIVERSARY
-
-  The Solo Kodai Chronicles — Season 2025
-           Cooked Score: 15
-           ZEN RETREAT
-
-"One year ago, you and your crew created friendship mythology."
-
-          RELIVE THE STORY →
-```
-
-Auto-scheduled via SQL trigger the moment lore generation completes. Sent at 6am UTC via Vercel Cron + Resend. No manual setup — it just works.
-
----
-
-### Nostalgia Engine
-
-- **Today's Moments** — surfaces trips from the same date in past years
-- **Memory Echo** — finds semantically similar photos across trips using vector embeddings
-- Anniversary emails are seeded by this engine
-
----
-
-### 👤 Public Lore Profiles &middot; `[ /u/:username ]`
-
-<kbd><b>The Friendship Hall of Adventures</b></kbd>
-
-```text
-  ┌──────────────────────────────────────────────────────────┐
-  │  @bansalbhunesh  ·  Level: Peak Delusion [84]             │
-  ├──────────────────────────────────────────────────────────┤
-  │  Primary Archetype: resident "Chaos Source" (8 trips)    │
-  │  Trips Completed: 12  ·  Superlatives Won: 4             │
-  │                                                          │
-  │  Chaos Sparkline:                                        │
-  │  /\    /\        /\__/\                                  │
-  │    \__/  \______/      \___                              │
-  └──────────────────────────────────────────────────────────┘
-```
-
-A gorgeous, high-fidelity developer/explorer portfolio that serves as your personal **Hall of Adventures**.
-
-> [!NOTE]
-> **Share your legend.** Your public profile showcases your lifetime journey of trips and group events:
->
-> - **📈 Chaos Sparklines** — Sleek, client-side SVG sparklines tracking your collective delusion trajectory across different trips.
-> - **📂 The Lore Library** — A stunning grid of all your generated trip dossier covers, tags, and season titles.
-> - **🏷️ Role Archetypes** — Highlights the most recurrent role assigned to you by the AI across your adventures (e.g. the resident _Chaos Source_ or _NPC_).
-
----
-
-### 🔑 Zero-Friction Passwordless Authentication
-
-A secure, passwordless authentication loop designed to get you from landing page to lore generation in under 10 seconds.
-
-```
-┌──────────────┐      ┌──────────────────┐      ┌─────────────┐      ┌─────────────┐
-│  Enter Email │ ───> │  Get 8-Digit OTP │ ───> │  Enter Code │ ───> │ You're Home │
-└──────────────┘      └──────────────────┘      └─────────────┘      └─────────────┘
-```
-
-- **⚡ Lightning Delivery** — OTP codes delivered instantly to your inbox via high-deliverability **Resend** nodes.
-- **🛡️ Hardened Security** — All raw codes are hashed using a robust **HMAC-SHA256** mechanism with server-only salts before database writing.
-- **🛑 Anti-Spam Sentry** — Built-in rate limiting (hard cap of 5 attempts / 15 minutes) coupled with dynamic anti-spam middleware to block disposable domains and bots.
-- **✨ Instant Onboarding** — New accounts and user profiles are created dynamically on first login, with zero setup required.
-
----
-
-## Design System
-
-Three distinct visual zones:
-
-| Zone              | Feel                                                                        |
-| ----------------- | --------------------------------------------------------------------------- |
-| **Landing**       | Light cream + dot grid default. Dark mode toggle unleashes particle canvas. |
-| **Auth**          | Dr. Strange portal rings. A golden snitch bouncing across screen edges.     |
-| **Trip Interior** | Dark `#060604` base. Film grain. Cinematic documentary shell.               |
-| **Story Player**  | Full-screen. Progress bars. Directional transitions. Pure cinema.           |
-
-**Design tokens:**
-
-- Fonts: **Bricolage Grotesque** (display) · **Nunito** (UI) · **Fira Mono** (data)
-- OKLCH color system — perceptually uniform, warm-tinted neutrals
-- Accent: `oklch(60% 0.22 25)` (coral-red) · Teal · Amber
-
----
-
-## Tech Stack
-
-```
-FRONTEND
-  Next.js 16 (App Router + Turbopack) · React 19
-  tRPC v11 · TanStack Query v5
-  Tailwind CSS · OKLCH color tokens
-  Canvas API particle systems · CSS keyframe animations
-  Bricolage Grotesque · Nunito · Fira Mono (Google Fonts)
-
-BACKEND
-  Supabase PostgreSQL + Storage + Auth + RLS
-  Next.js API Routes (reactions, cron, OG cards, payments)
-  tRPC routers (trips, photos, reactions, cards, battles, archetypes)
-  Resend (OTP + anniversary emails)
-  Razorpay (payments)
-  Langfuse (AI pipeline observability)
-
-AI WORKER  (Python 3.12 + FastAPI — deployed on Render)
-  AsyncAnthropic (Claude Sonnet 4.6 · vision + text)
-  3-phase production pipeline (observability · reliability · quality)
-  LoreEvaluator — Haiku-based 5-dimension quality scoring
-  Photo embeddings — cosine similarity for nostalgia engine
-  Image generation — trip covers, character portraits, era thumbnails
-  Durable background jobs via Supabase background_jobs table
-
-INFRASTRUCTURE
-  Vercel (frontend + serverless API)
-  Vercel Cron (0 6 * * * — anniversary emails)
-  Supabase SQL triggers (auto-schedule anniversary on lore ready)
-  Render (AI worker, always-on Docker)
-```
-
----
-
-## Project Structure
-
-```
 src/
 ├── app/
 │   ├── page.tsx                        # Landing — light/dark cinematic
 │   ├── (auth)/login/                   # Email OTP (portal + snitch animation)
 │   ├── trips/
 │   │   ├── page.tsx                    # Trip list with chaos sparklines
-│   │   ├── new/                        # Create a trip
+│   │   ├── new/                        # Create a trip (strict date validator)
 │   │   ├── join/                       # Join via invite code
 │   │   └── [tripId]/
 │   │       ├── page.tsx                # Trip room (photos, generate)
-│   │       ├── generating/             # Particle universe while AI runs
+│   │       ├── generating/             # Realtime particle universe while AI runs
 │   │       ├── story/                  # Private tap-through story
-│   │       ├── invite/                 # 8-char invite code display
-│   │       ├── card/                   # OG card generation
-│   │       ├── upgrade/                # Razorpay upgrade tiers
-│   │       └── print-order/            # Physical book waitlist
+│   │       └── upgrade/                # Razorpay upgrade tiers
 │   ├── battles/[battleId]/             # Chaos Clash — head-to-head voting
 │   ├── wrap/[year]/                    # Year wrap summary
-│   ├── t/[code]/                       # Public teaser + story (no auth)
-│   ├── u/[username]/                   # Public profile
-│   └── api/
-│       ├── auth/send-otp|verify-otp/   # OTP with rate limiting
-│       ├── payments/create-order/      # Razorpay order creation
-│       ├── reactions/                  # GET counts + POST (anon + auth)
-│       ├── cron/anniversaries/         # Daily anniversary email job
-│       ├── cron/stuck-jobs/            # Reset stuck pipelines
-│       ├── print-waitlist/             # Print order submissions
-│       └── card/[type]/[tripId]/       # OG image generation
+│   ├── t/[code]/                       # Public teaser + story (no-auth route)
+│   └── u/[username]/                   # Public developer/adventurer profile
 │
 ├── components/
-│   ├── cinematic/                      # Dark documentary interior system
-│   │   ├── ArchiveRoom, Documentary, Hero, Frames, Artifacts, Orchestrator
+│   ├── cinematic/                      # Dark documentary system components
 │   ├── experience/
-│   │   ├── CinematicLanding.tsx        # Landing — light/dark + particle canvas
-│   │   ├── CinematicAuth.tsx           # Portal rings + golden snitch
-│   │   ├── ParticleUniverse.tsx        # Canvas: 300 dust + stars + vortex
-│   │   ├── ConfessionInput.tsx         # Pre-trip anonymous confessions
-│   │   ├── LoreCapsules.tsx            # Memory time capsule UI
-│   │   ├── ScratchReveal.tsx           # Scratch-card reveal effect
+│   │   ├── CinematicLanding.tsx        # Landing Page particle systems
+│   │   ├── ConfessionInput.tsx         # Anonymous pre-trip confession portal
+│   │   ├── ScratchReveal.tsx           # Scratch-card reveal canvas
 │   │   ├── ReactionBar.tsx             # 🔥😂💔👑😭 optimistic reactions
-│   │   └── MoodSoundtrack.tsx
-│   └── ui/atoms.tsx                    # CinematicText, AtmosphericBlob, FilmGrain
-
+│   │   └── MoodSoundtrack.tsx          # Web Audio synth & CLAP mood matcher
+│
+├── server/
+│   └── trpc/routers/
+│       ├── trips.ts                    # Main trip router & status resetters
+│       └── photos.ts                   # Upload URL signing & confirmation
+│
 ai-worker/
 └── src/
     ├── lore/
-    │   ├── orchestrator.py             # 3-phase async pipeline (~1200 lines)
-    │   ├── prompts.py                  # Claude system + user prompts
-    │   └── validators.py               # Schema + quality validation
-    ├── image_gen.py                    # Trip covers, portraits, era thumbnails
-    ├── embeddings.py                   # Photo CLIP embeddings
-    ├── nostalgia.py                    # Anniversary + memory echo engine
-    ├── thumbnails.py                   # Photo thumbnail generation
-    ├── clients.py                      # AsyncAnthropic + Supabase
-    └── main.py                         # FastAPI app + background job pollers
+    │   ├── orchestrator.py             # 3-phase async generation pipeline
+    │   ├── prompts.py                  # Vision & narrative prompts
+    │   └── validators.py               # Schema compliance & quality gate
+    ├── image_gen.py                    # Fal.ai Sana Sprint cover & thumbnail generator
+    ├── embeddings.py                   # Voyage AI multimodal embeddings extractor
+    ├── clients.py                      # Shared Async client configurations
+    └── main.py                         # FastAPI poller & background worker
 ```
 
 ---
 
-## The AI Pipeline
+## 🛠️ Developer Setup & Local Execution
 
-Claude doesn't caption photos. It reads the room.
-
-**3-phase production pipeline, ~45s end-to-end:**
-
-### Phase 1 — Vision + Lore (8 stages)
-
-```
-1. VISION BATCHING
-   Photos analyzed in batches of 10
-   Extracts: chaos indicators, late-night ratio, who's performing vs documenting
-
-2. SIGNAL AGGREGATION
-   Cross-references all batches (16k char context guard)
-   Outputs: social dynamic, dominant photographer, peak cooked moment
-
-3. LORE GENERATION
-   Title, tagline, cooked score, verdict, season recap, 3 trip eras
-   Hinglish-native · A24-toned · internet-culture-aware
-
-4. CHARACTER ROLES  (parallel per member)
-   Role title, description, chaos rating, defining moment
-   Types: Chaos Source · Black Cat · Golden Retriever · Main Character · NPC
-
-5. SUPERLATIVES
-   "Most likely to..." — assigned to actual members with evidence
-   Winner IDs validated against real member UUIDs
-
-6. COOKED SCORING
-   Cross-validated against all behavioral signals
-   0-25: Mildly Simmering · 26-50: Getting Cooked · 51-75: Fully Cooked
-   76-90: Peak Delusion · 91-100: Historically Cooked
-
-7. SCHEMA VALIDATION
-   Rejects generic AI writing (blocked phrases: "unforgettable memories",
-   "bonds that last", "magical experience", etc.)
-
-8. PERSISTENCE
-   Writes lore_json, sets lore_status='ready'
-   SQL trigger fires → anniversary email auto-scheduled for 1 year later
-```
-
-### Phase 2 — Observability + Reliability
-
-- **Trace IDs** — every pipeline run gets a UUID, stored in `lore_trace_id`
-- **Per-step token tracking** — `generation_cost_by_step` JSONB in the `trips` table
-- **Pipeline state checkpoints** — `lore_pipeline_state` JSONB for debugging
-- **FailoverReason taxonomy** — errors classified as `rate_limit / overload / timeout / connection / content_policy`
-- **Per-reason retry config** — rate limits wait 8s, overload 5s, timeout 3s, with exponential backoff
-- **PipelineRateLimiter** — module-level semaphore (8 concurrent), shared across all instances
-- **PipelineBudget** — hard 60k token ceiling checked pre-call, prevents runaway spend
-- **Durable image generation** — `background_jobs` table replaces fire-and-forget tasks; survives worker restarts
-- **Stuck pipeline recovery** — `reset_stuck_pipelines()` runs every 30 poll ticks (~30 min)
-
-### Phase 3 — Quality Evaluation
-
-- **LoreEvaluator** — Claude Haiku 4.5 scores every lore output on 5 dimensions: specificity, coherence, tone, differentiation, schema completeness
-- **Quality gate** — lore scoring below 0.55 is automatically retried once with dimension-specific feedback injected into the prompt
-- **`lore_eval_json`** stored per trip — scores, weakest dimension, feedback
-- **`lore_needs_review`** flag set for human review queue
-
----
-
-## Dynamic Sensory Soundtrack Engine & AI Similarity Framework
-
-Yaarlore features an immersive, state-of-the-art **Spotify Feature Simulator & Dynamic Synthesizer Console** integrated inside [MoodSoundtrack.tsx](file:///c:/Users/bhune/Woh-wala-trip/src/components/experience/MoodSoundtrack.tsx) to deliver real-time visual-emotion-to-soundtrack mapping.
-
-This system is built using a **Hybrid Procedural + Streamed Audio Engine** that routes client-side synth oscillators and professional MP3 streams from the YouTube Free Audio Library through the same high-fidelity Web Audio effects graph and canvas equalizer.
-
-### 🔊 Hybrid Audio Routing Architecture
-
-When a synthesized procedural track is active, the engine triggers custom Web Audio oscillators, LFO modulators, and arpeggios. When a streamed track is active, it spins up an HTML5 `Audio` tag, handles cross-origin policies for direct streaming, and routes the stream through the identical lowpass filters, delays, and frequency analyzers:
-
-```mermaid
-graph TD
-    subgraph Engine Input Sources
-        A[YouTube Free MP3 Stream] -->|MediaElementAudioSourceNode| C[BiquadFilterNode Lowpass]
-        B[Procedural Synth Oscillators] -->|Direct Web Audio Connections| C
-    end
-
-    subgraph Web Audio Effects Pipeline
-        C -->|Lowpass Filtered| D[DelayNode Spatial Feedback]
-        D -->|Feedback Loop| E[GainNode Feedback Level]
-        E --> D
-        C -->|Dry Mix| F[AnalyserNode Live Equalizer]
-        D -->|Wet Mix| F
-    end
-
-    subgraph Output Output
-        F -->|Real-time Frequency Data| G[HTML5 Canvas Visualizer]
-        F -->|Stereo Mix| H[Master Gain Volume Control]
-        H -->|Audio Output| I[AudioContext Destination]
-    end
-
-    style A fill:#38bdf8,stroke:#0369a1,stroke-width:2px,color:#fff
-    style B fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
-    style C fill:#a855f7,stroke:#6b21a8,stroke-width:2px,color:#fff
-    style G fill:#22c55e,stroke:#15803d,stroke-width:2px,color:#fff
-```
-
----
-
-### 🎛️ Real-Time Spotify Audio Features Modulator
-
-Users can toggle the **Spotify Features** console to simulate standard Spotify API metrics, which are mathematically mapped to direct physical parameters inside our Web Audio graph:
-
-| Spotify Feature     | Target Parameter               | Effect Range & Mapping Mechanism                                                                                                                            |
-| :------------------ | :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🎭 Valence**      | Chord Harmonies & Pitch Scales | High Valence ($\ge 50\%$) maps to warm Lydian / bright major frequencies. Low Valence ($< 50\%$) triggers darker minor / pentatonic keys.                   |
-| **⚡ Energy**       | Biquad Filter Cutoff Frequency | Modulates a lowpass filter sweep between $180\text{Hz}$ (deep, underwater ambiance) and $1,980\text{Hz}$ (bright, cutting highs) via `setTargetAtTime`.     |
-| **💃 Danceability** | Arpeggiator Clock Tempo        | Intersects with Energy to sweep arpeggiator clock tick rate timings down from $320\text{ms}$ (gentle pulses) to a driving $50\text{ms}$ (rave tempo).       |
-| **🎤 Liveness**     | Spatial Delay Feedback Level   | Adjusts the feedback gain multiplier node between $15\%$ and $80\%$, expanding the acoustic space from dry room acoustics to monumental cave echo feedback. |
-
----
-
-### 🧠 CLAP Zero-Shot Similarity Sensing Heuristic
-
-To match user mood queries, Yaarlore uses a client-side emulation of the **Contrastive Language-Audio Pretraining (CLAP)** zero-shot classification system:
-
-$$\text{Sim}(A, T) = \frac{E_A \cdot E_T}{\|E_A\| \|E_T\|}$$
-
-1. **Natural Language Input**: The user inputs free text (e.g., _"A fast dramatic synth beat for racing moments"_).
-2. **NLP Feature Extraction**: The prompt is processed across multi-keyword token mappings corresponding to semantic concepts like speed, brightness, density, and emotional weight.
-3. **Cosine Similarity Matrix**: A similarity matrix is computed across all 8 hybrid tracks. The winner is marked with a `★ MATCH` badge in the UI and automatically triggered with a cinematic triumph chime.
-
----
-
-## Database Schema
-
-```sql
--- Core
-trips            (id, name, destination, dates, invite_code, lore_json,
-                  lore_status, chaos_score, created_by,
-                  lore_trace_id, lore_pipeline_state,       -- observability
-                  generation_cost_by_step, lore_error,      -- cost tracking
-                  lore_eval_json, lore_needs_review,        -- quality
-                  trip_cover_url, cover_style)              -- image gen
-
-trip_members     (id, trip_id, user_id, role_title, role_description,
-                  role_chaos_rating, character_portrait_url)
-
-trip_photos      (id, trip_id, user_id, storage_path, thumbnail_path,
-                  embedding vector(1536), embedding_status)
-
-profiles         (id, email, display_name, referral_code, referred_by)
-
--- Features
-lore_reactions   (id, trip_id, user_id [nullable], emoji, created_at)
-scheduled_emails (id, trip_id, user_id, email_type, send_at, sent_at)
-battles          (id, trip_a_id, trip_b_id, votes_a, votes_b, status, verdict)
-background_jobs  (id, trip_id, job_type, status, claimed_at, completed_at)
-print_waitlist   (id, trip_id, user_id, name, created_at)
-referral_events  (id, referrer_id, referred_id, created_at)
-otp_codes        (id, email, code_hash, attempts, created_at)
-```
-
-`lore_json` carries the full AI output as a single JSONB column — one write, forever queryable.
-
----
-
-## Running Locally
-
-### 1. Clone & Install
+### 1. Clone & Dependencies
 
 ```bash
 git clone https://github.com/bansalbhunesh/Woh-wala-trip
@@ -511,126 +218,93 @@ cd Woh-wala-trip
 npm install
 ```
 
-### 2. Environment Variables
+### 2. Environment Configuration
 
-Create `.env.local` (copy from `.env.local.example`):
+Create `.env.local` in the root directory:
 
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
-# Email
-RESEND_API_KEY=re_xxxxxxxxxxxx
+# Email Node (Resend)
+RESEND_API_KEY=re_xxx
 RESEND_FROM_EMAIL=noreply@yourdomain.com
 
-# AI Worker
+# AI Worker Connection
 AI_WORKER_URL=http://localhost:8000
-AI_WORKER_SECRET=your-secret-here
+AI_WORKER_SECRET=your_auth_secret_here
 
-# Payments (Razorpay)
-RAZORPAY_KEY_ID=rzp_test_xxxx
-RAZORPAY_KEY_SECRET=xxxx
+# Payment Provider (Razorpay)
+RAZORPAY_KEY_ID=rzp_test_xxx
+RAZORPAY_KEY_SECRET=xxx
 
-# Site
+# Site Constants
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 CRON_SECRET=your-cron-secret
 ```
 
-### 3. Run Migrations
+### 3. Initialize SQL Migrations
 
-In Supabase SQL Editor, run files from `supabase/migrations/` in numerical order.
+Run the migration scripts located in `supabase/migrations/` in numerical order using the Supabase SQL editor.
 
-### 4. Start the AI Worker
+### 4. Start the Python AI Worker
+
+Create `ai-worker/.env` and start the FastAPI worker:
 
 ```bash
 cd ai-worker
-python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
+python -m venv venv
+# Activate virtual environment
+# Windows: venv\Scripts\activate | Unix: source venv/bin/activate
 pip install -e .
 
-# ai-worker/.env  (NEVER put these in root .env.local)
-ANTHROPIC_API_KEY=sk-ant-...
-SUPABASE_URL=https://xxxxx.supabase.co
+# Configure ai-worker/.env
+ANTHROPIC_API_KEY=sk-ant-xxx
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-AI_WORKER_SECRET=your-secret-here
+AI_WORKER_SECRET=your_auth_secret_here
 
+# Run worker reload server
 uvicorn src.main:app --reload --port 8000
 ```
 
-> The AI worker is a separate process. `ANTHROPIC_API_KEY` lives only in `ai-worker/.env`.
-
-### 5. Run the App
+### 5. Launch the Next.js Dev Server
 
 ```bash
+cd ..
 npm run dev
 ```
 
-Open `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000) inside your browser.
 
 ---
 
-## Deploy
+## 🧪 Verification & Test Suite
 
-### Frontend → Vercel
+### Frontend & API Integrity Tests
+
+To execute all Next.js page renders, API contracts, and tRPC integration tests:
 
 ```bash
-npx vercel deploy --prod
+npm run test:unit
 ```
 
-Add all `.env.local` vars in Vercel → Settings → Environment Variables.
+### AI Pipeline Deterministic Tests
 
-`vercel.json` already has the cron config:
+To evaluate Vision batch inputs, schema parsing, quality gate limits, and budget limits in Python:
 
-```json
-{ "crons": [{ "path": "/api/cron/anniversaries", "schedule": "0 6 * * *" }] }
+```bash
+npm run test:ai:deterministic
 ```
-
-### AI Worker → Render
-
-1. New Web Service → connect repo
-2. Root Directory: `ai-worker` · Runtime: Docker
-3. Env vars: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AI_WORKER_SECRET`
-4. Set `AI_WORKER_URL=https://your-worker.onrender.com` in Vercel
-
----
-
-## Want to Dig In?
-
-| What                          | Where                                                  |
-| ----------------------------- | ------------------------------------------------------ |
-| Improve lore quality          | `ai-worker/src/lore/prompts.py`                        |
-| Tune chaos scoring            | `ai-worker/src/lore/validators.py`                     |
-| Adjust quality gate threshold | `ai-worker/src/lore/orchestrator.py` → `LoreEvaluator` |
-| Change the design system      | `src/app/globals.css` + `tailwind.config.ts`           |
-| Add a new card type           | `src/app/api/card/` + `src/lib/og/`                    |
-| Trip room UI                  | `src/app/trips/[tripId]/page.tsx`                      |
-| Story player                  | `src/app/trips/[tripId]/story/page.tsx`                |
-
----
-
-## What's Next
-
-- [ ] Google Photos integration — auto-import trip albums
-- [ ] Push notifications — get notified the second lore drops
-- [ ] Full friendship timeline — every trip, every era, in one archive
-- [ ] Group confessions — anonymous pre-trip questions that feed the AI
-- [ ] WhatsApp share card — one-tap share to group chat
 
 ---
 
 <div align="center">
 
----
+**Built with chaos, archived with care.**
 
-**Some trips deserve to be documented properly.**
-
-_This is how._
-
----
-
-[**Try it →**](https://yaarlore.app)
-
-_Season 2026 · AI Friendship Archive · Built with chaos, documented with care_
+_Yaarlore © 2026 · Engineered for Friendship Mythology._
 
 </div>
