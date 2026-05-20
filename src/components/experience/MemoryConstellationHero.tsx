@@ -33,7 +33,7 @@ const MEMORIES = [
     depth: 0.6,
     baseOp: 0.55,
     blur: 1.0,
-    revealAt: 2800,
+    revealAt: 1800,
   },
   {
     id: 'm02',
@@ -45,7 +45,7 @@ const MEMORIES = [
     depth: 0.38,
     baseOp: 0.4,
     blur: 2.4,
-    revealAt: 5200,
+    revealAt: 3100,
   },
   {
     id: 'm03',
@@ -57,7 +57,7 @@ const MEMORIES = [
     depth: 0.94,
     baseOp: 0.82,
     blur: 0.0,
-    revealAt: 1400,
+    revealAt: 800,
   }, // ANCHOR — sunset jump
   {
     id: 'm04',
@@ -69,7 +69,7 @@ const MEMORIES = [
     depth: 0.68,
     baseOp: 0.6,
     blur: 0.8,
-    revealAt: 3600,
+    revealAt: 2300,
   },
   {
     id: 'm05',
@@ -81,7 +81,7 @@ const MEMORIES = [
     depth: 0.84,
     baseOp: 0.7,
     blur: 0.3,
-    revealAt: 2000,
+    revealAt: 1200,
   }, // ANCHOR — restaurant
   {
     id: 'm06',
@@ -93,7 +93,7 @@ const MEMORIES = [
     depth: 0.5,
     baseOp: 0.46,
     blur: 1.8,
-    revealAt: 4400,
+    revealAt: 2700,
   },
   {
     id: 'm07',
@@ -105,7 +105,7 @@ const MEMORIES = [
     depth: 0.3,
     baseOp: 0.36,
     blur: 3.0,
-    revealAt: 7000,
+    revealAt: 4200,
   },
   {
     id: 'm08',
@@ -117,7 +117,7 @@ const MEMORIES = [
     depth: 0.48,
     baseOp: 0.32,
     blur: 2.2,
-    revealAt: 3000,
+    revealAt: 1900,
   }, // moved bottom-left — was blocking insight/CTA center
   {
     id: 'm09',
@@ -129,7 +129,7 @@ const MEMORIES = [
     depth: 0.26,
     baseOp: 0.3,
     blur: 3.6,
-    revealAt: 6400,
+    revealAt: 3800,
   },
   {
     id: 'm10',
@@ -141,7 +141,7 @@ const MEMORIES = [
     depth: 0.44,
     baseOp: 0.44,
     blur: 2.1,
-    revealAt: 5800,
+    revealAt: 3500,
   },
   {
     id: 'm11',
@@ -153,7 +153,7 @@ const MEMORIES = [
     depth: 0.48,
     baseOp: 0.42,
     blur: 1.8,
-    revealAt: 6800,
+    revealAt: 4100,
   }, // pulled in from cx:92 edge
   {
     id: 'm12',
@@ -165,7 +165,7 @@ const MEMORIES = [
     depth: 0.36,
     baseOp: 0.22,
     blur: 3.0,
-    revealAt: 4800,
+    revealAt: 2900,
   }, // very low opacity — was behind CTA wordmark
 ] as const;
 
@@ -257,19 +257,19 @@ export default function MemoryConstellationHero() {
       );
     });
 
-    // Threads appear after the first two anchors are visible
-    timers.push(setTimeout(() => setThreadsOpacity(1), 5000));
+    // Threads appear once the two anchors have materialised
+    timers.push(setTimeout(() => setThreadsOpacity(1), 3400));
 
-    // CTA appears after context has formed
-    timers.push(setTimeout(() => setCtaVisible(true), 6500));
+    // CTA appears early so users always have a clear action
+    timers.push(setTimeout(() => setCtaVisible(true), 4000));
 
-    // First insight emerges at 8 seconds
+    // First insight emerges sooner — keeps the user engaged
     timers.push(
       setTimeout(() => {
         setInsightIdx(0);
         setInsightVisible(true);
         setInsightChars(0);
-      }, 8000)
+      }, 5000)
     );
 
     return () => timers.forEach(clearTimeout);
