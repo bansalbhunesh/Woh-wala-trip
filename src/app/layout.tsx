@@ -1,5 +1,6 @@
 import { TRPCProvider } from '@/lib/trpc/provider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
+import { ToastProvider } from '@/components/ui/Toast';
 import { Bricolage_Grotesque, Nunito, Fira_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -116,10 +117,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <TRPCProvider>
           <PostHogProvider>
-            {/* id="main-content" is the skip-link anchor target.
-                Pages define their own <main> landmark internally;
-                we just need this id to exist as a jump target. */}
-            <div id="main-content">{children}</div>
+            <ToastProvider>
+              {/* id="main-content" is the skip-link anchor target.
+                  Pages define their own <main> landmark internally;
+                  we just need this id to exist as a jump target. */}
+              <div id="main-content">{children}</div>
+            </ToastProvider>
           </PostHogProvider>
         </TRPCProvider>
         {/* Scroll-reveal IntersectionObserver — activates .reveal elements as they enter viewport */}

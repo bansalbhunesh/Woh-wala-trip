@@ -80,11 +80,42 @@ export function LoadingState() {
 
 export function NotFoundState() {
   return (
-    <div className="min-h-screen bg-[#060604] flex flex-col items-center justify-center gap-6">
-      <p className="text-white/20 font-cinematic italic text-xl">Archive not found.</p>
+    <div className="min-h-screen bg-[#060604] flex flex-col items-center justify-center gap-10 px-6">
+      {/* Dim 404 backdrop */}
+      <div
+        className="absolute font-display font-black uppercase leading-none select-none pointer-events-none"
+        style={{
+          fontSize: 'clamp(100px, 28vw, 220px)',
+          color: 'rgba(245,240,232,0.025)',
+          userSelect: 'none',
+        }}
+      >
+        404
+      </div>
+
+      <div className="relative text-center space-y-5 max-w-xs">
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.55em]"
+          style={{ color: 'rgba(255,77,77,0.5)' }}
+        >
+          ● ARCHIVE NOT FOUND
+        </p>
+        <p
+          className="font-display italic text-lg leading-relaxed"
+          style={{ color: 'rgba(245,240,232,0.3)' }}
+        >
+          "This archive doesn't exist. Either it was redacted, or it never happened."
+        </p>
+      </div>
+
       <Link
         href="/trips"
-        className="text-[10px] uppercase tracking-widest font-vibe font-black text-white/30 hover:text-white transition-colors"
+        className="relative px-7 py-3 rounded-full font-mono text-[9px] uppercase tracking-[0.4em] transition-all duration-300 hover:opacity-70 active:scale-95"
+        style={{
+          background: 'rgba(245,240,232,0.06)',
+          border: '1.5px solid rgba(245,240,232,0.12)',
+          color: 'rgba(245,240,232,0.5)',
+        }}
       >
         ← Return to Dossier
       </Link>

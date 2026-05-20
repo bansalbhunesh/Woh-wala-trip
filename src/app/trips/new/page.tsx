@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { analytics } from '@/lib/analytics';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useToast } from '@/components/ui/Toast';
 
 export default function NewTripPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   // Onboarding wizard steps:
   // 0: Welcome / Preparation
@@ -22,8 +24,9 @@ export default function NewTripPage() {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input automatically on step changes
+  // Focus input automatically on step changes and clear any lingering validation error
   useEffect(() => {
+    setValidationError('');
     if (step >= 1 && step <= 4) {
       setTimeout(() => {
         inputRef.current?.focus();
@@ -57,6 +60,7 @@ export default function NewTripPage() {
   };
 
   const [todayStr, setTodayStr] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -77,20 +81,42 @@ export default function NewTripPage() {
     onSuccess: trip => {
       analytics.tripCreated(trip.id, trip.name);
       triggerChime(1.5);
+      toast('Archive created — initialising crew roster');
       router.push(`/trips/${trip.id}/invite`);
     },
   });
 
   const handleNext = () => {
-    // Validation checks per step
-    if (step === 1 && !fields.name.trim()) return;
-
+    setValidationError('');
     const today = new Date().toLocaleDateString('sv');
+
+    if (step === 1 && !fields.name.trim()) {
+      setValidationError('Give the chaos a name. Even a bad one works.');
+      return;
+    }
     if (step === 3) {
-      if (!fields.startDate || fields.startDate > today) return;
+      if (!fields.startDate) {
+        setValidationError('Select when the season began.');
+        return;
+      }
+      if (fields.startDate > today) {
+        setValidationError("Future trips don't have lore yet. Pick a past date.");
+        return;
+      }
     }
     if (step === 4) {
-      if (!fields.endDate || fields.endDate > today || fields.endDate < fields.startDate) return;
+      if (!fields.endDate) {
+        setValidationError('Select when the finale happened.');
+        return;
+      }
+      if (fields.endDate > today) {
+        setValidationError('The finale must be in the past — lore requires lived experience.');
+        return;
+      }
+      if (fields.endDate < fields.startDate) {
+        setValidationError("The finale can't come before the premiere.");
+        return;
+      }
     }
 
     triggerChime(1.0 + step * 0.08);
@@ -631,6 +657,35 @@ export default function NewTripPage() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Inline validation error — appears when handleNext catches an invalid field */}
+          {validationError && (
+            <div
+              className="mt-4 text-center"
+              style={{ animation: 'nt-error-enter 0.4s cubic-bezier(0.16,1,0.3,1) both' }}
+            >
+              <span
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
+                style={{
+                  background: 'oklch(96% 0.012 25 / 0.6)',
+                  border: '1px solid oklch(60% 0.22 25 / 0.35)',
+                  color: 'oklch(50% 0.22 25)',
+                }}
+              >
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    background: 'oklch(60% 0.22 25)',
+                    flexShrink: 0,
+                    display: 'inline-block',
+                  }}
+                />
+                {validationError}
+              </span>
+            </div>
+          )}
 
           {/* Stepper Dots Indicator */}
           {step > 0 && step <= 4 && (

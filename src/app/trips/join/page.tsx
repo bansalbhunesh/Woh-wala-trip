@@ -2,10 +2,12 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
+import { useToast } from '@/components/ui/Toast';
 
 function JoinContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [code, setCode] = useState((searchParams.get('code') || '').toUpperCase());
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -16,7 +18,10 @@ function JoinContent() {
   }, []);
 
   const joinTrip = trpc.trips.joinByCode.useMutation({
-    onSuccess: ({ tripId }) => router.push(`/trips/${tripId}`),
+    onSuccess: ({ tripId }) => {
+      toast('Welcome to the crew →');
+      router.push(`/trips/${tripId}`);
+    },
   });
 
   const canJoin = code.length >= 4 && !joinTrip.isPending;
@@ -170,15 +175,26 @@ function JoinContent() {
 
           {joinTrip.error && (
             <div
-              className="text-center py-3 px-5 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
-              style={{
-                background: 'oklch(96% 0.012 25 / 0.5)',
-                border: '1px solid oklch(60% 0.22 25 / 0.3)',
-                color: 'oklch(60% 0.22 25)',
-                animation: 'join-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
-              }}
+              className="flex flex-col items-center gap-3"
+              style={{ animation: 'join-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards' }}
             >
-              {joinTrip.error.message}
+              <p
+                className="text-center py-3 px-5 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
+                style={{
+                  background: 'oklch(96% 0.012 25 / 0.5)',
+                  border: '1px solid oklch(60% 0.22 25 / 0.3)',
+                  color: 'oklch(60% 0.22 25)',
+                }}
+              >
+                {joinTrip.error.message}
+              </p>
+              <button
+                onClick={() => joinTrip.reset()}
+                className="font-mono text-[8px] uppercase tracking-[0.3em] transition-opacity hover:opacity-60"
+                style={{ color: 'oklch(52% 0.015 60)' }}
+              >
+                ← Try a different code
+              </button>
             </div>
           )}
 

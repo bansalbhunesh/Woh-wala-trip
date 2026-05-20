@@ -6,6 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { ConfessionInput } from '@/components/experience/ConfessionInput';
 import { Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useToast } from '@/components/ui/Toast';
 
 type UploadPhase = 'idle' | 'scanning' | 'uploading' | 'absorbing' | 'error';
 
@@ -25,10 +26,15 @@ interface Props {
 export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
   const router = useRouter();
   const utils = trpc.useUtils();
+  const { toast } = useToast();
   const [active, setActive] = useState<ActiveUpload | null>(null);
   const [queue, setQueue] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const { data: photoData, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
+  const {
+    data: photoData,
+    refetch: refetchPhotos,
+    isLoading: photosLoading,
+  } = trpc.photos.list.useQuery({ tripId });
 
   const generateLore = trpc.trips.generateLore.useMutation({
     onSuccess: () => {
@@ -162,6 +168,19 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canGenerate]);
+
+  // Toast when a batch finishes uploading
+  const prevUploadsInFlight = useRef(false);
+  useEffect(() => {
+    if (prevUploadsInFlight.current && !uploadsInFlight && batchDone > 0) {
+      toast(
+        batchDone === 1
+          ? '1 fragment absorbed into the archive'
+          : `${batchDone} fragments absorbed into the archive`
+      );
+    }
+    prevUploadsInFlight.current = uploadsInFlight;
+  }, [uploadsInFlight, batchDone, toast]);
 
   // SVG ring circumference for progress
   const R = 52;
@@ -702,6 +721,34 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
               >
                 {needed} more photo{needed !== 1 ? 's' : ''} to unlock lore generation
               </p>
+            </div>
+          )}
+
+          {/* Archived fragments gallery grid — skeleton while initial query loads */}
+          {photosLoading && photoCount === 0 && (
+            <div className="w-full space-y-4 px-4 lg:px-0">
+              <div
+                className="h-3 rounded-full w-36"
+                style={{
+                  background: 'rgba(245,240,232,0.06)',
+                  animation: 'sk-pulse 1.6s ease-in-out infinite',
+                }}
+              />
+              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 justify-items-center lg:justify-items-start">
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-2xl"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      background: 'rgba(245,240,232,0.05)',
+                      border: '1.5px solid rgba(245,240,232,0.06)',
+                      animation: `sk-pulse 1.6s ease-in-out ${i * 0.08}s infinite`,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
