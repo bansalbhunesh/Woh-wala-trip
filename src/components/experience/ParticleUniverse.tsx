@@ -3,42 +3,57 @@
 import { useEffect, useRef } from 'react';
 
 interface Props {
-  phase: number; // 0=void 1=signal 2=awaken 3=reveal 4=portal
+  phase: number;
   mouseX: number;
   mouseY: number;
 }
 
-interface Point3D {
-  x: number; // Current physical X (morphs toward target)
-  y: number; // Current physical Y (morphs toward target)
-  z: number; // Current physical Z (morphs toward target)
-  baseI: number; // Grid index I (columns)
-  baseJ: number; // Grid index J (rows)
+/* ─────────────────────────────────────────────────────────────
+   AI Memory Observatory — Deep-Space Volumetric Fog Engine
+   
+   Design references: Interstellar UI, Apple Weather volumetrics,
+   Spotify Wrapped reveals, Minority Report memory fields.
+   
+   No grids. No mesh. No chaotic particles.
+   Just slow, breathing, luminous fog — like peering into
+   a dark observatory where memories drift as light.
+   ────────────────────────────────────────────────────────── */
+
+interface Nebula {
+  x: number; // Position as ratio of canvas (0–1)
+  y: number;
+  radius: number; // Base radius in px
+  vx: number; // Drift velocity (very slow)
+  vy: number;
+  hue: number;
+  sat: number;
+  lum: number;
+  alpha: number; // Max alpha
+  phase: number; // Breathing phase offset
+  breathRate: number;
 }
 
-interface DustMote {
+interface Star {
   x: number;
   y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
   size: number;
+  brightness: number;
+  twinkleSpeed: number;
+  twinklePhase: number;
+}
+
+interface LightThread {
+  points: { x: number; y: number }[]; // Control points (ratio 0–1)
+  speed: number;
+  phase: number;
+  hue: number;
+  alpha: number;
+  width: number;
 }
 
 export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Track parameters to avoid trigger re-mounts on reactive changes
-  const stateRef = useRef({
-    phase,
-    mouseX,
-    mouseY,
-    animId: 0,
-  });
-
-  const cameraYawRef = useRef(0);
-  const cameraPitchRef = useRef(0);
+  const stateRef = useRef({ phase, mouseX, mouseY, animId: 0 });
 
   useEffect(() => {
     stateRef.current.phase = phase;
@@ -49,7 +64,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false })!;
+    const ctx = canvas.getContext('2d')!;
 
     let W = window.innerWidth;
     let H = window.innerHeight;
@@ -68,277 +83,325 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     };
     window.addEventListener('resize', onResize);
 
-    // Interactive Shockwave parameters
-    let shockwaveX = 0;
-    let shockwaveY = 0;
-    let shockwaveR = 0;
-    let shockwaveActive = false;
+    // ─── NEBULA FOG CLOUDS ─────────────────────────────────
+    // Large, soft radial gradients that drift extremely slowly.
+    // These ARE the atmosphere. Colors: deep crimson, warm amber,
+    // faint teal — the YaarLore palette.
+    const nebulae: Nebula[] = [
+      // Primary warm crimson cloud — right side, anchoring the archetype cards
+      {
+        x: 0.72,
+        y: 0.55,
+        radius: 380,
+        vx: 0.002,
+        vy: -0.001,
+        hue: 8,
+        sat: 75,
+        lum: 18,
+        alpha: 0.09,
+        phase: 0,
+        breathRate: 0.15,
+      },
+      // Deep amber glow — bottom left, grounding the typography
+      {
+        x: 0.25,
+        y: 0.78,
+        radius: 320,
+        vx: -0.0015,
+        vy: 0.001,
+        hue: 28,
+        sat: 80,
+        lum: 22,
+        alpha: 0.07,
+        phase: 1.2,
+        breathRate: 0.12,
+      },
+      // Teal accent — top right, cool temperature balance
+      {
+        x: 0.82,
+        y: 0.18,
+        radius: 260,
+        vx: -0.001,
+        vy: 0.0008,
+        hue: 175,
+        sat: 55,
+        lum: 20,
+        alpha: 0.045,
+        phase: 2.4,
+        breathRate: 0.18,
+      },
+      // Center warmth — subtle, behind the title
+      {
+        x: 0.38,
+        y: 0.42,
+        radius: 450,
+        vx: 0.001,
+        vy: -0.0005,
+        hue: 18,
+        sat: 65,
+        lum: 14,
+        alpha: 0.055,
+        phase: 3.6,
+        breathRate: 0.1,
+      },
+      // Upper left cool — atmospheric depth
+      {
+        x: 0.12,
+        y: 0.22,
+        radius: 280,
+        vx: 0.0008,
+        vy: 0.0012,
+        hue: 220,
+        sat: 30,
+        lum: 12,
+        alpha: 0.035,
+        phase: 0.8,
+        breathRate: 0.14,
+      },
+      // Bottom right ember — warm accent near CTA
+      {
+        x: 0.65,
+        y: 0.85,
+        radius: 300,
+        vx: -0.0012,
+        vy: -0.0008,
+        hue: 15,
+        sat: 70,
+        lum: 16,
+        alpha: 0.06,
+        phase: 4.2,
+        breathRate: 0.16,
+      },
+      // Very large diffuse center fog — ties everything together
+      {
+        x: 0.5,
+        y: 0.5,
+        radius: 600,
+        vx: 0.0005,
+        vy: 0.0003,
+        hue: 12,
+        sat: 45,
+        lum: 10,
+        alpha: 0.03,
+        phase: 5.0,
+        breathRate: 0.08,
+      },
+      // Ghost teal — mid-left
+      {
+        x: 0.18,
+        y: 0.55,
+        radius: 220,
+        vx: 0.001,
+        vy: -0.0006,
+        hue: 185,
+        sat: 40,
+        lum: 16,
+        alpha: 0.03,
+        phase: 1.8,
+        breathRate: 0.2,
+      },
+    ];
 
-    const onWindowClick = (e: MouseEvent) => {
-      shockwaveX = e.clientX;
-      shockwaveY = e.clientY;
-      shockwaveR = 0;
-      shockwaveActive = true;
-    };
-    window.addEventListener('click', onWindowClick);
-
-    // Create 3D grid points (24 columns x 16 rows)
-    const COLS = 24;
-    const ROWS = 16;
-    const gridPoints: Point3D[] = [];
-
-    for (let i = 0; i < COLS; i++) {
-      for (let j = 0; j < ROWS; j++) {
-        gridPoints.push({
-          x: (i - (COLS - 1) / 2) * 55,
-          y: 0,
-          z: (j - (ROWS - 1) / 2) * 55,
-          baseI: i,
-          baseJ: j,
-        });
-      }
-    }
-
-    // Create drifting 3D atmospheric dust layer
-    const dust: DustMote[] = [];
-    for (let i = 0; i < 110; i++) {
-      dust.push({
-        x: (Math.random() - 0.5) * 2000,
-        y: (Math.random() - 0.5) * 1200,
-        z: (Math.random() - 0.5) * 1200,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        vz: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 4.5 + 1.5,
+    // ─── DEEP STAR FIELD ────────────────────────────────────
+    // Hundreds of tiny near-static dots. Subtle twinkle.
+    const stars: Star[] = [];
+    for (let i = 0; i < 280; i++) {
+      stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        size: Math.random() * 1.2 + 0.3,
+        brightness: Math.random() * 0.4 + 0.1,
+        twinkleSpeed: Math.random() * 0.3 + 0.1,
+        twinklePhase: Math.random() * Math.PI * 2,
       });
     }
+
+    // ─── LIGHT THREADS ──────────────────────────────────────
+    // Very faint curved aurora-like lines that undulate slowly.
+    // They represent "AI threads connecting memories."
+    const threads: LightThread[] = [
+      {
+        points: [
+          { x: 0.08, y: 0.65 },
+          { x: 0.3, y: 0.4 },
+          { x: 0.55, y: 0.55 },
+          { x: 0.78, y: 0.35 },
+          { x: 0.95, y: 0.5 },
+        ],
+        speed: 0.12,
+        phase: 0,
+        hue: 15,
+        alpha: 0.035,
+        width: 1.5,
+      },
+      {
+        points: [
+          { x: 0.05, y: 0.3 },
+          { x: 0.25, y: 0.6 },
+          { x: 0.5, y: 0.35 },
+          { x: 0.72, y: 0.65 },
+          { x: 0.92, y: 0.4 },
+        ],
+        speed: 0.09,
+        phase: 2.0,
+        hue: 180,
+        alpha: 0.025,
+        width: 1.2,
+      },
+      {
+        points: [
+          { x: 0.1, y: 0.8 },
+          { x: 0.35, y: 0.55 },
+          { x: 0.6, y: 0.7 },
+          { x: 0.85, y: 0.45 },
+        ],
+        speed: 0.15,
+        phase: 4.0,
+        hue: 28,
+        alpha: 0.03,
+        width: 1.0,
+      },
+    ];
 
     let t = 0;
     let lastTs = 0;
 
-    // 3D Camera Projection function (projects 3D coordinates onto 2D viewport)
-    function project(x: number, y: number, z: number, yaw: number, pitch: number) {
-      // Rotation around Y axis (Yaw)
-      const cosY = Math.cos(yaw);
-      const sinY = Math.sin(yaw);
-      const rx = x * cosY - z * sinY;
-      const rz = x * sinY + z * cosY;
-
-      // Rotation around X axis (Pitch)
-      const cosX = Math.cos(pitch);
-      const sinX = Math.sin(pitch);
-      const ry = y * cosX - rz * sinX;
-      const rzTransformed = y * sinX + rz * cosX;
-
-      // Translate virtual camera (push back relative depth)
-      const cameraZ = 850;
-      const depth = rzTransformed + cameraZ;
-
-      if (depth <= 40) return null; // Clipping plane guard
-
-      const focalLength = 800;
-      const scale = focalLength / depth;
-      const sx = W / 2 + rx * scale;
-      const sy = H / 2 + ry * scale;
-
-      return { sx, sy, scale, depth };
-    }
-
     function draw(timestamp: number) {
       stateRef.current.animId = requestAnimationFrame(draw);
-
       const dt = lastTs > 0 ? Math.min((timestamp - lastTs) / 1000, 0.05) : 1 / 60;
       lastTs = timestamp;
-      t += dt * 0.35; // Global clock tick rate
+      t += dt;
 
-      const { phase: p, mouseX: mx, mouseY: my } = stateRef.current;
+      const { mouseX: mx, mouseY: my } = stateRef.current;
 
-      // Smooth camera yaw/pitch transitions with mouse hover parallax
-      const targetYaw = (mx - 0.5) * 0.55 + Math.sin(t * 0.15) * 0.08;
-      const targetPitch = (my - 0.5) * 0.35 + Math.cos(t * 0.2) * 0.06;
-
-      cameraYawRef.current += (targetYaw - cameraYawRef.current) * 0.08;
-      cameraPitchRef.current += (targetPitch - cameraPitchRef.current) * 0.08;
-
-      const yaw = cameraYawRef.current;
-      const pitch = cameraPitchRef.current;
-
-      const intensity = [0.15, 0.45, 0.85, 1.1, 1.45][Math.min(p, 4)];
-
-      // Shockwave propagation
-      if (shockwaveActive) {
-        shockwaveR += dt * 700;
-        if (shockwaveR > Math.max(W, H) * 1.5) {
-          shockwaveActive = false;
-        }
-      }
-
-      // Draw background fade trails
-      ctx.fillStyle = 'rgba(6, 6, 4, 0.12)';
+      // ─── CLEAR: Pure black, no trails ─────────────────────
+      ctx.fillStyle = '#060604';
       ctx.fillRect(0, 0, W, H);
 
-      // 1. Particle & 3D Wave Grid target updating
-      gridPoints.forEach(point => {
-        let targetX = (point.baseI - (COLS - 1) / 2) * 55;
-        let targetZ = (point.baseJ - (ROWS - 1) / 2) * 55;
-        let targetY = 0;
+      // ─── RENDER NEBULA FOG CLOUDS ─────────────────────────
+      // Each nebula is a large soft radial gradient drawn at very
+      // low opacity. They drift slowly and "breathe" (pulse size).
+      nebulae.forEach(n => {
+        // Drift position (wraps softly at edges)
+        n.x += n.vx * dt;
+        n.y += n.vy * dt;
 
-        if (p === 0) {
-          // Void state: calm undulating ripples
-          targetY = Math.sin(targetX * 0.005 + t) * Math.cos(targetZ * 0.005 + t) * 20;
-        } else if (p === 1) {
-          // Signal state: vertical wave pulse passing through rows
-          const pulse = Math.sin(point.baseI * 0.28 - t * 4.0);
-          targetY = pulse * 45 * Math.cos(point.baseJ * 0.15);
-        } else if (p === 2) {
-          // Awaken: Double undulating sine-wave terrain
-          let waveHeight =
-            Math.sin(targetX * 0.005 + t * 1.5) * 75 + Math.cos(targetZ * 0.006 - t * 1.0) * 55;
+        // Soft bounce at boundaries (reverse direction gently)
+        if (n.x < -0.15) n.vx = Math.abs(n.vx);
+        if (n.x > 1.15) n.vx = -Math.abs(n.vx);
+        if (n.y < -0.15) n.vy = Math.abs(n.vy);
+        if (n.y > 1.15) n.vy = -Math.abs(n.vy);
 
-          // Mouse gravity ripple
-          const dx = targetX - (mx - 0.5) * 700;
-          const dz = targetZ - (my - 0.5) * 700;
-          const dist = Math.sqrt(dx * dx + dz * dz) || 1;
-          const pull = Math.max(0, 1 - dist / 320);
-          waveHeight += Math.sin(dist * 0.035 - t * 4.5) * 50 * pull;
+        // Mouse parallax — nebulae shift subtly opposite to cursor
+        const parallaxX = (mx - 0.5) * -30;
+        const parallaxY = (my - 0.5) * -20;
 
-          // Shockwave ripple
-          if (shockwaveActive) {
-            const swDx = targetX - (shockwaveX - W / 2);
-            const swDz = targetZ - (shockwaveY - H / 2);
-            const swDist = Math.sqrt(swDx * swDx + swDz * swDz) || 1;
-            const diff = Math.abs(swDist - shockwaveR);
-            if (diff < 80) {
-              waveHeight += (1 - diff / 80) * 80 * Math.sin(diff * 0.1);
-            }
-          }
+        // Breathing pulse (slow sine modulation of radius)
+        const breathScale = 1 + Math.sin(t * n.breathRate + n.phase) * 0.12;
+        const r = n.radius * breathScale;
 
-          targetY = waveHeight;
-        } else if (p === 3) {
-          // Reveal: Cylindrical Helix/Double-helix memory stream
-          const radius = 210 + 40 * Math.sin(point.baseJ * 0.35 + t * 1.4);
-          const theta = point.baseI * 0.26 + t * 0.45;
-          targetX = radius * Math.cos(theta);
-          targetY = (point.baseJ - (ROWS - 1) / 2) * 35;
-          targetZ = radius * Math.sin(theta);
-        } else if (p === 4) {
-          // Portal: Gravity collapse (Accretion disk pulling into center)
-          const decay = Math.max(0, 1 - ((t * 0.05) % 1.0));
-          const radius = Math.max(12, point.baseJ * 18 * decay);
-          const theta = point.baseI * 0.18 + t * 3.5;
-          targetX = radius * Math.cos(theta);
-          targetY = Math.sin(radius * 0.08 - t * 3.5) * 10;
-          targetZ = radius * Math.sin(theta);
-        }
+        const cx = n.x * W + parallaxX;
+        const cy = n.y * H + parallaxY;
 
-        // Linear interpolation to morph the coordinates smoothly
-        const morphSpeed = p === 4 ? 0.15 : 0.08;
-        point.x += (targetX - point.x) * morphSpeed;
-        point.y += (targetY - point.y) * morphSpeed;
-        point.z += (targetZ - point.z) * morphSpeed;
+        // Draw soft radial gradient
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        const color = `hsla(${n.hue}, ${n.sat}%, ${n.lum}%,`;
+        grad.addColorStop(0, `${color} ${n.alpha})`);
+        grad.addColorStop(0.4, `${color} ${n.alpha * 0.55})`);
+        grad.addColorStop(0.7, `${color} ${n.alpha * 0.2})`);
+        grad.addColorStop(1, `${color} 0)`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
       });
 
-      // 2. Project 3D Grid points to 2D view-space
-      const projected = gridPoints.map(pt => project(pt.x, pt.y, pt.z, yaw, pitch));
-
-      // 3. Draw Grid lines (Constellation Network) with Depth fading
+      // ─── RENDER STAR FIELD ─────────────────────────────────
+      // Near-static tiny dots with soft twinkling.
       ctx.save();
-      ctx.lineWidth = 0.8;
+      stars.forEach(s => {
+        const twinkle = 0.5 + 0.5 * Math.sin(t * s.twinkleSpeed + s.twinklePhase);
+        const alpha = s.brightness * twinkle;
+        if (alpha < 0.02) return;
 
-      const activeCol = Math.floor(t * 3.5) % COLS; // Energy signal pulse location
+        // Subtle parallax
+        const px = s.x * W + (mx - 0.5) * -8;
+        const py = s.y * H + (my - 0.5) * -6;
 
-      for (let i = 0; i < COLS; i++) {
-        for (let j = 0; j < ROWS; j++) {
-          const idx = i * ROWS + j;
-          const p1 = projected[idx];
-          if (!p1) continue;
-
-          // Connect horizontally
-          if (i < COLS - 1) {
-            const idxH = (i + 1) * ROWS + j;
-            const p2 = projected[idxH];
-            if (p2) {
-              const alpha = Math.min(1.0, ((p1.scale + p2.scale) / 2) * 0.1 * intensity);
-              if (alpha > 0.01) {
-                const isPulse = i === activeCol || i + 1 === activeCol;
-                ctx.strokeStyle = isPulse
-                  ? `rgba(45, 205, 185, ${alpha * 2.2})`
-                  : `rgba(255, 95, 45, ${alpha})`;
-                ctx.beginPath();
-                ctx.moveTo(p1.sx, p1.sy);
-                ctx.lineTo(p2.sx, p2.sy);
-                ctx.stroke();
-              }
-            }
-          }
-
-          // Connect vertically
-          if (j < ROWS - 1) {
-            const idxV = idx + 1;
-            const p2 = projected[idxV];
-            if (p2) {
-              const alpha = Math.min(1.0, ((p1.scale + p2.scale) / 2) * 0.1 * intensity);
-              if (alpha > 0.01) {
-                const isPulse = i === activeCol;
-                ctx.strokeStyle = isPulse
-                  ? `rgba(45, 205, 185, ${alpha * 2.2})`
-                  : `rgba(255, 95, 45, ${alpha})`;
-                ctx.beginPath();
-                ctx.moveTo(p1.sx, p1.sy);
-                ctx.lineTo(p2.sx, p2.sy);
-                ctx.stroke();
-              }
-            }
-          }
-        }
-      }
+        ctx.fillStyle = `rgba(245, 240, 232, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(px, py, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
       ctx.restore();
 
-      // 4. Draw Grid Nodes (Glow spheres)
-      gridPoints.forEach((point, idx) => {
-        const proj = projected[idx];
-        if (!proj) return;
+      // ─── RENDER LIGHT THREADS ──────────────────────────────
+      // Slow undulating curves — aurora / memory connections.
+      threads.forEach(thread => {
+        ctx.save();
+        ctx.lineWidth = thread.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
-        const isPulse = point.baseI === activeCol;
-        const alpha = Math.min(1.0, proj.scale * (isPulse ? 0.75 : 0.45) * intensity);
-        if (alpha < 0.01) return;
+        // Animated control points — each point undulates vertically
+        const animPoints = thread.points.map((p, i) => ({
+          x: p.x * W + (mx - 0.5) * -15,
+          y: p.y * H + Math.sin(t * thread.speed + thread.phase + i * 1.5) * 40 + (my - 0.5) * -10,
+        }));
 
-        const size = (isPulse ? 3.5 : 1.8) * proj.scale;
+        // Pulse alpha along the thread (traveling glow)
+        const pulsePos = (t * 0.08 + thread.phase) % 1.0;
 
-        ctx.fillStyle = isPulse ? `rgba(80, 245, 220, ${alpha})` : `rgba(255, 150, 95, ${alpha})`;
-
+        // Draw as smooth quadratic Bézier curve
         ctx.beginPath();
-        ctx.arc(proj.sx, proj.sy, size, 0, Math.PI * 2);
+        ctx.moveTo(animPoints[0].x, animPoints[0].y);
+        for (let i = 1; i < animPoints.length - 1; i++) {
+          const cpx = (animPoints[i].x + animPoints[i + 1].x) / 2;
+          const cpy = (animPoints[i].y + animPoints[i + 1].y) / 2;
+          ctx.quadraticCurveTo(animPoints[i].x, animPoints[i].y, cpx, cpy);
+        }
+        const last = animPoints[animPoints.length - 1];
+        ctx.lineTo(last.x, last.y);
+
+        // Base stroke
+        const h = thread.hue;
+        ctx.strokeStyle = `hsla(${h}, 50%, 55%, ${thread.alpha})`;
+        ctx.stroke();
+
+        // Traveling glow dot along the path
+        const glowIdx = Math.floor(pulsePos * (animPoints.length - 1));
+        const glowFrac = pulsePos * (animPoints.length - 1) - glowIdx;
+        const glowPt = {
+          x:
+            animPoints[glowIdx].x +
+            (animPoints[Math.min(glowIdx + 1, animPoints.length - 1)].x - animPoints[glowIdx].x) *
+              glowFrac,
+          y:
+            animPoints[glowIdx].y +
+            (animPoints[Math.min(glowIdx + 1, animPoints.length - 1)].y - animPoints[glowIdx].y) *
+              glowFrac,
+        };
+
+        const glowGrad = ctx.createRadialGradient(glowPt.x, glowPt.y, 0, glowPt.x, glowPt.y, 35);
+        glowGrad.addColorStop(0, `hsla(${h}, 60%, 60%, 0.12)`);
+        glowGrad.addColorStop(1, `hsla(${h}, 60%, 60%, 0)`);
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(glowPt.x, glowPt.y, 35, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.restore();
       });
 
-      // 5. Draw Drifting 3D Atmospheric Dust Layer
-      dust.forEach(mote => {
-        mote.x += mote.vx * dt * 60;
-        mote.y += mote.vy * dt * 60;
-        mote.z += mote.vz * dt * 60;
-
-        // Wrap edges inside 3D bounds
-        if (mote.x < -1000) mote.x = 1000;
-        if (mote.x > 1000) mote.x = -1000;
-        if (mote.y < -600) mote.y = 600;
-        if (mote.y > 600) mote.y = -600;
-        if (mote.z < -600) mote.z = 600;
-        if (mote.z > 600) mote.z = -600;
-
-        const proj = project(mote.x, mote.y, mote.z, yaw, pitch);
-        if (!proj) return;
-
-        const alpha = Math.min(1.0, proj.scale * 0.15 * intensity);
-        if (alpha < 0.01) return;
-
-        const size = mote.size * proj.scale;
-
-        ctx.fillStyle = `rgba(255, 140, 75, ${alpha})`;
-        ctx.beginPath();
-        ctx.arc(proj.sx, proj.sy, size, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // ─── CINEMATIC VIGNETTE ────────────────────────────────
+      // Dark edges, bright center — classic film framing.
+      const vigGrad = ctx.createRadialGradient(W / 2, H / 2, W * 0.25, W / 2, H / 2, W * 0.85);
+      vigGrad.addColorStop(0, 'rgba(6, 6, 4, 0)');
+      vigGrad.addColorStop(0.6, 'rgba(6, 6, 4, 0)');
+      vigGrad.addColorStop(1, 'rgba(6, 6, 4, 0.55)');
+      ctx.fillStyle = vigGrad;
+      ctx.fillRect(0, 0, W, H);
     }
 
     draw(0);
@@ -346,14 +409,13 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     return () => {
       cancelAnimationFrame(stateRef.current.animId);
       window.removeEventListener('resize', onResize);
-      window.removeEventListener('click', onWindowClick);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full pointer-events-none filter blur-[3px]"
+      className="fixed inset-0 w-full h-full pointer-events-none"
       style={{ zIndex: 0 }}
       aria-hidden="true"
     />
