@@ -292,7 +292,7 @@ export function FriendshipExpose({
 
         <div className="space-y-4">
           <div className="text-[9px] uppercase tracking-[0.3em] text-cooked-accent/50 font-vibe font-black">
-            Primary Chaos Source
+            Highest Chaos Rating
           </div>
           <h3 className="text-[56px] font-cinematic font-black tracking-tighter text-[#F5F0E8] leading-none">
             {formatName(top.display_name)}

@@ -218,19 +218,46 @@ def validate_lore_json(lore: dict):
                 f"character_role.archetype uses dead platform label {arch!r} — must be specific"
             )
 
+    # Group anthem — must have at least a title and reason if present
+    anthem = lore.get("group_anthem")
+    if anthem is not None:
+        if not isinstance(anthem, dict):
+            raise ValueError("group_anthem must be a dict")
+        if not anthem.get("title"):
+            raise ValueError("group_anthem.title is missing or empty")
+        if not anthem.get("reason"):
+            raise ValueError("group_anthem.reason is missing or empty")
+
 
 def scan_forbidden_phrases(lore: dict) -> list[str]:
     """Return list of forbidden phrases detected. Empty list = clean."""
+    recap = lore.get("season_recap") or {}
+    anthem = lore.get("group_anthem") or {}
+    dynamics = lore.get("friendship_dynamics") or {}
+    awards = lore.get("trip_lore_awards") or {}
+
     text_to_scan = " ".join([
-        lore.get("season_recap", {}).get("full_narrative", ""),
-        lore.get("season_recap", {}).get("act_1", ""),
-        lore.get("season_recap", {}).get("act_2", ""),
-        lore.get("season_recap", {}).get("act_3", ""),
+        # Core narrative fields
+        recap.get("full_narrative", ""),
+        recap.get("act_1", ""),
+        recap.get("act_2", ""),
+        recap.get("act_3", ""),
         lore.get("closing_line", ""),
-        lore.get("tagline", ""),
         lore.get("opening_line", ""),
         lore.get("what_this_trip_was_really_about", ""),
+        # Share-card fields — these are the most likely to regress
+        lore.get("tagline", ""),
         lore.get("screenshot_moment_line", ""),
+        lore.get("whatsapp_caption", ""),
+        lore.get("trip_title", ""),
+        lore.get("trip_personality_type", ""),
+        lore.get("cooked_explanation", ""),
+        # Group dynamics
+        dynamics.get("group_structure", ""),
+        dynamics.get("collective_energy", ""),
+        awards.get("core_memory", ""),
+        # Anthem
+        anthem.get("reason", ""),
     ]).lower()
 
     return [p for p in FORBIDDEN_PHRASES if p in text_to_scan]

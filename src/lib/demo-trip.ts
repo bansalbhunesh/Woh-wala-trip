@@ -73,13 +73,13 @@ export const DEMO_LORE: LoreJson = {
       question: 'Survive anything by simply not engaging with it',
       reason:
         'Dissociated from the Rohtang situation early and was genuinely fine. Impressive technique.',
-      archetype: 'Black Cat',
+      archetype: 'dissociated from chaos early',
     },
     {
       winner_name: 'Karan',
       question: 'Cause the problem and also solve the problem',
       reason: 'Suggested Rohtang. Bought everyone chai after. Balanced, in a way.',
-      archetype: 'Golden Retriever',
+      archetype: 'started it, fixed it, no notes',
     },
   ],
   receipt_stats: [

@@ -28,8 +28,12 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
       onClick={e => {
         if (e.target === e.currentTarget) onDismiss();
       }}
+      role="presentation"
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="welcome-modal-title"
         className="relative w-full max-w-sm rounded-3xl overflow-hidden"
         style={{
           background: '#0C0B09',
@@ -54,6 +58,7 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
               ● FIRST MISSION
             </p>
             <h2
+              id="welcome-modal-title"
               className="font-display font-black uppercase tracking-tighter leading-none"
               style={{ fontSize: 'clamp(28px,7vw,36px)', color: '#F5F0E8' }}
             >
@@ -79,8 +84,8 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
                 key={i}
                 className="flex items-start gap-4 px-4 py-3 rounded-2xl"
                 style={{
-                  background: 'rgba(245,240,232,0.03)',
-                  border: '1px solid rgba(245,240,232,0.07)',
+                  background: 'rgba(245,240,232,0.05)',
+                  border: '1px solid rgba(245,240,232,0.14)',
                   animationDelay: `${0.2 + i * 0.1}s`,
                 }}
               >
@@ -93,8 +98,8 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
                     {step.label}
                   </p>
                   <p
-                    className="font-display italic text-[11px] mt-0.5"
-                    style={{ color: 'rgba(245,240,232,0.45)' }}
+                    className="font-display italic text-[12px] mt-0.5"
+                    style={{ color: 'rgba(245,240,232,0.65)' }}
                   >
                     {step.desc}
                   </p>
@@ -239,7 +244,7 @@ function NostalgiaStrip() {
             {m.thumbnailUrl || m.url ? (
               <img
                 src={m.thumbnailUrl ?? m.url}
-                alt={m.trip_name}
+                alt={`Photo from ${m.trip_name}, ${m.years_ago} year${m.years_ago !== 1 ? 's' : ''} ago`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
@@ -337,6 +342,33 @@ export default function TripsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Join an existing trip — second most common action after New */}
+          <Link
+            href="/trips/join"
+            className="hidden sm:flex items-center gap-2 px-4 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+            style={{
+              background: 'rgba(45,158,139,0.08)',
+              border: '1px solid rgba(45,158,139,0.25)',
+              color: 'rgba(45,158,139,0.8)',
+              opacity: revealed ? 1 : 0,
+              transition:
+                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.14s, transform 0.3s cubic-bezier(0.16,1,0.3,1)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.transform = 'translate3d(0,-2px,0)';
+              el.style.borderColor = 'rgba(45,158,139,0.5)';
+              el.style.color = '#2D9E8B';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.transform = 'translate3d(0,0,0)';
+              el.style.borderColor = 'rgba(45,158,139,0.25)';
+              el.style.color = 'rgba(45,158,139,0.8)';
+            }}
+          >
+            JOIN TRIP
+          </Link>
           {/* FEAT: Hall of Chaos leaderboard link */}
           <Link
             href="/leaderboard"
@@ -415,128 +447,134 @@ export default function TripsPage() {
       )}
 
       {/* Content */}
-      <main className="relative z-10 px-8 py-10 pb-24">
+      <main className="relative z-10 px-8 py-10 pb-24 animate-page-enter">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {[0, 1, 2].map(i => (
               <div
                 key={i}
-                className="relative flex flex-col rounded-2xl overflow-hidden animate-pulse"
+                className="relative flex flex-col rounded-2xl overflow-hidden"
                 style={{
                   background: 'rgba(245,240,232,0.03)',
                   border: '1.5px solid rgba(245,240,232,0.08)',
                   minHeight: 220,
-                  // Stagger pulse phase so the three skeletons don't beat in
-                  // lockstep — feels more like real content streaming in.
-                  animationDelay: `${i * 0.18}s`,
+                  opacity: 0,
+                  animation: `slide-up 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 0.1}s forwards`,
                 }}
               >
-                {/* Coloured header strip */}
-                <div
-                  className="h-2 w-full flex-shrink-0"
-                  style={{ background: 'rgba(245,240,232,0.07)' }}
-                />
+                {/* Header strip shimmer */}
+                <div className="h-2 w-full flex-shrink-0 skeleton" />
 
                 <div className="p-6 flex flex-col flex-1 gap-4">
-                  {/* Status pill */}
-                  <div
-                    className="h-2.5 rounded-full"
-                    style={{ width: '40%', background: 'rgba(245,240,232,0.07)' }}
-                  />
-
-                  {/* Trip name — two lines */}
+                  <div className="h-2.5 rounded-full skeleton" style={{ width: '40%' }} />
                   <div className="space-y-2">
                     <div
-                      className="h-6 rounded-lg"
-                      style={{ width: '80%', background: 'rgba(245,240,232,0.07)' }}
+                      className="h-6 rounded-lg skeleton"
+                      style={{ width: '80%', animationDelay: '0.1s' }}
                     />
                     <div
-                      className="h-6 rounded-lg"
-                      style={{ width: '55%', background: 'rgba(245,240,232,0.05)' }}
+                      className="h-6 rounded-lg skeleton"
+                      style={{ width: '55%', animationDelay: '0.2s' }}
                     />
                   </div>
-
-                  {/* Meta lines */}
                   <div className="space-y-2">
                     <div
-                      className="h-2 rounded-full"
-                      style={{ width: '60%', background: 'rgba(245,240,232,0.05)' }}
+                      className="h-2 rounded-full skeleton"
+                      style={{ width: '60%', animationDelay: '0.15s' }}
                     />
                     <div
-                      className="h-2 rounded-full"
-                      style={{ width: '45%', background: 'rgba(245,240,232,0.04)' }}
+                      className="h-2 rounded-full skeleton"
+                      style={{ width: '45%', animationDelay: '0.25s' }}
                     />
                   </div>
-
-                  {/* Bottom bar */}
                   <div
                     className="flex items-center justify-between pt-4 mt-auto"
                     style={{ borderTop: '1px solid rgba(245,240,232,0.07)' }}
                   >
-                    <div
-                      className="h-2 rounded-full"
-                      style={{ width: '30%', background: 'rgba(245,240,232,0.05)' }}
-                    />
-                    <div
-                      className="h-4 w-4 rounded-full"
-                      style={{ background: 'rgba(245,240,232,0.07)' }}
-                    />
+                    <div className="h-2 rounded-full skeleton" style={{ width: '30%' }} />
+                    <div className="h-4 w-4 rounded-full skeleton" />
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : trips?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-8 text-center max-w-sm mx-auto">
+          <div className="flex flex-col items-center justify-center py-24 space-y-8 text-center max-w-sm mx-auto">
+            {/* Ghost chaos score */}
             <div
-              className="w-px h-16 mx-auto"
+              className="font-display font-black select-none pointer-events-none"
               style={{
-                background:
-                  'linear-gradient(to bottom, transparent, rgba(255,77,77,0.4), transparent)',
+                fontSize: 'clamp(100px, 20vw, 180px)',
+                color: 'rgba(255,77,77,0.04)',
+                lineHeight: 1,
+                letterSpacing: '-0.04em',
               }}
-            />
-            <div className="space-y-3">
+            >
+              ?
+            </div>
+            <div className="space-y-3 -mt-8">
               <p
                 className="font-mono text-[8px] uppercase tracking-[0.6em]"
                 style={{ color: '#FF4D4D' }}
               >
-                NO LORE YET
+                ● NO MYTHOLOGY YET
               </p>
               <h2
-                className="font-display font-black text-3xl uppercase"
+                className="font-display font-black text-3xl uppercase tracking-tighter"
                 style={{ color: '#F5F0E8' }}
               >
                 ARCHIVE EMPTY
               </h2>
               <p
-                className="font-display italic text-sm"
+                className="font-display italic text-sm leading-relaxed max-w-xs mx-auto"
                 style={{ color: 'rgba(245,240,232,0.45)' }}
               >
-                "No friendship has been documented yet."
+                "Your chaos score is still unknown. Upload your trip photos and the AI will document
+                what actually happened."
               </p>
             </div>
-            <Link
-              href="/trips/new"
-              className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest"
-              style={{
-                background: '#F5F0E8',
-                color: '#060604',
-                transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = 'translate3d(0,-2px,0)';
-                el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
-                playHomeChime(1.3, 0.02);
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = 'translate3d(0,0,0)';
-                el.style.boxShadow = 'none';
-              }}
-            >
-              INITIALIZE FIRST SEASON →
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/trips/new"
+                className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest"
+                style={{
+                  background: '#F5F0E8',
+                  color: '#060604',
+                  transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.transform = 'translate3d(0,-2px,0)';
+                  el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
+                  playHomeChime(1.3, 0.02);
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.transform = 'translate3d(0,0,0)';
+                  el.style.boxShadow = 'none';
+                }}
+              >
+                CREATE YOUR FIRST TRIP →
+              </Link>
+              <Link
+                href="/trips/join"
+                className="px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(45,158,139,0.3)',
+                  color: 'rgba(45,158,139,0.8)',
+                  transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.transform = 'translate3d(0,-2px,0)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.transform = 'translate3d(0,0,0)';
+                }}
+              >
+                JOIN A TRIP
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -545,6 +583,13 @@ export default function TripsPage() {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const loreStatus = (trip as any).lore_status ?? 'default';
               const chaosScore = (trip as any).chaos_score ?? null;
+              const loreJson = (trip as any).lore_json as {
+                tagline?: string;
+                cooked_verdict?: string;
+              } | null;
+              const tagline = loreStatus === 'ready' ? (loreJson?.tagline ?? null) : null;
+              const cookedVerdict =
+                loreStatus === 'ready' ? (loreJson?.cooked_verdict ?? null) : null;
               const percentileLabel =
                 loreStatus === 'ready' ? chaosPercentileLabel(chaosScore, chaosDist) : null;
               const animDelay = idx * 0.07;
@@ -562,11 +607,25 @@ export default function TripsPage() {
                     ? '#D49E2D'
                     : '#FF4D4D';
 
+              const cardLabel = [
+                trip.name,
+                trip.destination ? `in ${trip.destination}` : '',
+                loreStatus === 'ready' && chaosScore != null ? `Chaos score: ${chaosScore}` : '',
+                loreStatus === 'ready'
+                  ? 'Lore archived'
+                  : loreStatus === 'processing'
+                    ? 'Generating lore'
+                    : 'Active',
+              ]
+                .filter(Boolean)
+                .join(', ');
+
               return (
                 <Link
                   key={trip.id}
                   href={`/trips/${trip.id}`}
-                  className="group relative flex flex-col rounded-2xl overflow-hidden focus:outline-none"
+                  aria-label={cardLabel}
+                  className="group relative flex flex-col rounded-2xl overflow-hidden"
                   style={{
                     background: 'rgba(245,240,232,0.03)',
                     border: '1.5px solid rgba(245,240,232,0.12)',
@@ -607,10 +666,10 @@ export default function TripsPage() {
                       </p>
                       {loreStatus === 'processing' && (
                         <div
-                          className="w-2 h-2 rounded-full"
+                          className="w-2 h-2 rounded-full glow-pulse-red"
                           style={{
-                            background: statusColor,
-                            animation: 'trips-pulse 1.5s ease-in-out infinite',
+                            background: '#D49E2D',
+                            boxShadow: '0 0 4px rgba(212,158,45,0.4)',
                           }}
                         />
                       )}
@@ -644,6 +703,33 @@ export default function TripsPage() {
                             year: 'numeric',
                           })}
                         </p>
+                      )}
+                      {/* Tagline — the emotional reward of having lore. Shown prominently so
+                          users immediately see what was generated without opening the archive. */}
+                      {tagline && (
+                        <p
+                          className="font-display italic text-[12px] leading-snug line-clamp-2 pt-0.5"
+                          style={{ color: 'rgba(245,240,232,0.55)' }}
+                        >
+                          &ldquo;{tagline}&rdquo;
+                        </p>
+                      )}
+                      {/* Chaos score badge — the number users want to share */}
+                      {loreStatus === 'ready' && chaosScore != null && (
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <span
+                            className="font-display font-black text-xl"
+                            style={{ color: accent }}
+                          >
+                            {chaosScore}
+                          </span>
+                          <span
+                            className="font-mono text-[7px] uppercase tracking-[0.3em]"
+                            style={{ color: `${accent}80` }}
+                          >
+                            / 100 {cookedVerdict ?? 'cooked'}
+                          </span>
+                        </div>
                       )}
                       {percentileLabel && (
                         <div
@@ -748,23 +834,34 @@ export default function TripsPage() {
       <footer
         className="fixed bottom-0 left-0 right-0 flex items-center justify-between px-8 py-3 z-20"
         style={{
-          borderTop: '1px solid rgba(245,240,232,0.12)',
-          background: 'rgba(6, 6, 4, 0.9)',
+          borderTop: '1px solid rgba(245,240,232,0.08)',
+          background: 'rgba(6, 6, 4, 0.92)',
           backdropFilter: 'blur(12px)',
+          paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
         <p
-          className="font-mono text-[7.5px] uppercase tracking-[0.5em]"
-          style={{ color: 'rgba(245,240,232,0.35)' }}
+          className="font-mono text-[9px] uppercase tracking-[0.4em]"
+          style={{ color: 'rgba(245,240,232,0.5)' }}
         >
           YAARLORE
         </p>
-        <p
-          className="font-mono text-[7.5px] uppercase tracking-[0.5em]"
-          style={{ color: 'rgba(245,240,232,0.25)' }}
-        >
-          LORE PIPELINE V2 · ACTIVE
-        </p>
+        <nav className="flex items-center gap-5" aria-label="Footer links">
+          {[
+            { href: '/contact', label: 'Contact' },
+            { href: '/privacy', label: 'Privacy' },
+            { href: '/terms', label: 'Terms' },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="font-mono text-[8px] uppercase tracking-[0.3em] hover:opacity-70 transition-opacity"
+              style={{ color: 'rgba(245,240,232,0.3)' }}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
       </footer>
 
       <style jsx>{`

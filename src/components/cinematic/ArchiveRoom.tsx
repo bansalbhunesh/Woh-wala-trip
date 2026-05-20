@@ -1207,7 +1207,7 @@ export function ArchiveFooter({
               Terms of Archive
             </Link>
             <a
-              href="mailto:bhuneshbansal20039888@gmail.com?subject=Report a Trip"
+              href="mailto:hello@yaarlore.app?subject=Report a Trip"
               className="text-[11px] text-white/30 hover:text-white/55 transition-colors font-data"
             >
               Report a Trip

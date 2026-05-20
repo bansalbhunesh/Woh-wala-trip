@@ -104,7 +104,11 @@ function Booth({
           transition: 'border-color 0.25s',
         }}
       >
+        <label htmlFor="confession-input" className="sr-only">
+          Anonymous confession for the trip lore
+        </label>
         <input
+          id="confession-input"
           ref={inputRef}
           type="text"
           value={value}

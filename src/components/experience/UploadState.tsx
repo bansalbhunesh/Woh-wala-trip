@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { ConfessionInput } from '@/components/experience/ConfessionInput';
@@ -27,6 +27,7 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
   const utils = trpc.useUtils();
   const [active, setActive] = useState<ActiveUpload | null>(null);
   const [queue, setQueue] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const { data: photoData, refetch: refetchPhotos } = trpc.photos.list.useQuery({ tripId });
 
   const generateLore = trpc.trips.generateLore.useMutation({
@@ -167,12 +168,74 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
   const C = 2 * Math.PI * R;
   const dash = active ? C * (active.progress / 100) : 0;
 
+  const handleDragOver = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (canUpload) setIsDragOver(true);
+    },
+    [canUpload]
+  );
+
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+      if (!canUpload) return;
+      const files = e.dataTransfer.files;
+      if (files?.length) handleFiles(files);
+    },
+    [canUpload, handleFiles]
+  );
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start py-16 px-6 relative overflow-hidden">
-      {/* Atmospheric background glow that pulses during upload */}
+    <div
+      className="min-h-screen flex flex-col items-center justify-start py-16 px-6 relative overflow-hidden"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Live region for upload status announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {active?.phase === 'scanning' && 'Scanning photo…'}
+        {active?.phase === 'uploading' && `Uploading photo: ${active.progress}% complete`}
+        {active?.phase === 'absorbing' && 'Photo archived successfully'}
+        {active?.phase === 'error' && 'Upload failed. Tap to retry.'}
+        {!active &&
+          batchTotal > 0 &&
+          batchDone === batchTotal &&
+          `${batchTotal} photo${batchTotal !== 1 ? 's' : ''} uploaded successfully`}
+      </div>
+      {/* Drag-over overlay */}
+      {isDragOver && (
+        <div
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
+          style={{
+            background: 'rgba(255,77,77,0.06)',
+            border: '2px dashed rgba(255,77,77,0.4)',
+            borderRadius: 24,
+          }}
+        >
+          <p
+            className="font-mono text-[11px] uppercase tracking-[0.5em]"
+            style={{ color: 'rgba(255,77,77,0.8)' }}
+          >
+            ● DROP TO ARCHIVE
+          </p>
+        </div>
+      )}
+
+      {/* Atmospheric background glow that pulses during upload or drag */}
       <div
         className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
-        style={{ opacity: isActive ? 1 : 0 }}
+        style={{ opacity: isActive || isDragOver ? 1 : 0 }}
       >
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px]"
@@ -221,7 +284,7 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
             >
               UPLOAD TERMINAL
             </h3>
-            <p className="font-display italic text-xs" style={{ color: 'rgba(245,240,232,0.25)' }}>
+            <p className="font-display italic text-xs" style={{ color: 'rgba(245,240,232,0.55)' }}>
               Drag & drop or tap the portal to select files
             </p>
           </div>
@@ -258,6 +321,11 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
 
             {/* The slot itself */}
             <label
+              aria-label={
+                canUpload
+                  ? 'Upload trip photos — click or drop files here'
+                  : 'Upload disabled — lore already generated'
+              }
               className={`absolute inset-4 rounded-3xl overflow-hidden flex flex-col items-center justify-center group ${
                 canUpload ? 'cursor-pointer' : 'pointer-events-none opacity-40 cursor-not-allowed'
               }`}
@@ -278,7 +346,11 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
                       'opacity 0.7s cubic-bezier(0.4,0,1,1), transform 0.7s cubic-bezier(0.4,0,1,1)',
                   }}
                 >
-                  <img src={active.preview} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={active.preview}
+                    alt={`Uploading: ${active.file?.name ?? 'photo'}`}
+                    className="w-full h-full object-cover"
+                  />
                   <div
                     className="absolute inset-0 transition-opacity duration-500"
                     style={{
@@ -311,14 +383,15 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
                       border: '1px solid rgba(245,240,232,0.12)',
                       background: 'rgba(245,240,232,0.04)',
                     }}
+                    aria-hidden="true"
                   >
-                    <Plus size={18} style={{ color: 'rgba(245,240,232,0.35)' }} />
+                    <Plus size={18} style={{ color: 'rgba(245,240,232,0.6)' }} />
                   </div>
                   <span
                     className="font-mono text-[10px] uppercase tracking-[0.35em]"
                     style={{ color: 'rgba(245,240,232,0.6)' }}
                   >
-                    Upload
+                    Upload Photos
                   </span>
                 </>
               )}
@@ -326,7 +399,7 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
               <input
                 ref={inputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 multiple
                 className="hidden"
                 disabled={!canUpload}
@@ -405,6 +478,8 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
 
           {errorMsg && (
             <p
+              role="alert"
+              aria-live="assertive"
               className="font-mono text-[10px] uppercase tracking-[0.25em] cursor-pointer hover:opacity-85 text-center px-4"
               onClick={() => {
                 setActive(null);
@@ -423,8 +498,8 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
             </div>
           )}
 
-          {/* CTA controls */}
-          <div className="w-full flex flex-col items-center pt-4">
+          {/* CTA controls — pb-[env(safe-area-inset-bottom)] ensures button clears iOS home bar in PWA */}
+          <div className="w-full flex flex-col items-center pt-4 pb-[env(safe-area-inset-bottom,0px)]">
             {canGenerate && photoCount < 8 && (
               <div className="text-[10px] text-amber-400/80 mb-3.5 font-mono uppercase tracking-wider text-center animate-pulse">
                 ⚠ Add {8 - photoCount} more photos for richer lore
@@ -434,7 +509,7 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
             <button
               onClick={() => generateLore.mutate({ tripId })}
               disabled={!canGenerate || generateLore.isPending || isActive}
-              className="w-full py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-25 flex items-center justify-center gap-3"
+              className="w-full py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-25 flex items-center justify-center gap-3"
               style={{
                 background: canGenerate ? 'rgba(255,77,77,0.12)' : 'rgba(245,240,232,0.04)',
                 border: `1px solid ${canGenerate ? 'rgba(255,77,77,0.4)' : 'rgba(245,240,232,0.08)'}`,
@@ -467,7 +542,9 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
                   IGNITING...
                 </>
               ) : generateLore.error ? (
-                '⚠ ' + (generateLore.error.message?.slice(0, 35) ?? 'Error')
+                <span role="alert">
+                  {'⚠ ' + (generateLore.error.message?.slice(0, 80) ?? 'Error')}
+                </span>
               ) : (
                 'IGNITE THE LORE ENGINE →'
               )}
@@ -678,41 +755,7 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes scan-sweep {
-          from {
-            top: -2px;
-            opacity: 1;
-          }
-          to {
-            top: 100%;
-            opacity: 0.4;
-          }
-        }
-        @keyframes fragment-in {
-          from {
-            opacity: 0;
-            transform: scale(0.6);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-      `}</style>
+      {/* scan-sweep, fragment-in, spin, fade-in — all available in globals.css */}
     </div>
   );
 }

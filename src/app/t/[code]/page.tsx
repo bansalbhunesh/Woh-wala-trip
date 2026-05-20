@@ -101,11 +101,11 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
 
         <div className="relative z-10 max-w-4xl mx-auto w-full space-y-12">
           <div className="space-y-6">
-            <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.4em] text-white/40 font-black">
+            <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.4em] text-white/40 font-black flex-wrap">
               <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                Private Release
+                Archive
               </span>
-              <span>{trip.destination}</span>
+              {trip.destination && <span>{trip.destination}</span>}
               <span className="w-1.5 h-1.5 rounded-full bg-cooked-accent animate-pulse" />
             </div>
 
@@ -132,14 +132,14 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
             </div>
 
             <div className="flex items-baseline gap-6 bg-white/[0.03] border border-white/5 p-8 rounded-[3rem] backdrop-blur-xl">
-              <span className="text-8xl font-vibe font-black tracking-tighter leading-none text-cooked-accent">
+              <span className="text-8xl font-vibe font-black tracking-tighter leading-none text-cooked-accent animate-number-reveal">
                 {cookedLevel}
               </span>
               <div className="flex flex-col">
                 <span className="text-xl font-vibe font-black uppercase tracking-tight text-white/90 leading-none">
                   {lore.cooked_verdict}
                 </span>
-                <span className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em] mt-2">
+                <span className="text-[9px] text-white/45 font-black uppercase tracking-[0.2em] mt-2">
                   Chaos Rating
                 </span>
               </div>
@@ -151,17 +151,21 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
               were decoration; they've been replaced with photo and chapter
               counts so visitors see actual scale of the archive. */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={<Users size={14} />} label="Cast" value={`${trip.member_count ?? 0}`} />
+            <StatCard
+              icon={<Users size={14} />}
+              label="Cast"
+              value={trip.member_count ? `${trip.member_count}` : '—'}
+            />
             <StatCard icon={<Calendar size={14} />} label="Runtime" value={`${duration} Days`} />
             <StatCard
               icon={<ImageIcon size={14} />}
-              label="Photos"
-              value={`${trip.total_photos ?? 0}`}
+              label="Evidence"
+              value={trip.total_photos ? `${trip.total_photos}` : '—'}
             />
             <StatCard
               icon={<Film size={14} />}
-              label="Chapters"
-              value={`${lore.trip_eras?.length ?? 0}`}
+              label="Eras"
+              value={lore.trip_eras?.length ? `${lore.trip_eras.length}` : '—'}
             />
           </div>
 
@@ -183,9 +187,45 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
         </div>
       </section>
 
+      {/* Trip Eras teaser — gives visitors a feel for the story structure */}
+      {lore.trip_eras && lore.trip_eras.length > 0 && (
+        <section className="px-6 py-20 border-t border-white/5">
+          <div className="max-w-4xl mx-auto space-y-8 reveal">
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-black uppercase tracking-[0.5em] text-white/55">
+                THE ERAS
+              </p>
+              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-cooked-accent/60">
+                {lore.trip_eras.length} CHAPTERS
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {lore.trip_eras.map((era: any, i: number) => (
+                <div
+                  key={i}
+                  className="p-5 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-2"
+                >
+                  <p className="text-[9px] font-black uppercase tracking-[0.35em] text-white/50">
+                    {era.timeframe ?? `Chapter ${i + 1}`}
+                  </p>
+                  <p className="font-cinematic font-black text-lg uppercase leading-tight text-white/80">
+                    {era.era_name}
+                  </p>
+                  {era.defining_moment && (
+                    <p className="text-[11px] font-cinematic italic text-white/40 leading-snug line-clamp-2">
+                      {era.defining_moment}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Recap Section */}
       {lore.season_recap?.full_narrative && (
-        <section className="px-6 py-40 border-t border-white/5 bg-white/[0.01] relative overflow-hidden">
+        <section className="px-6 py-40 border-t border-white/5 bg-white/[0.01] relative overflow-hidden reveal">
           <AtmosphericBlob
             color="#FF3B2F"
             className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-[0.03]"
@@ -197,7 +237,7 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
             <p className="text-3xl md:text-5xl font-cinematic italic text-[#F5F0E8] leading-[1.2] tracking-tight">
               &ldquo;{lore.season_recap.full_narrative}&rdquo;
             </p>
-            <div className="text-[9px] uppercase tracking-[0.5em] text-white/10 font-black">
+            <div className="text-[9px] uppercase tracking-[0.5em] text-white/25 font-black">
               Archive Extract 88.2
             </div>
           </div>
@@ -214,11 +254,11 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest text-white/20 font-black">
+    <div className="p-6 rounded-[2rem] bg-white/[0.04] border border-white/10 flex flex-col gap-2">
+      <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest text-white/55 font-black">
         {icon} {label}
       </div>
-      <div className="text-sm font-black text-white/80">{value}</div>
+      <div className="text-base font-black text-white/90">{value}</div>
     </div>
   );
 }

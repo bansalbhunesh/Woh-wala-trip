@@ -19,10 +19,10 @@ import { useRouter } from 'next/navigation';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const FRAGMENTS = [
-  '"the golden retriever has been identified"',
-  '"chaos source: confirmed"',
-  '"emotionally cooked: 84%"',
-  '"peak delusion detected"',
+  '"three plans, none executed — confirmed"',
+  '"chaos score: 84 / 100"',
+  '"emotionally cooked: verified"',
+  '"4 am was always their idea"',
   '"this trip cannot be unexperienced"',
   '"friendship lore: reconstructing"',
 ];
@@ -106,8 +106,9 @@ function PortalCanvas({ phase }: { phase: number }) {
 
     let portalScale = 0;
     let snitchAlpha = 0;
-    let t = 0,
-      raf = 0;
+    let t = 0;
+    let lastTs = 0;
+    let raf = 0;
 
     const GOLD = (a: number) => `rgba(255,168,30,${a})`;
     const AMBER = (a: number) => `rgba(255,100,10,${a})`;
@@ -169,14 +170,15 @@ function PortalCanvas({ phase }: { phase: number }) {
       }
     };
 
-    const drawSparks = () => {
+    const drawSparks = (dt: number) => {
+      const sparkDrag = Math.exp(-2.4 * dt); // 0.96/frame = exp(-2.4/s)
       for (let i = sparks.length - 1; i >= 0; i--) {
         const s = sparks[i];
-        s.x += s.vx;
-        s.y += s.vy;
-        s.vx *= 0.96;
-        s.vy *= 0.96;
-        s.life -= 1;
+        s.x += s.vx * dt * 60;
+        s.y += s.vy * dt * 60;
+        s.vx *= sparkDrag;
+        s.vy *= sparkDrag;
+        s.life -= dt * 60; // maxLife was in frames, keep consistent
         if (s.life <= 0) {
           sparks.splice(i, 1);
           continue;
@@ -274,26 +276,35 @@ function PortalCanvas({ phase }: { phase: number }) {
       ctx.shadowBlur = 0;
     };
 
-    const updateSnitch = (p: number) => {
+    const updateSnitch = (p: number, dt: number) => {
       if (p < 1) return;
-      snitch.waitFrames--;
+      // Wait time in seconds: 55–145 frames at 60fps = 0.92s – 2.42s
+      snitch.waitFrames -= dt * 60;
       if (snitch.waitFrames <= 0) {
         const { tx, ty } = newSnitchTarget();
         snitch.tx = tx * W;
         snitch.ty = ty * H;
-        snitch.vx = (snitch.tx - snitch.x) * 0.18;
-        snitch.vy = (snitch.ty - snitch.y) * 0.18;
+        // Initial velocity toward target — normalized to actual distance
+        const dx = snitch.tx - snitch.x;
+        const dy = snitch.ty - snitch.y;
+        snitch.vx = dx * 0.18;
+        snitch.vy = dy * 0.18;
         snitch.waitFrames = 55 + Math.floor(Math.random() * 90);
       }
-      snitch.x += snitch.vx;
-      snitch.y += snitch.vy;
-      snitch.vx *= 0.84;
-      snitch.vy *= 0.84;
+      snitch.x += snitch.vx * dt * 60;
+      snitch.y += snitch.vy * dt * 60;
+      // Drag: 0.84/frame = exp(-0.174*60) per second
+      const snitchDrag = Math.exp(-10.4 * dt);
+      snitch.vx *= snitchDrag;
+      snitch.vy *= snitchDrag;
     };
 
-    const draw = () => {
+    const draw = (timestamp: number) => {
       raf = requestAnimationFrame(draw);
-      t += 0.014;
+      // Delta-time: 0.014/frame * 60fps = 0.84/s
+      const dt = lastTs > 0 ? Math.min((timestamp - lastTs) / 1000, 0.05) : 1 / 60;
+      lastTs = timestamp;
+      t += dt * 0.84;
       const p = phaseRef.current;
 
       ctx.fillStyle = `rgba(4,2,2,0.82)`;
@@ -302,13 +313,15 @@ function PortalCanvas({ phase }: { phase: number }) {
       const cx = W / 2,
         cy = H / 2;
 
-      // Portal: visible in phase 0 only, fades in phase 1+
-      const portalTarget = p === 0 ? Math.min(t * 0.14, 1) : 0;
-      portalScale += (portalTarget - portalScale) * (p === 0 ? 0.05 : 0.04);
+      // Portal: t is now in seconds. 0.14 * 0.84 ≈ 0.118 raw-t per second.
+      // We want full scale in ~1.2s: 1.2s * 0.84 = 1.008 → t*1.0 ≈ 1 in 1.2s
+      const portalTarget = p === 0 ? Math.min(t * 0.83, 1) : 0;
+      // Lerp normalized: 0.05/frame * 60fps = 3/s (phase 0), 0.04 = 2.4/s (fade)
+      portalScale += (portalTarget - portalScale) * (1 - Math.exp(-(p === 0 ? 3 : 2.4) * dt));
 
-      // Snitch: visible in phase 1+, fades on phase 4
+      // Snitch: fades in/out at 2.4/s
       const snitchTarget = p >= 1 && p < 4 ? 1 : 0;
-      snitchAlpha += (snitchTarget - snitchAlpha) * 0.04;
+      snitchAlpha += (snitchTarget - snitchAlpha) * (1 - Math.exp(-2.4 * dt));
 
       // Portal draw
       if (portalScale > 0.02) {
@@ -348,10 +361,10 @@ function PortalCanvas({ phase }: { phase: number }) {
         emitSparks(cx, cy, I, I);
       }
 
-      drawSparks();
+      drawSparks(dt);
 
       // Snitch
-      updateSnitch(p);
+      updateSnitch(p, dt);
       drawSnitch(snitchAlpha);
 
       // Final wipe
@@ -362,14 +375,21 @@ function PortalCanvas({ phase }: { phase: number }) {
       }
     };
 
-    draw();
+    draw(0);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 w-full h-full"
+      style={{ zIndex: 0 }}
+      aria-hidden="true"
+    />
+  );
 }
 
 // Safe relative-path-only redirect target. Prevents open-redirect via
@@ -698,13 +718,13 @@ export default function CinematicAuth() {
               autoComplete="email"
               className="w-full py-6 px-8 text-center font-mono text-base outline-none"
               style={{
-                background: 'rgba(245,240,232,0.025)',
-                border: `1px solid ${inputFocused || email ? 'rgba(255,140,30,0.4)' : 'rgba(245,240,232,0.07)'}`,
+                background: 'rgba(245,240,232,0.06)',
+                border: `1px solid ${inputFocused || email ? 'rgba(255,140,30,0.55)' : 'rgba(245,240,232,0.18)'}`,
                 borderRadius: '0.9rem',
-                color: 'rgba(245,240,232,0.85)',
+                color: 'rgba(245,240,232,0.92)',
                 caretColor: '#FFA020',
                 letterSpacing: '0.04em',
-                transition: 'border-color 0.4s cubic-bezier(0.16,1,0.3,1)',
+                transition: 'border-color 0.4s cubic-bezier(0.16,1,0.3,1), background 0.4s',
               }}
             />
             <div
@@ -838,8 +858,8 @@ export default function CinematicAuth() {
               </em>
             </h2>
             <p
-              className="font-mono text-[8px]"
-              style={{ color: 'rgba(245,240,232,0.22)', letterSpacing: '0.08em' }}
+              className="font-mono text-[9px]"
+              style={{ color: 'rgba(245,240,232,0.6)', letterSpacing: '0.08em' }}
             >
               SENT TO {email.length > 28 ? email.slice(0, 25) + '...' : email.toUpperCase()}
             </p>
@@ -851,7 +871,12 @@ export default function CinematicAuth() {
           </div>
 
           {/* 8 digit slots */}
-          <div className="flex gap-1 sm:gap-1.5 justify-center" onPaste={handlePaste}>
+          <div
+            className="flex gap-1 sm:gap-1.5 justify-center"
+            onPaste={handlePaste}
+            role="group"
+            aria-label="8-digit verification code"
+          >
             {otp.map((d, i) => (
               <div
                 key={i}
@@ -889,13 +914,14 @@ export default function CinematicAuth() {
                   onBlur={() => setActiveDigit(-1)}
                   disabled={verifyLoading}
                   className="relative text-center font-display font-black outline-none rounded-xl disabled:opacity-50"
+                  aria-label={`Digit ${i + 1} of 8`}
                   style={{
                     width: 'clamp(32px, 10vw, 44px)',
                     height: 'clamp(40px, 12vw, 52px)',
                     fontSize: 'clamp(16px, 4vw, 22px)',
-                    background: d ? 'rgba(255,77,77,0.1)' : 'rgba(245,240,232,0.03)',
-                    border: `1px solid ${activeDigit === i ? 'rgba(255,77,77,0.65)' : d ? 'rgba(255,77,77,0.35)' : 'rgba(245,240,232,0.08)'}`,
-                    color: d ? '#FFA020' : 'rgba(245,240,232,0.3)',
+                    background: d ? 'rgba(255,77,77,0.1)' : 'rgba(245,240,232,0.06)',
+                    border: `1px solid ${activeDigit === i ? 'rgba(255,77,77,0.7)' : d ? 'rgba(255,77,77,0.45)' : 'rgba(245,240,232,0.2)'}`,
+                    color: d ? '#FFA020' : 'rgba(245,240,232,0.4)',
                     caretColor: '#FFA020',
                     transform: d ? 'translate3d(0,0,0) scale(1.04)' : 'translate3d(0,0,0) scale(1)',
                     transition:
@@ -924,7 +950,7 @@ export default function CinematicAuth() {
                 key={i}
                 className="w-1 h-1 rounded-full"
                 style={{
-                  background: d ? '#FFA020' : 'rgba(245,240,232,0.1)',
+                  background: d ? '#FFA020' : 'rgba(245,240,232,0.18)',
                   boxShadow: d ? '0 0 5px rgba(255,140,30,0.6)' : 'none',
                   transition:
                     'background 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s cubic-bezier(0.16,1,0.3,1)',
@@ -948,7 +974,7 @@ export default function CinematicAuth() {
           {/* Bottom actions — larger text, clearly visible */}
           <div
             className="flex items-center justify-between pt-2"
-            style={{ borderTop: '1px solid rgba(245,240,232,0.06)' }}
+            style={{ borderTop: '1px solid rgba(245,240,232,0.12)' }}
           >
             <button
               onClick={() => {
@@ -957,7 +983,7 @@ export default function CinematicAuth() {
                 setError('');
               }}
               className="font-mono text-[9px] uppercase tracking-[0.35em] hover:opacity-80 active:opacity-60 transition-opacity px-2 py-2"
-              style={{ color: 'rgba(245,240,232,0.45)' }}
+              style={{ color: 'rgba(245,240,232,0.65)' }}
             >
               ← WRONG EMAIL
             </button>
@@ -968,7 +994,7 @@ export default function CinematicAuth() {
               }}
               disabled={cooldown > 0 || sendLoading}
               className="font-mono text-[9px] uppercase tracking-[0.35em] disabled:opacity-30 hover:opacity-80 active:opacity-60 transition-opacity px-2 py-2"
-              style={{ color: cooldown > 0 ? 'rgba(255,140,30,0.4)' : 'rgba(245,240,232,0.45)' }}
+              style={{ color: cooldown > 0 ? 'rgba(255,140,30,0.6)' : 'rgba(245,240,232,0.65)' }}
             >
               {cooldown > 0 ? `RESEND IN ${cooldown}s` : 'RESEND CODE'}
             </button>
@@ -1024,11 +1050,13 @@ export default function CinematicAuth() {
           }}
         >
           <div
+            role="alert"
+            aria-live="assertive"
             className="px-6 py-3 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
             style={{
-              background: 'rgba(255,77,77,0.1)',
-              border: '1px solid rgba(255,77,77,0.22)',
-              color: 'rgba(255,77,77,0.8)',
+              background: 'rgba(255,77,77,0.15)',
+              border: '1px solid rgba(255,77,77,0.4)',
+              color: 'rgba(255,77,77,1)',
             }}
           >
             {error}

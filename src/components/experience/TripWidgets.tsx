@@ -151,7 +151,7 @@ export function StoryVisibilityToggle({
           onClick={handleToggle}
           disabled={update.isPending}
           aria-label={visible ? 'Hide public story' : 'Show public story'}
-          className="relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+          className="relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200 "
           style={{
             background: visible ? 'rgba(45,158,139,0.7)' : 'rgba(0,0,0,0.15)',
             opacity: update.isPending ? 0.6 : 1,

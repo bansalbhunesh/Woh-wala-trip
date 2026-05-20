@@ -57,45 +57,60 @@ def _get_today_key() -> str:
 def _budget_ok() -> bool:
     """Claim one slot from the global daily fal.ai budget.
 
-    Reads and increments the persistent counter in Supabase fal_budget.
-    Thread-safe via _budget_lock.  Returns False if budget is exhausted.
+    Uses a single atomic Postgres UPDATE to increment the counter only when
+    it is below the daily cap. Falls back to INSERT on the first call of the day.
+    Thread-safe via _budget_lock. Returns False if budget is exhausted.
     """
     with _budget_lock:
         today = _get_today_key()
         try:
-            # Atomically increment the counter for today using an upsert that
-            # adds 1 to calls_count, then read back the new value.
-            # Strategy: read first, then conditionally increment so we can
-            # check the cap before writing.
-            resp = supabase.table("fal_budget").select("calls_count").eq("date", today).execute()
-            rows = resp.data or []
-            current_count: int = rows[0]["calls_count"] if rows else 0
+            # Atomic conditional increment: only increments if current count < cap.
+            # Returns the updated row so we can inspect the new count.
+            result = supabase.rpc(
+                "claim_fal_budget_slot",
+                {"p_date": today, "p_cap": settings.FAL_DAILY_BUDGET},
+            ).execute()
 
-            if current_count >= settings.FAL_DAILY_BUDGET:
+            # RPC returns True if a slot was claimed, False if cap was reached.
+            if not result.data:
                 log.warning(
                     f"[image_gen] daily budget exhausted "
                     f"({settings.FAL_DAILY_BUDGET} calls) — skipping"
                 )
                 return False
 
-            # Increment — upsert handles first call of the day (insert) and
-            # subsequent calls (update) atomically via ON CONFLICT DO UPDATE.
-            supabase.table("fal_budget").upsert(
-                {"date": today, "calls_count": current_count + 1},
-                on_conflict="date",
-            ).execute()
+            # Check remaining budget (best-effort; log only)
+            try:
+                resp = supabase.table("fal_budget").select("calls_count").eq("date", today).execute()
+                rows = resp.data or []
+                current = rows[0]["calls_count"] if rows else 0
+                remaining = settings.FAL_DAILY_BUDGET - current
+                if remaining <= 10:
+                    log.warning(f"[image_gen] fal.ai budget low: {remaining} calls left today")
+            except Exception:
+                pass
 
-            remaining = settings.FAL_DAILY_BUDGET - (current_count + 1)
-            if remaining <= 10:
-                log.warning(f"[image_gen] fal.ai budget low: {remaining} calls left today")
             return True
 
         except Exception as e:
-            # Budget DB unavailable — fail CLOSED to prevent unlimited billing.
-            log.error(
-                f"[image_gen] fal_budget DB check failed (failing CLOSED): {e}"
-            )
-            return False
+            # RPC not available (old schema) — fall back to read-then-increment.
+            # This retains the pre-existing behaviour with a known TOCTOU window.
+            log.warning(f"[image_gen] claim_fal_budget_slot RPC unavailable, using fallback: {e}")
+            try:
+                resp = supabase.table("fal_budget").select("calls_count").eq("date", today).execute()
+                rows = resp.data or []
+                current_count: int = rows[0]["calls_count"] if rows else 0
+                if current_count >= settings.FAL_DAILY_BUDGET:
+                    log.warning(f"[image_gen] daily budget exhausted ({settings.FAL_DAILY_BUDGET} calls) — skipping")
+                    return False
+                supabase.table("fal_budget").upsert(
+                    {"date": today, "calls_count": current_count + 1},
+                    on_conflict="date",
+                ).execute()
+                return True
+            except Exception as e2:
+                log.error(f"[image_gen] fal_budget DB check failed (failing CLOSED): {e2}")
+                return False
 
 
 def _trip_quota_ok(trip_id: str) -> bool:
@@ -231,13 +246,17 @@ async def generate_trip_cover(trip_id: str, force: bool = False):
 # 2. Character portraits — per-member archetype art cards
 # ---------------------------------------------------------------------------
 
-_ARCHETYPE_VISUAL = {
-    "Black Cat":             "moody cool-toned shadows, dark indigo palette, mysterious elegant composition",
-    "Golden Retriever":      "warm sunshine yellow, bright energetic chaos, golden warmth spilling everywhere",
-    "Emotional Support NPC": "soft muted earth tones, gentle worn textures, comfortable calm browns",
-    "Main Character":        "bold high-contrast center-frame drama, vivid palette, cinematic presence",
-    "Chaos Source":          "vivid reds and electric oranges, chaotic layered composition, motion energy",
-}
+def _chaos_visual(chaos_rating: int) -> str:
+    """Map chaos rating (0-10) to a visual style for portrait art generation."""
+    if chaos_rating >= 9:
+        return "vivid reds and electric oranges, chaotic layered composition, motion blur energy"
+    if chaos_rating >= 7:
+        return "bold high-contrast drama, warm ambers and deep shadows, cinematic presence"
+    if chaos_rating >= 5:
+        return "warm ambient golden light, dynamic but grounded composition, candid mood"
+    if chaos_rating >= 3:
+        return "soft muted earth tones, gentle worn textures, calm and composed atmosphere"
+    return "moody cool-toned shadows, quiet indigo palette, still and observational"
 
 
 async def generate_character_portraits(trip_id: str, force: bool = False):
@@ -275,9 +294,8 @@ async def generate_character_portraits(trip_id: str, force: bool = False):
 async def _gen_portrait(trip_id: str, member: dict):
     uid = member["user_id"]
     role = member.get("role_title", "The Mysterious One")
-    archetype = member.get("role_archetype_tag", "NPC")
     chaos = member.get("role_chaos_rating") or 5
-    visual = _ARCHETYPE_VISUAL.get(archetype, "warm ambient Indian light, candid mood")
+    visual = _chaos_visual(int(chaos))
     energy = "electric chaotic" if chaos >= 8 else "moderate dynamic" if chaos >= 5 else "calm composed"
 
     prompt = (

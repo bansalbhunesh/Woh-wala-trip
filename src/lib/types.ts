@@ -81,7 +81,7 @@ export interface MemberRole {
   role_most_likely_said?: string;
   role_archetype_tag?: string;
   chaos_rating: number;
-  archetype?: 'Black Cat' | 'Golden Retriever' | 'NPC' | 'Main Character' | 'Chaos Source';
+  archetype?: string; // freeform behavioral descriptor — e.g. "three plans, none executed"
 }
 
 export type CookedVerdict =

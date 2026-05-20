@@ -14,7 +14,7 @@ export function GeneratingState({ tripId }: Props) {
     { label: 'Reviewing the evidence', sub: 'Reading your photo dump...' },
     { label: 'Identifying the chaos source', sub: 'Someone is responsible for 37% of this.' },
     { label: 'Calculating delusion index', sub: 'How cooked were you, really?' },
-    { label: 'Assigning character roles', sub: 'The Golden Retriever has been identified.' },
+    { label: 'Assigning character roles', sub: 'Behaviours detected. Labels incoming.' },
     { label: 'Writing the season recap', sub: 'The AI historian is taking notes.' },
     { label: 'Finalising the lore', sub: 'Almost ready to expose everything.' },
   ];

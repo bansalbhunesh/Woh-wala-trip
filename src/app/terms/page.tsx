@@ -62,7 +62,7 @@ export default function TermsPage() {
             </em>
           </h1>
           <p className="font-data text-sm pt-2" style={{ color: 'rgba(245,240,232,0.35)' }}>
-            Last updated: May 2025 &nbsp;·&nbsp; Effective immediately
+            Last updated: May 2026 &nbsp;·&nbsp; Effective immediately
           </p>
         </div>
 
@@ -113,11 +113,11 @@ export default function TermsPage() {
               responsible for keeping your email account secure. If you suspect unauthorised access
               to your Yaarlore account, contact us immediately at{' '}
               <a
-                href="mailto:bhuneshbansal20039888@gmail.com"
+                href="mailto:hello@yaarlore.app"
                 className="underline underline-offset-2 hover:opacity-80"
                 style={{ color: 'rgba(245,240,232,0.8)' }}
               >
-                bhuneshbansal20039888@gmail.com
+                hello@yaarlore.app
               </a>
               .
             </p>
@@ -396,11 +396,11 @@ export default function TermsPage() {
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               Questions about these Terms:{' '}
               <a
-                href="mailto:bhuneshbansal20039888@gmail.com"
+                href="mailto:hello@yaarlore.app"
                 className="underline underline-offset-2 hover:opacity-80"
                 style={{ color: 'rgba(245,240,232,0.8)' }}
               >
-                bhuneshbansal20039888@gmail.com
+                hello@yaarlore.app
               </a>
             </p>
           </section>

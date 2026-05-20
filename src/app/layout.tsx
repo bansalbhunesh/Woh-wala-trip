@@ -47,6 +47,11 @@ export const metadata = {
     icon: [{ url: '/icon.png', type: 'image/png' }],
     apple: [{ url: '/icon.png', type: 'image/png' }],
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Yaarlore',
+  },
   openGraph: {
     title: "Yaarlore — Your Friend Group's Trip Documentary",
     description:
@@ -89,7 +94,9 @@ export const viewport = {
   initialScale: 1,
   // maximumScale removed — locking zoom violates WCAG 1.4.4 and provides no
   // real benefit. iOS Safari will still respect the cinematic layout.
-  themeColor: '#FAF8F3',
+  // viewportFit=cover enables safe-area-inset-* CSS env vars (iPhone notch/home bar).
+  viewportFit: 'cover' as const,
+  themeColor: '#FF4D4D',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -103,9 +110,38 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className="overflow-x-hidden"
         style={{ background: 'oklch(97% 0.008 70)', color: 'oklch(16% 0.015 60)' }}
       >
+        {/* Skip to main content — WCAG 2.4.1: keyboard users can bypass navigation */}
+        <a href="#main-content" className="skip-to-main">
+          Skip to main content
+        </a>
         <TRPCProvider>
-          <PostHogProvider>{children}</PostHogProvider>
+          <PostHogProvider>
+            {/* id="main-content" is the skip-link anchor target.
+                Pages define their own <main> landmark internally;
+                we just need this id to exist as a jump target. */}
+            <div id="main-content">{children}</div>
+          </PostHogProvider>
         </TRPCProvider>
+        {/* Scroll-reveal IntersectionObserver — activates .reveal elements as they enter viewport */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+  if(typeof IntersectionObserver==='undefined')return;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('revealed');io.unobserve(e.target);}
+    });
+  },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
+  function observe(){
+    document.querySelectorAll('.reveal,.reveal-fast').forEach(function(el){io.observe(el);});
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',observe);}
+  else{observe();}
+  var mo=new MutationObserver(observe);
+  mo.observe(document.body,{childList:true,subtree:true});
+})();`,
+          }}
+        />
       </body>
     </html>
   );

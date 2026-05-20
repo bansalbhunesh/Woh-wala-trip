@@ -532,7 +532,7 @@ class LoreOrchestrator:
             )
 
             response = await anthropic_client.messages.create(
-                model="claude-haiku-20241022",
+                model=settings.CLAUDE_HAIKU_MODEL,
                 max_tokens=2048,
                 system=prompts.INCIDENT_EXTRACTION_SYSTEM,
                 messages=[{"role": "user", "content": prompt}],
@@ -818,8 +818,9 @@ class LoreOrchestrator:
                 ]
                 all_incidents = current_incidents + new_incidents
 
-                # Upsert Group Lore OS
+                # Upsert Group Lore OS — group_hash must be in payload for ON CONFLICT to match
                 upsert_payload = {
+                    "group_hash": hash_val,
                     "canonical_members": sorted_ids,
                     "last_trip_id": trip_id,
                     "trip_count": (existing_record or {}).get("trip_count", 0) + 1,
@@ -927,35 +928,30 @@ class LoreOrchestrator:
     # -------------------------------------------------------------------------
 
     def _notify_lore_ready(self, trip_id: str) -> None:
-        """POST to Next.js /api/notify/lore-ready so the trip creator gets an email.
+        """Schedule a non-blocking POST to Next.js /api/notify/lore-ready.
 
-        Completely non-blocking and non-fatal — any exception is swallowed and
-        logged so it never affects the lore pipeline result.
+        Fires as an asyncio background task so it never stalls the pipeline.
+        Any exception is logged and swallowed.
         """
-        from src.config import settings
-        import urllib.request
-
         base_url = settings.NEXTJS_BASE_URL.rstrip("/")
         if not base_url:
             log.debug(f"[{trip_id}] NEXTJS_BASE_URL not set — skipping lore-ready notification")
             return
 
-        try:
-            payload = f'{{"trip_id":"{trip_id}"}}'.encode()
-            url = f"{base_url}/api/notify/lore-ready"
-            http_req = urllib.request.Request(
-                url,
-                data=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {settings.AI_WORKER_SECRET}",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(http_req, timeout=10) as resp:
-                log.info(f"[{trip_id}] lore-ready notification sent — status={resp.status}")
-        except Exception as exc:
-            log.warning(f"[{trip_id}] lore-ready notification failed (non-fatal): {exc}")
+        async def _post():
+            import httpx
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.post(
+                        f"{base_url}/api/notify/lore-ready",
+                        json={"trip_id": trip_id},
+                        headers={"Authorization": f"Bearer {settings.AI_WORKER_SECRET}"},
+                    )
+                    log.info(f"[{trip_id}] lore-ready notification sent — status={resp.status_code}")
+            except Exception as exc:
+                log.warning(f"[{trip_id}] lore-ready notification failed (non-fatal): {exc}")
+
+        asyncio.create_task(_post())
 
     # -------------------------------------------------------------------------
     # Phase 1 / OBS-02: Pipeline state tracking with per-step timestamps
@@ -1186,9 +1182,10 @@ class LoreOrchestrator:
         max_photos  = bs * max_batches
 
         if len(photos) > max_photos:
-            step_size = len(photos) / max_photos
+            original_count = len(photos)
+            step_size = original_count / max_photos
             photos    = [photos[int(i * step_size)] for i in range(max_photos)]
-            log.info(f"[{trip['id']}] sampled {max_photos}/{len(photos)} photos for vision (cap={max_photos})")
+            log.info(f"[{trip['id']}] sampled {max_photos}/{original_count} photos for vision (cap={max_photos})")
 
         batches = [photos[i:i + bs] for i in range(0, len(photos), bs)]
         log.info(f"[{trip['id']}] analyzing {len(photos)} photos in {len(batches)} batches")
@@ -1438,14 +1435,28 @@ class LoreOrchestrator:
         _CONTEXT_CHAR_LIMIT = 16_000
         full_batch_json     = json.dumps(batches, indent=2)
         if len(full_batch_json) > _CONTEXT_CHAR_LIMIT:
-            scored   = sorted(batches, key=lambda b: len(json.dumps(b)), reverse=True)
+            # Preserve temporal spread: keep first, last, and evenly-spaced middle batches
+            # so the aggregator sees coverage across the whole trip, not just the densest batches.
+            if len(batches) <= 2:
+                trimmed = batches
+            else:
+                step = max(1, (len(batches) - 1) / (len(batches) - 1))
+                indices = list(dict.fromkeys(
+                    [0]
+                    + [round(i * (len(batches) - 1) / max(len(batches) - 1, 1)) for i in range(1, len(batches) - 1)]
+                    + [len(batches) - 1]
+                ))
+                trimmed = [batches[i] for i in sorted(indices)]
+
             kept: list[dict] = []
             used_chars = 0
-            for b in scored:
+            for b in trimmed:
                 s = json.dumps(b)
                 if used_chars + len(s) <= _CONTEXT_CHAR_LIMIT:
                     kept.append(b)
                     used_chars += len(s)
+                else:
+                    break
             log.info(
                 f"[{trip['id']}] context guard: {len(batches)} → {len(kept)} batches "
                 f"({len(full_batch_json)} → {used_chars} chars)"
@@ -1509,7 +1520,10 @@ class LoreOrchestrator:
             try:
                 extra = callback_context  # inject mythology callbacks
                 if attempt > 0:
-                    extra += "\n\nYour last response was rejected. Return ONLY raw JSON. Be more specific. Avoid generic phrases."
+                    extra += (
+                        f"\n\nYour last response was rejected with this error: {last_err!s:.300}. "
+                        "Return ONLY raw JSON. Fix the specific issue above. Be more specific to this trip's actual events."
+                    )
                 lore     = await self._generate_lore(trip, aggregated, confessions, extra, low_confidence=low_confidence)
                 validate_lore_json(lore)
                 forbidden = scan_forbidden_phrases(lore)
@@ -1788,7 +1802,10 @@ class LoreOrchestrator:
                 }
                 for i, era in enumerate(lore["trip_eras"])
             ]
-            supabase.table("trip_eras").upsert(era_rows).execute()
+            # Delete before insert — idempotent on retries, avoids duplicate rows
+            # when there is no reliable unique constraint on (trip_id, display_order).
+            supabase.table("trip_eras").delete().eq("trip_id", trip_id).execute()
+            supabase.table("trip_eras").insert(era_rows).execute()
 
     def _save_roles(self, trip_id: str, roles: list[dict]):
         for role in roles:
@@ -1798,6 +1815,7 @@ class LoreOrchestrator:
                 "role_title":        role.get("role_title"),
                 "role_description":  role.get("role_description"),
                 "role_chaos_rating": role.get("chaos_rating"),
+                "role_archetype_tag": role.get("archetype_tag") or role.get("archetype"),
             }).eq("trip_id", trip_id).eq("user_id", role["user_id"]).execute()
 
     def _save_stats(self, trip_id: str, stats: list[dict]):
@@ -1878,22 +1896,33 @@ class LoreOrchestrator:
             .execute()
             .data
         )
+        if not battle:
+            log.error(f"[{battle_id}] battle not found")
+            return
         trip_a, trip_b = battle["trip_a"], battle["trip_b"]
+        if not trip_a or not trip_b:
+            log.error(f"[{battle_id}] battle trip references missing")
+            return
+        if not trip_a.get("lore_json"):
+            raise ValueError(f"[{battle_id}] trip_a has no lore_json — generate lore first")
+        if not trip_b.get("lore_json"):
+            raise ValueError(f"[{battle_id}] trip_b has no lore_json — generate lore first")
 
+        lore_a, lore_b = trip_a["lore_json"], trip_b["lore_json"]
         user_prompt = prompts.TRIP_VS_TRIP_USER.format(
-            trip_a_title=trip_a["lore_json"].get("trip_title", trip_a["name"]),
+            trip_a_title=lore_a.get("trip_title", trip_a.get("name", "Unknown")),
             trip_a_destination=trip_a.get("destination", "unknown"),
             trip_a_cooked_score=trip_a.get("chaos_score", 50),
-            trip_a_personality=trip_a["lore_json"].get("trip_personality_type", ""),
-            trip_a_tagline=trip_a["lore_json"].get("tagline", ""),
-            trip_a_verdict=trip_a["lore_json"].get("cooked_verdict", ""),
+            trip_a_personality=lore_a.get("trip_personality_type", ""),
+            trip_a_tagline=lore_a.get("tagline", ""),
+            trip_a_verdict=lore_a.get("cooked_verdict", ""),
             trip_a_members=trip_a.get("member_count", 0),
-            trip_b_title=trip_b["lore_json"].get("trip_title", trip_b["name"]),
+            trip_b_title=lore_b.get("trip_title", trip_b.get("name", "Unknown")),
             trip_b_destination=trip_b.get("destination", "unknown"),
             trip_b_cooked_score=trip_b.get("chaos_score", 50),
-            trip_b_personality=trip_b["lore_json"].get("trip_personality_type", ""),
-            trip_b_tagline=trip_b["lore_json"].get("tagline", ""),
-            trip_b_verdict=trip_b["lore_json"].get("cooked_verdict", ""),
+            trip_b_personality=lore_b.get("trip_personality_type", ""),
+            trip_b_tagline=lore_b.get("tagline", ""),
+            trip_b_verdict=lore_b.get("cooked_verdict", ""),
             trip_b_members=trip_b.get("member_count", 0),
         )
 
@@ -2017,6 +2046,15 @@ class LoreOrchestrator:
             cleaned = cleaned[start:]
         try:
             return json.loads(cleaned)
-        except json.JSONDecodeError as e:
-            log.error(f"JSON parse failed: {e}\nRaw (first 800 chars):\n{raw[:800]}")
-            raise ValueError(f"Claude returned invalid JSON: {e}")
+        except json.JSONDecodeError:
+            # Claude occasionally returns Python-style literals (True/False/None).
+            # ast.literal_eval handles these safely with no arbitrary code execution.
+            import ast
+            try:
+                result = ast.literal_eval(cleaned)
+                if isinstance(result, (dict, list)):
+                    return result
+            except (ValueError, SyntaxError):
+                pass
+            log.error(f"JSON parse failed\nRaw (first 800 chars):\n{raw[:800]}")
+            raise ValueError(f"Claude returned invalid JSON — not parseable as JSON or Python literal")

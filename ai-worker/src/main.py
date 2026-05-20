@@ -102,13 +102,19 @@ async def poll_background_jobs():
                 job_type = job["job_type"]
                 payload = job.get("payload") or {}
 
-                # Atomic claim — only proceeds if still pending (guard against duplicate workers)
-                await asyncio.to_thread(
+                # Atomic claim — UPDATE only matches if still 'pending'; another worker
+                # racing here will update 0 rows and the job will not be double-processed.
+                claim_result = await asyncio.to_thread(
                     lambda: supabase.table("background_jobs").update({
                         "status":     "claimed",
                         "claimed_at": datetime.now(timezone.utc).isoformat(),
                     }).eq("id", jid).eq("status", "pending").execute()
                 )
+                # If another worker already claimed this job, rows_affected == 0 — skip.
+                rows_claimed = len(claim_result.data) if claim_result.data else 0
+                if rows_claimed == 0:
+                    log.info(f"[bg-jobs] job {jid} already claimed by another worker — skipping")
+                    continue
                 log.info(f"[bg-jobs] claimed {job_type} job {jid} for trip {trip_id}")
 
                 try:
@@ -265,8 +271,9 @@ async def check_and_set_cooldown(trip_id: str, cooldown_seconds: int = _LORE_COO
                 f"{redis_url}/set/{key}/1/EX/{cooldown_seconds}/NX",
                 headers={"Authorization": f"Bearer {redis_token}"},
             )
+            # Upstash REST wraps responses: {"result": "OK"} on success, {"result": null} if key existed.
             result = resp.json()
-            return result == "OK"
+            return result.get("result") == "OK"
     except Exception as e:
         # Redis unavailable — fall back to in-memory so generation isn't blocked
         log.warning(f"[redis-cooldown] Redis check failed ({e!r}), falling back to in-memory")

@@ -180,9 +180,20 @@ export default function NewTripPage() {
         >
           yaarlore
         </span>
-        <span className="font-mono text-[9px] uppercase tracking-widest opacity-40">
-          {step > 0 && step <= 5 ? `SECURE RECORD // 0${step}` : 'PORTAL ENTRY'}
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="font-mono text-[9px] uppercase tracking-widest opacity-55">
+            {step > 0 && step <= 5 ? `RECORD // 0${step}` : ''}
+          </span>
+          {/* Exit to trips dashboard — gives users a clear escape */}
+          <button
+            onClick={() => router.push('/trips')}
+            className="font-mono text-[9px] uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+            style={{ color: 'oklch(50% 0.01 60)' }}
+            title="Cancel and go to My Trips"
+          >
+            ✕
+          </button>
+        </div>
       </nav>
 
       {/* Main Questionnaire Stage */}
@@ -234,7 +245,7 @@ export default function NewTripPage() {
                       setStep(1);
                     }}
                     onMouseEnter={() => triggerChime(1.3)}
-                    className="px-8 py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] transition-all hover:scale-[1.03] active:scale-95 shadow-md shadow-black/[0.04]"
+                    className="px-8 py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] transition-all hover:scale-[1.03] active:scale-95 shadow-md shadow-black/[0.04]"
                     style={{
                       background: 'oklch(16% 0.015 60)',
                       color: 'oklch(97% 0.008 70)',
@@ -256,22 +267,32 @@ export default function NewTripPage() {
                 className="space-y-6"
               >
                 <div className="space-y-1">
-                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.35em] opacity-55">
                     SAGA IDENTITY // 01
                   </span>
-                  <h2 className="font-display font-black text-4xl uppercase tracking-tight">
+                  <h2
+                    id="step-1-label"
+                    className="font-display font-black text-4xl uppercase tracking-tight"
+                  >
                     What is the title of this season?
                   </h2>
-                  <p className="font-display italic text-sm opacity-60">
+                  <p id="step-1-hint" className="font-display italic text-sm opacity-60">
                     The official name of your trip's archive. Make it dramatic.
                   </p>
                 </div>
 
                 <div className="relative pt-4">
+                  <label htmlFor="trip-name" className="sr-only">
+                    Trip title
+                  </label>
                   <input
+                    id="trip-name"
                     ref={inputRef}
                     type="text"
                     value={fields.name}
+                    aria-labelledby="step-1-label"
+                    aria-describedby="step-1-hint"
+                    aria-required="true"
                     onChange={e => setFields(f => ({ ...f, name: e.target.value }))}
                     onKeyDown={handleKeyDown}
                     placeholder={HINT_PRESETS.name[activeHintIndex]}
@@ -285,7 +306,7 @@ export default function NewTripPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-6">
-                  <span className="font-mono text-[9px] text-black/30">
+                  <span className="font-mono text-[9px] text-black/50">
                     Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
                     proceed
                   </span>
@@ -315,7 +336,7 @@ export default function NewTripPage() {
                 className="space-y-6"
               >
                 <div className="space-y-1">
-                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.35em] opacity-55">
                     THEATER OF OPERATIONS // 02
                   </span>
                   <h2 className="font-display font-black text-4xl uppercase tracking-tight">
@@ -346,7 +367,7 @@ export default function NewTripPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-6">
-                  <span className="font-mono text-[9px] text-black/30">
+                  <span className="font-mono text-[9px] text-black/50">
                     Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
                     skip or proceed
                   </span>
@@ -375,7 +396,7 @@ export default function NewTripPage() {
                 className="space-y-6"
               >
                 <div className="space-y-1">
-                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.35em] opacity-55">
                     TIMELINE ENTRY // 03
                   </span>
                   <h2 className="font-display font-black text-4xl uppercase tracking-tight">
@@ -404,7 +425,7 @@ export default function NewTripPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-6">
-                  <span className="font-mono text-[9px] text-black/30">
+                  <span className="font-mono text-[9px] text-black/50">
                     Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
                     proceed
                   </span>
@@ -434,7 +455,7 @@ export default function NewTripPage() {
                 className="space-y-6"
               >
                 <div className="space-y-1">
-                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.35em] opacity-55">
                     TIMELINE EXIT // 04
                   </span>
                   <h2 className="font-display font-black text-4xl uppercase tracking-tight">
@@ -464,7 +485,7 @@ export default function NewTripPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-6">
-                  <span className="font-mono text-[9px] text-black/30">
+                  <span className="font-mono text-[9px] text-black/50">
                     Press <span className="font-bold border px-1.5 py-0.5 rounded">Enter ↵</span> to
                     review
                   </span>
@@ -494,7 +515,7 @@ export default function NewTripPage() {
                 className="space-y-8"
               >
                 <div className="space-y-1 text-center">
-                  <span className="font-mono text-[8px] uppercase tracking-[0.4em] opacity-40">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.35em] opacity-55">
                     READY FOR LAUNCH // 05
                   </span>
                   <h2 className="font-display font-black text-4xl uppercase tracking-tight">
@@ -515,7 +536,7 @@ export default function NewTripPage() {
                 >
                   <div className="grid grid-cols-2 gap-y-4 gap-x-2">
                     <div>
-                      <p className="font-mono text-[8px] tracking-widest opacity-40">
+                      <p className="font-mono text-[9px] tracking-widest opacity-60">
                         SEASON TITLE
                       </p>
                       <p className="font-display italic font-black text-lg truncate leading-tight">
@@ -523,13 +544,13 @@ export default function NewTripPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="font-mono text-[8px] tracking-widest opacity-40">LOCATION</p>
+                      <p className="font-mono text-[9px] tracking-widest opacity-60">LOCATION</p>
                       <p className="font-display italic font-black text-lg truncate leading-tight">
                         {fields.destination || 'Top Classified'}
                       </p>
                     </div>
                     <div>
-                      <p className="font-mono text-[8px] tracking-widest opacity-40">
+                      <p className="font-mono text-[9px] tracking-widest opacity-60">
                         PREMIERE DATE
                       </p>
                       <p className="font-mono font-bold text-sm leading-tight">
@@ -537,7 +558,7 @@ export default function NewTripPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="font-mono text-[8px] tracking-widest opacity-40">FINALE DATE</p>
+                      <p className="font-mono text-[9px] tracking-widest opacity-60">FINALE DATE</p>
                       <p className="font-mono font-bold text-sm leading-tight">{fields.endDate}</p>
                     </div>
                   </div>
@@ -555,7 +576,7 @@ export default function NewTripPage() {
                     }
                     disabled={!isFormFullyReady || createTrip.isPending}
                     onMouseEnter={() => isFormFullyReady && triggerChime(1.4)}
-                    className="w-full py-4.5 rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30 transition-all hover:scale-[1.01] active:scale-95 shadow-md shadow-black/[0.04]"
+                    className="w-full py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30 transition-all hover:scale-[1.01] active:scale-95 shadow-md shadow-black/[0.04]"
                     style={{
                       background: 'oklch(16% 0.015 60)',
                       color: 'oklch(97% 0.008 70)',
@@ -613,7 +634,7 @@ export default function NewTripPage() {
 
           {/* Stepper Dots Indicator */}
           {step > 0 && step <= 4 && (
-            <div className="flex justify-center items-center gap-2 pt-12">
+            <nav aria-label="Form steps" className="flex justify-center items-center gap-2 pt-12">
               {[1, 2, 3, 4].map(s => (
                 <button
                   key={s}
@@ -621,14 +642,16 @@ export default function NewTripPage() {
                     triggerChime(0.9 + s * 0.08);
                     setStep(s);
                   }}
-                  className="w-1.5 h-1.5 rounded-full transition-all duration-300"
+                  aria-label={`Go to step ${s}${s === step ? ' (current)' : ''}`}
+                  aria-current={s === step ? 'step' : undefined}
+                  className="w-1.5 h-1.5 rounded-full transition-all duration-300 no-min-h"
                   style={{
                     background: s === step ? 'oklch(60% 0.22 25)' : 'oklch(80% 0.015 70)',
                     transform: s === step ? 'scale(1.5)' : 'scale(1)',
                   }}
                 />
               ))}
-            </div>
+            </nav>
           )}
         </div>
       </div>

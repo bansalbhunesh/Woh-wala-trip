@@ -1,9 +1,5 @@
 'use client';
 
-// Root error boundary. Replaces Next.js' default error overlay with a
-// brand-coherent shell so production crashes still feel like Yaarlore.
-// Per-route segments can still ship their own error.tsx; this only catches
-// the cases that bubble all the way up.
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -14,8 +10,6 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Forward to Sentry if it's wired (no-op otherwise — we don't add a hard
-    // dependency here so this stays a tiny static shell).
     if (typeof window !== 'undefined') {
       const sentry = (window as unknown as { Sentry?: { captureException: (e: unknown) => void } })
         .Sentry;
@@ -25,95 +19,67 @@ export default function GlobalError({
 
   return (
     <div
-      style={{
-        minHeight: '100vh',
-        background: '#060604',
-        color: '#F5F0E8',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-        textAlign: 'center',
-        fontFamily: 'monospace',
-        gap: '1.25rem',
-      }}
+      className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
+      style={{ background: '#060604', color: '#F5F0E8' }}
     >
-      <p
-        style={{
-          fontSize: 10,
-          letterSpacing: '0.6em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,77,77,0.55)',
-          margin: 0,
-        }}
-      >
-        ● SIGNAL LOST
-      </p>
-      <h1
-        style={{
-          fontSize: 'clamp(28px, 7vw, 48px)',
-          fontWeight: 900,
-          letterSpacing: '-0.03em',
-          textTransform: 'uppercase',
-          margin: 0,
-          lineHeight: 0.9,
-        }}
-      >
-        Something broke
-      </h1>
-      <p
-        style={{
-          maxWidth: 360,
-          fontSize: 13,
-          color: 'rgba(245,240,232,0.4)',
-          lineHeight: 1.5,
-          margin: 0,
-        }}
-      >
-        The archive hit an unexpected error. Try again — your data is safe.
-      </p>
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-        <button
-          onClick={() => reset()}
-          style={{
-            padding: '14px 28px',
-            borderRadius: 999,
-            fontSize: 10,
-            letterSpacing: '0.35em',
-            textTransform: 'uppercase',
-            fontWeight: 900,
-            color: '#060604',
-            background: '#F5F0E8',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          Try again
-        </button>
-        <a
-          href="/"
-          style={{
-            padding: '14px 28px',
-            borderRadius: 999,
-            fontSize: 10,
-            letterSpacing: '0.35em',
-            textTransform: 'uppercase',
-            color: 'rgba(245,240,232,0.7)',
-            border: '1px solid rgba(245,240,232,0.15)',
-            textDecoration: 'none',
-          }}
-        >
-          ← Yaarlore
-        </a>
-      </div>
-      {error?.digest && (
+      <div className="film-grain pointer-events-none" />
+
+      <div className="relative z-10 space-y-5 max-w-sm">
         <p
-          style={{ fontSize: 9, color: 'rgba(245,240,232,0.2)', margin: 0, letterSpacing: '0.2em' }}
+          className="font-mono text-[9px] uppercase tracking-[0.6em]"
+          style={{ color: 'rgba(255,77,77,0.55)' }}
         >
-          ref: {error.digest}
+          ● SIGNAL LOST
         </p>
-      )}
+
+        <h1
+          className="font-display font-black uppercase leading-[0.88] tracking-tighter"
+          style={{ fontSize: 'clamp(32px, 8vw, 60px)' }}
+        >
+          Something
+          <br />
+          <em className="italic" style={{ color: 'rgba(255,77,77,0.7)' }}>
+            broke
+          </em>
+        </h1>
+
+        <p
+          className="font-display italic text-sm leading-relaxed"
+          style={{ color: 'rgba(245,240,232,0.4)' }}
+        >
+          The archive hit an unexpected error. Your data is safe — this is on us.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+          <button
+            onClick={() => reset()}
+            className="inline-flex items-center justify-center px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest transition-all hover:scale-[1.02]"
+            style={{ background: '#F5F0E8', color: '#060604', border: 'none', cursor: 'pointer' }}
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center px-8 py-4 rounded-full font-ui font-black text-[10px] uppercase tracking-widest transition-all"
+            style={{
+              border: '1px solid rgba(245,240,232,0.15)',
+              color: 'rgba(245,240,232,0.7)',
+              textDecoration: 'none',
+            }}
+          >
+            ← Yaarlore
+          </a>
+        </div>
+
+        {error?.digest && (
+          <p
+            className="font-mono text-[8px] pt-2"
+            style={{ color: 'rgba(245,240,232,0.2)', letterSpacing: '0.2em' }}
+          >
+            ref: {error.digest}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

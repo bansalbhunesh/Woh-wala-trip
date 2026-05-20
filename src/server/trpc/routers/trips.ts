@@ -410,8 +410,11 @@ export const tripsRouter = router({
         });
       }
 
-      // Count actual photos — don't trust the cached total_photos column
-      const { count: photoCount } = await ctx.supabase
+      // Count actual photos via service client — avoids silent RLS failures on
+      // ctx.supabase (user-scoped) returning null when photos exist but RLS
+      // policies haven't propagated yet on a fresh session.
+      const adminForCount = createSupabaseServiceClient();
+      const { count: photoCount } = await adminForCount
         .from('photos')
         .select('id', { count: 'exact', head: true })
         .eq('trip_id', input.tripId);
@@ -424,11 +427,14 @@ export const tripsRouter = router({
       }
 
       const workerUrl = process.env.AI_WORKER_URL;
-      if (!workerUrl || workerUrl.includes('localhost')) {
+      if (!workerUrl) {
+        logger.error(
+          { procedure: 'trips.generateLore', userId: ctx.user.id },
+          'AI_WORKER_URL not set — lore engine unavailable'
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message:
-            'Lore engine is offline. Make sure AI_WORKER_URL is set to your deployed worker.',
+          message: 'Lore engine is temporarily unavailable. Please try again in a few minutes.',
         });
       }
 

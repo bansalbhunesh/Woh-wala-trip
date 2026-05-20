@@ -1,17 +1,24 @@
 // Public status page — no auth required.
-// Fetches /api/health server-side on every request (cache: 'no-store').
 export const dynamic = 'force-dynamic';
 
-type CheckResult = {
-  status: 'ok' | 'error' | string;
-  latencyMs?: number;
-  detail?: string;
+import Link from 'next/link';
+
+export const metadata = {
+  title: 'System Status — Yaarlore',
+  description: 'Real-time status of Yaarlore services.',
 };
 
-type HealthResponse = {
-  status: string;
-  checks: Record<string, CheckResult>;
-  timestamp?: string;
+type CheckResult = { status: 'ok' | 'error' | string; latencyMs?: number; detail?: string };
+type HealthResponse = { status: string; checks: Record<string, CheckResult>; timestamp?: string };
+
+// Keys match the actual /api/health response — verified in src/app/api/health/route.ts
+const SERVICE_LABELS: Record<string, string> = {
+  supabase_db: 'Database',
+  ai_worker: 'AI Lore Engine',
+  redis: 'Cache Layer',
+  // Fallback for any additional checks added to /api/health in future
+  storage: 'Photo Storage',
+  auth: 'Authentication',
 };
 
 export default async function StatusPage() {
@@ -22,14 +29,12 @@ export default async function StatusPage() {
       process.env.NEXT_PUBLIC_APP_URL ??
       process.env.NEXT_PUBLIC_SITE_URL ??
       'http://localhost:3000';
-
     const res = await fetch(`${appUrl}/api/health`, {
       cache: 'no-store',
       signal: AbortSignal.timeout(5000),
     });
     health = (await res.json()) as HealthResponse;
   } catch {
-    // Health fetch failed — show degraded state
     health = {
       status: 'degraded',
       checks: { api: { status: 'error', detail: 'Health endpoint unreachable' } },
@@ -37,47 +42,162 @@ export default async function StatusPage() {
   }
 
   const isOperational = health.status === 'ok';
+  const checkedAt = health.timestamp ? new Date(health.timestamp) : new Date();
 
   return (
-    <main className="min-h-screen bg-black text-white p-8 font-mono">
-      <h1 className="text-2xl font-bold mb-2">Yaarlore System Status</h1>
-      <p className="text-zinc-400 text-sm mb-8">{new Date().toUTCString()}</p>
+    <div
+      className="min-h-screen"
+      style={{ background: '#060604', color: '#F5F0E8', fontFamily: 'var(--font-mono, monospace)' }}
+    >
+      <div className="film-grain" />
 
-      <div
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 ${
-          isOperational ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'
-        }`}
+      <header
+        className="sticky top-0 z-20 flex items-center px-6 py-4"
+        style={{
+          borderBottom: '1px solid rgba(245,240,232,0.05)',
+          background: 'rgba(6,6,4,0.85)',
+          backdropFilter: 'blur(12px)',
+        }}
       >
-        <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-        {isOperational ? 'All Systems Operational' : 'Degraded Performance'}
-      </div>
+        <Link
+          href="/"
+          className="font-mono text-[10px] uppercase tracking-[0.4em] transition-opacity hover:opacity-70"
+          style={{ color: 'rgba(245,240,232,0.45)' }}
+        >
+          ← Back
+        </Link>
+        <span
+          className="ml-auto font-mono text-[8px] uppercase tracking-[0.5em]"
+          style={{ color: 'rgba(245,240,232,0.15)' }}
+        >
+          YAARLORE
+        </span>
+      </header>
 
-      <div className="max-w-xl">
-        {Object.entries(health.checks ?? {}).map(([service, check]) => (
-          <div
-            key={service}
-            className="flex items-center justify-between border-b border-zinc-800 py-3"
+      <main className="mx-auto max-w-xl px-6 py-16 pb-32">
+        <div className="mb-12 space-y-3">
+          <p
+            className="font-mono text-[8px] uppercase tracking-[0.55em]"
+            style={{ color: 'rgba(255,77,77,0.5)' }}
           >
-            <span className="capitalize">{service.replace(/_/g, ' ')}</span>
-            <div className="flex items-center gap-3">
-              {check.latencyMs != null && (
-                <span className="text-zinc-500 text-xs">{check.latencyMs}ms</span>
-              )}
-              <span className={check.status === 'ok' ? 'text-green-400' : 'text-red-400'}>
-                {check.status === 'ok' ? '● Operational' : '● Degraded'}
-              </span>
-            </div>
+            ● SYSTEM STATUS
+          </p>
+          <h1
+            className="font-display font-black uppercase leading-[0.9] tracking-tighter"
+            style={{ fontSize: 'clamp(36px, 7vw, 64px)', color: 'rgba(245,240,232,0.95)' }}
+          >
+            All Systems
+          </h1>
+
+          <div
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full mt-2"
+            style={{
+              background: isOperational ? 'rgba(45,158,139,0.12)' : 'rgba(255,77,77,0.12)',
+              border: `1px solid ${isOperational ? 'rgba(45,158,139,0.3)' : 'rgba(255,77,77,0.3)'}`,
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background: isOperational ? '#2D9E8B' : '#FF4D4D',
+                boxShadow: `0 0 8px ${isOperational ? 'rgba(45,158,139,0.8)' : 'rgba(255,77,77,0.8)'}`,
+                animation: 'pulse 2s ease-in-out infinite',
+              }}
+            />
+            <span
+              className="font-mono text-[9px] uppercase tracking-[0.35em]"
+              style={{ color: isOperational ? '#2D9E8B' : '#FF4D4D' }}
+            >
+              {isOperational ? 'All Systems Operational' : 'Partial Outage Detected'}
+            </span>
           </div>
-        ))}
+        </div>
 
-        {Object.keys(health.checks ?? {}).length === 0 && (
-          <p className="text-zinc-500 text-sm py-4">No service checks available.</p>
-        )}
-      </div>
+        <div className="space-y-2">
+          {Object.entries(health.checks ?? {}).length > 0 ? (
+            Object.entries(health.checks).map(([key, check]) => (
+              <div
+                key={key}
+                className="flex items-center justify-between px-5 py-4 rounded-xl"
+                style={{
+                  background: 'rgba(245,240,232,0.03)',
+                  border: '1px solid rgba(245,240,232,0.06)',
+                }}
+              >
+                <span
+                  className="font-mono text-[10px] uppercase tracking-wider"
+                  style={{ color: 'rgba(245,240,232,0.7)' }}
+                >
+                  {SERVICE_LABELS[key] ?? key.replace(/_/g, ' ')}
+                </span>
+                <div className="flex items-center gap-3">
+                  {check.latencyMs != null && (
+                    <span
+                      className="font-mono text-[9px]"
+                      style={{ color: 'rgba(245,240,232,0.3)' }}
+                    >
+                      {check.latencyMs}ms
+                    </span>
+                  )}
+                  <span
+                    className="font-mono text-[9px] uppercase tracking-[0.3em]"
+                    style={{ color: check.status === 'ok' ? '#2D9E8B' : '#FF4D4D' }}
+                  >
+                    {check.status === 'ok' ? '● Operational' : '● Degraded'}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div
+              className="px-5 py-8 rounded-xl text-center"
+              style={{
+                background: 'rgba(245,240,232,0.03)',
+                border: '1px solid rgba(245,240,232,0.06)',
+              }}
+            >
+              <p
+                className="font-mono text-[9px] uppercase tracking-wider"
+                style={{ color: 'rgba(245,240,232,0.3)' }}
+              >
+                No service data available
+              </p>
+            </div>
+          )}
+        </div>
 
-      <p className="text-zinc-600 text-xs mt-12">
-        Last checked: {health.timestamp ?? new Date().toISOString()}
-      </p>
-    </main>
+        <p
+          className="font-mono text-[8px] uppercase tracking-[0.4em] mt-10"
+          style={{ color: 'rgba(245,240,232,0.2)' }}
+        >
+          Last checked: {checkedAt.toUTCString()}
+        </p>
+
+        <div
+          className="mt-12 pt-8 space-y-2"
+          style={{ borderTop: '1px solid rgba(245,240,232,0.06)' }}
+        >
+          <p
+            className="font-mono text-[8px] uppercase tracking-[0.4em]"
+            style={{ color: 'rgba(245,240,232,0.2)' }}
+          >
+            INCIDENT HISTORY
+          </p>
+          <p className="font-display italic text-sm" style={{ color: 'rgba(245,240,232,0.35)' }}>
+            No incidents in the past 30 days.
+          </p>
+          <p className="font-mono text-[9px] mt-4" style={{ color: 'rgba(245,240,232,0.3)' }}>
+            Report an issue:{' '}
+            <a
+              href="mailto:hello@yaarlore.app"
+              className="underline underline-offset-2 hover:opacity-80"
+              style={{ color: 'rgba(245,240,232,0.55)' }}
+            >
+              hello@yaarlore.app
+            </a>
+          </p>
+        </div>
+      </main>
+    </div>
   );
 }

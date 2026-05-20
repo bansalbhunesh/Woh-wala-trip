@@ -871,7 +871,7 @@ export function MoodSoundtrack({
           setIsOpen(!isOpen);
         }}
         title={`Mood Atmosphere Controller // Chaos Score ${cookedScore}%`}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95 z-50 relative focus:outline-none"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95 z-50 relative "
         style={{
           background: active ? `${activeColor}1e` : 'rgba(255,255,255,0.05)',
           border: `1px solid ${active ? activeColor : 'rgba(255,255,255,0.08)'}`,
@@ -929,7 +929,7 @@ export function MoodSoundtrack({
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="font-mono text-[9px] uppercase tracking-widest text-white/35 hover:text-white/60 focus:outline-none"
+                className="font-mono text-[9px] uppercase tracking-widest text-white/35 hover:text-white/60 "
               >
                 CLOSE
               </button>
@@ -1016,7 +1016,7 @@ export function MoodSoundtrack({
                         setActiveTrack(t.id);
                         if (!active) onToggle();
                       }}
-                      className="w-full rounded-lg p-2.5 flex items-center justify-between transition-colors focus:outline-none"
+                      className="w-full rounded-lg p-2.5 flex items-center justify-between transition-colors "
                       style={{
                         background: isSelected ? 'rgba(255,255,255,0.04)' : 'transparent',
                         border: `1.5px solid ${isSelected ? 'rgba(255,255,255,0.08)' : 'transparent'}`,
@@ -1348,7 +1348,7 @@ export function MoodSoundtrack({
             <div className="flex items-center gap-3">
               <button
                 onClick={onToggle}
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-all bg-[#F5F0E8] hover:scale-105 active:scale-95 focus:outline-none"
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-all bg-[#F5F0E8] hover:scale-105 active:scale-95 "
                 style={{ color: '#0A0A08' }}
               >
                 {active ? (
@@ -1360,14 +1360,14 @@ export function MoodSoundtrack({
 
               <button
                 onClick={() => setActiveTrack(t => (t - 1 + TRACKS.length) % TRACKS.length)}
-                className="text-white/45 hover:text-white/80 focus:outline-none"
+                className="text-white/45 hover:text-white/80 "
               >
                 <SkipBack size={12} />
               </button>
 
               <button
                 onClick={() => setActiveTrack(t => (t + 1) % TRACKS.length)}
-                className="text-white/45 hover:text-white/80 focus:outline-none"
+                className="text-white/45 hover:text-white/80 "
               >
                 <SkipForward size={12} />
               </button>
@@ -1377,7 +1377,7 @@ export function MoodSoundtrack({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setVolume(v => (v === 0 ? 0.45 : 0))}
-                className="text-white/40 hover:text-white/75 focus:outline-none"
+                className="text-white/40 hover:text-white/75 "
               >
                 {volume === 0 ? <VolumeX size={13} /> : <Volume2 size={13} />}
               </button>

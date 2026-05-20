@@ -26,9 +26,18 @@ export default function GeneratingPage() {
   const [progress, setProgress] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
+  const [loreStatusResolved, setLoreStatusResolved] = useState(false);
+
   const { data: tripData, refetch } = trpc.trips.getFull.useQuery(
     { tripId },
-    { refetchOnMount: true }
+    {
+      refetchOnMount: true,
+      // Polling fallback: refetch every 15s so mobile users whose WebSocket drops
+      // don't spin forever. Realtime fires immediately; polling is the safety net.
+      // Stop polling once lore status is terminal (ready/failed).
+      refetchInterval: loreStatusResolved ? false : 15_000,
+      refetchIntervalInBackground: false,
+    }
   );
 
   // FREEMIUM-01: check if this is the user's first generation to show the "on us" banner
@@ -83,17 +92,16 @@ export default function GeneratingPage() {
 
   useEffect(() => {
     if (loreStatus === 'ready' && !unlocking) {
-      // Track generation completion
+      setLoreStatusResolved(true);
       analytics.generationCompleted(tripId, trip?.chaos_score ?? 0);
-      // Route to the trip room — the lore is revealed there.
-      // The private /story route now redirects to the public story anyway;
-      // the trip room is the richer authenticated experience.
       setUnlocking(true);
       setProgress(100);
       setTimeout(() => router.push(`/trips/${tripId}`), 1800);
     } else if (loreStatus === 'failed') {
+      setLoreStatusResolved(true);
       router.push(`/trips/${tripId}`);
     } else if (tripData && loreStatus !== 'processing' && loreStatus !== undefined) {
+      setLoreStatusResolved(true);
       router.push(`/trips/${tripId}`);
     }
   }, [loreStatus, router, tripId, tripData, unlocking]);
@@ -170,9 +178,13 @@ export default function GeneratingPage() {
     const easeOutQuart = (x: number) => 1 - Math.pow(1 - x, 4);
 
     let t = 0;
-    const draw = () => {
+    let lastTs = 0;
+    const draw = (timestamp: number) => {
       rafRef.current = requestAnimationFrame(draw);
-      t += 0.008;
+      // Delta-time: 0.008/frame * 60fps = 0.48/s
+      const dt = lastTs > 0 ? Math.min((timestamp - lastTs) / 1000, 0.05) : 1 / 60;
+      lastTs = timestamp;
+      t += dt * 0.48;
 
       ctx.fillStyle = 'rgba(6,6,4,0.88)';
       ctx.fillRect(0, 0, W, H);
@@ -181,20 +193,23 @@ export default function GeneratingPage() {
         cy = H / 2;
       const stageIntensity = 0.15 + (stage / STAGES.length) * 0.85;
 
+      // Drag coefficient: 0.985/frame = exp(-0.015*60) per second
+      const drag = Math.exp(-0.9 * dt);
+
       particles.forEach(p => {
-        p.life += 0.015;
+        p.life += dt * 0.9; // 0.015/frame * 60fps = 0.9/s
         const alpha = ((Math.sin(p.life) + 1) / 2) * stageIntensity;
-        // Pull toward center as stages advance
         const dx = cx - p.x,
           dy = cy - p.y,
           dist = Math.sqrt(dx * dx + dy * dy);
-        const pull = 0.0005 + (stage / STAGES.length) * 0.003;
-        p.vx += (dx / (dist + 1)) * pull;
-        p.vy += (dy / (dist + 1)) * pull;
-        p.vx *= 0.985;
-        p.vy *= 0.985;
-        p.x += p.vx;
-        p.y += p.vy;
+        // Pull normalized: 0.0005/frame * 60 = 0.03/s base, stage adds 0.18/s max
+        const pullPerSec = 0.03 + (stage / STAGES.length) * 0.18;
+        p.vx += (dx / (dist + 1)) * pullPerSec * dt;
+        p.vy += (dy / (dist + 1)) * pullPerSec * dt;
+        p.vx *= drag;
+        p.vy *= drag;
+        p.x += p.vx * dt * 60;
+        p.y += p.vy * dt * 60;
         if (p.x < 0) p.x = W;
         if (p.x > W) p.x = 0;
         if (p.y < 0) p.y = H;
@@ -221,8 +236,8 @@ export default function GeneratingPage() {
         ctx.fill();
       });
 
-      // Central stage ring — expands with progress
-      const ringR = 100 + easeOutQuart(stage / STAGES.length) * 80 + Math.sin(t * 2) * 6;
+      // Central stage ring — breathing at ~0.5Hz (t in seconds, 2*PI*0.5 = π/s)
+      const ringR = 100 + easeOutQuart(stage / STAGES.length) * 80 + Math.sin(t * Math.PI) * 6;
       const ringA = 0.15 + (stage / STAGES.length) * 0.3;
       ctx.save();
       ctx.strokeStyle = `rgba(255,77,77,${ringA})`;
@@ -240,7 +255,7 @@ export default function GeneratingPage() {
       ctx.restore();
     };
 
-    draw();
+    draw(0);
     return () => {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', onResize);
@@ -251,13 +266,21 @@ export default function GeneratingPage() {
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ background: '#060604' }}>
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden="true" />
+
+      {/* Screen reader live region — announces stage changes as they happen */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {currentStage
+          ? `${currentStage.label}: ${currentStage.sub}. ${Math.floor(progress)}% complete.`
+          : ''}
+      </div>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6">
-        {/* Brand */}
+        {/* Brand — decorative, hidden from AT */}
         <p
           className="absolute top-8 left-0 right-0 text-center font-mono text-[8px] uppercase tracking-[0.6em]"
           style={{ color: 'rgba(245,240,232,0.1)' }}
+          aria-hidden="true"
         >
           yaarlore
         </p>
@@ -295,8 +318,8 @@ export default function GeneratingPage() {
         >
           {/* Stage number */}
           <p
-            className="font-mono text-[8px] uppercase tracking-[0.7em]"
-            style={{ color: 'rgba(255,77,77,0.5)' }}
+            className="font-mono text-[9px] uppercase tracking-[0.6em]"
+            style={{ color: 'rgba(255,77,77,0.75)' }}
           >
             ● STAGE {stage + 1} OF {STAGES.length}
           </p>
@@ -317,7 +340,7 @@ export default function GeneratingPage() {
             <p
               className="font-display italic text-sm"
               style={{
-                color: 'rgba(245,240,232,0.3)',
+                color: 'rgba(245,240,232,0.55)',
                 animation: 'fade-in 0.65s cubic-bezier(0.16,1,0.3,1) 0.15s both',
                 willChange: 'opacity',
               }}
@@ -330,14 +353,14 @@ export default function GeneratingPage() {
           {trip?.name && progress >= 50 && (
             <div className="space-y-1" style={{ animation: 'fade-in 1s ease' }}>
               <p
-                className="font-mono text-[7px] uppercase tracking-[0.5em]"
-                style={{ color: 'rgba(245,240,232,0.2)' }}
+                className="font-mono text-[9px] uppercase tracking-[0.4em]"
+                style={{ color: 'rgba(245,240,232,0.45)' }}
               >
                 SUBJECT
               </p>
               <p
                 className="font-display font-black text-xl uppercase"
-                style={{ color: 'rgba(245,240,232,0.6)' }}
+                style={{ color: 'rgba(245,240,232,0.85)' }}
               >
                 {trip.name}
               </p>
@@ -365,6 +388,11 @@ export default function GeneratingPage() {
           {/* Fine progress line */}
           <div className="w-48 mx-auto">
             <div
+              role="progressbar"
+              aria-valuenow={Math.floor(progress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Lore generation progress"
               className="h-px w-full relative overflow-hidden rounded-full"
               style={{ background: 'rgba(245,240,232,0.06)' }}
             >
@@ -380,6 +408,7 @@ export default function GeneratingPage() {
             <p
               className="font-mono text-[7px] uppercase tracking-[0.4em] text-center mt-2"
               style={{ color: 'rgba(245,240,232,0.15)' }}
+              aria-hidden="true"
             >
               {Math.floor(progress)}% RECONSTRUCTED
             </p>
@@ -395,12 +424,15 @@ export default function GeneratingPage() {
         {/* Timeout state — shown after 4 min if still processing */}
         {timedOut && (
           <div
-            className="absolute bottom-16 text-center space-y-3"
-            style={{ animation: 'fade-in 0.6s ease both' }}
+            className="absolute text-center space-y-3"
+            style={{
+              animation: 'fade-in 0.6s ease both',
+              bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
+            }}
           >
             <p
-              className="font-mono text-[9px] uppercase tracking-[0.4em]"
-              style={{ color: 'rgba(255,77,77,0.6)' }}
+              className="font-mono text-[10px] uppercase tracking-[0.4em]"
+              style={{ color: 'rgba(255,77,77,0.85)' }}
             >
               Taking longer than expected
             </p>
@@ -414,11 +446,11 @@ export default function GeneratingPage() {
                 }
                 router.push(`/trips/${tripId}`);
               }}
-              className="font-mono text-[9px] uppercase tracking-[0.4em] px-4 py-2 rounded"
+              className="font-mono text-[10px] uppercase tracking-[0.4em] px-5 py-3 rounded-full"
               style={{
-                border: '1px solid rgba(255,77,77,0.3)',
-                color: 'rgba(245,240,232,0.5)',
-                background: 'transparent',
+                border: '1px solid rgba(255,77,77,0.5)',
+                color: 'rgba(245,240,232,0.85)',
+                background: 'rgba(255,77,77,0.08)',
               }}
             >
               Go back &amp; retry
@@ -426,11 +458,14 @@ export default function GeneratingPage() {
           </div>
         )}
 
-        {/* Bottom hint */}
+        {/* Bottom hint — pb accounts for iOS home bar in PWA mode */}
         {!timedOut && (
           <p
-            className="absolute bottom-8 font-mono text-[7.5px] uppercase tracking-[0.5em]"
-            style={{ color: 'rgba(245,240,232,0.1)' }}
+            className="absolute font-mono text-[7.5px] uppercase tracking-[0.5em]"
+            style={{
+              color: 'rgba(245,240,232,0.1)',
+              bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
+            }}
           >
             USUALLY 2–5 MINUTES
           </p>
@@ -440,37 +475,33 @@ export default function GeneratingPage() {
       {/* Lore-unlock cinematic overlay — appears when lore_status→ready */}
       {unlocking && (
         <div
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center"
-          style={{ background: '#060604', animation: 'unlock-appear 0.3s ease both' }}
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center animate-zoom-in"
+          style={{ background: '#060604' }}
         >
           <div style={{ textAlign: 'center' }} className="space-y-4">
             <p
-              className="font-mono text-[8px] uppercase tracking-[0.7em] mb-6"
-              style={{
-                color: 'rgba(255,77,77,0.6)',
-                animation: 'fade-in 0.4s ease 0.2s both',
-                opacity: 0,
-              }}
+              className="font-mono text-[8px] uppercase tracking-[0.7em] mb-6 animate-fade-in"
+              style={{ color: 'rgba(255,77,77,0.6)', animationDelay: '0.2s', opacity: 0 }}
             >
               ● LORE SEALED
             </p>
             <div
-              className="font-display font-black uppercase"
+              className="font-display font-black uppercase animate-slam-up"
               style={{
                 fontSize: 'clamp(40px, 8vw, 80px)',
                 color: 'rgba(245,240,232,0.95)',
                 letterSpacing: '-0.03em',
-                animation: 'slam-up 0.6s cubic-bezier(0.16,1,0.3,1) 0.3s both',
+                animationDelay: '0.3s',
                 opacity: 0,
               }}
             >
               {trip?.name || 'THE LORE'}
             </div>
             <p
-              className="font-mono text-[9px] uppercase tracking-[0.5em] mt-6"
+              className="font-mono text-[9px] uppercase tracking-[0.5em] mt-6 animate-fade-in"
               style={{
                 color: 'rgba(255,77,77,0.5)',
-                animation: 'fade-in 0.5s ease 0.9s both',
+                animationDelay: '0.9s',
                 opacity: 0,
               }}
             >
@@ -480,52 +511,7 @@ export default function GeneratingPage() {
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translate3d(0, 16px, 0);
-            filter: blur(4px);
-          }
-          to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-            filter: blur(0px);
-          }
-        }
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            filter: blur(3px);
-          }
-          to {
-            opacity: 1;
-            filter: blur(0px);
-          }
-        }
-        @keyframes unlock-appear {
-          from {
-            opacity: 0;
-            filter: blur(8px);
-          }
-          to {
-            opacity: 1;
-            filter: blur(0px);
-          }
-        }
-        @keyframes slam-up {
-          from {
-            opacity: 0;
-            transform: translate3d(0, 40px, 0) scale(0.92);
-            filter: blur(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) scale(1);
-            filter: blur(0px);
-          }
-        }
-      `}</style>
+      {/* slam-up, fade-in, zoom-in are all in globals.css — no local keyframes needed */}
     </div>
   );
 }
@@ -546,56 +532,19 @@ function GeneratingSkeleton({ stage }: { stage: number }) {
       }}
       aria-hidden="true"
     >
-      {/* Title shimmer */}
-      <div
-        className="h-5 rounded"
-        style={{
-          width: '72%',
-          background: 'rgba(245,240,232,0.05)',
-          animation: 'shimmer 1.8s ease-in-out infinite',
-        }}
-      />
-      {/* Body line shimmers */}
-      <div
-        className="h-3 rounded"
-        style={{
-          width: '100%',
-          background: 'rgba(245,240,232,0.04)',
-          animation: 'shimmer 1.8s ease-in-out 0.15s infinite',
-        }}
-      />
-      <div
-        className="h-3 rounded"
-        style={{
-          width: '83%',
-          background: 'rgba(245,240,232,0.04)',
-          animation: 'shimmer 1.8s ease-in-out 0.3s infinite',
-        }}
-      />
-      {/* Card grid preview */}
+      {/* Skeleton shimmers — use global .skeleton class for directional gradient sweep */}
+      <div className="h-5 rounded skeleton" style={{ width: '72%' }} />
+      <div className="h-3 rounded skeleton" style={{ width: '100%', animationDelay: '0.15s' }} />
+      <div className="h-3 rounded skeleton" style={{ width: '83%', animationDelay: '0.3s' }} />
       <div className="grid grid-cols-3 gap-2 pt-1">
         {[0, 1, 2].map(i => (
           <div
             key={i}
-            className="h-16 rounded"
-            style={{
-              background: 'rgba(245,240,232,0.04)',
-              animation: `shimmer 1.8s ease-in-out ${0.1 * i}s infinite`,
-            }}
+            className="h-16 rounded skeleton"
+            style={{ animationDelay: `${i * 0.1}s` }}
           />
         ))}
       </div>
-      <style jsx>{`
-        @keyframes shimmer {
-          0%,
-          100% {
-            opacity: 0.5;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-      `}</style>
     </div>
   );
 }

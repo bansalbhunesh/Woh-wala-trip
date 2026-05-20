@@ -212,7 +212,7 @@ export function IncidentButton({ tripId }: { tripId: string }) {
             onChange={e => setNote(e.target.value)}
             placeholder='Brief note — "Bus incident happening right now"'
             maxLength={200}
-            className="w-full bg-white/[0.04] rounded-xl px-3 py-2 text-sm text-white/70 placeholder-white/20 focus:outline-none font-mono"
+            className="w-full bg-white/[0.04] rounded-xl px-3 py-2 text-sm text-white/70 placeholder-white/20  font-mono"
           />
         </div>
         <div className="px-4 pb-4 flex gap-2">

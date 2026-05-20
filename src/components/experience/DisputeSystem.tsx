@@ -154,7 +154,7 @@ function DisputeModal({
             placeholder="The AI missed something. Here's what actually happened..."
             rows={4}
             maxLength={500}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-3 text-sm text-white/80 placeholder-white/20 resize-none focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-3 text-sm text-white/80 placeholder-white/20 resize-none  focus:border-white/20 transition-colors"
           />
           <div className="flex justify-between mt-1">
             <p className="font-mono text-[8px] text-white/20">

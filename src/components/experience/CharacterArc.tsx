@@ -3,18 +3,20 @@
 import { trpc } from '@/lib/trpc/client';
 import { motion } from 'framer-motion';
 
+// Fallback palette for legacy/unexpected archetype values.
+// New lore uses freeform behavioral descriptors — any string not in this map
+// falls through to the default purple, which is fine.
 const ARCHETYPE_COLORS: Record<string, string> = {
-  'Black Cat': '#7C6AFF',
-  'Golden Retriever': '#D49E2D',
-  'Main Character': '#FF4D4D',
-  'Chaos Source': '#FF4D4D',
-  NPC: '#2D9E8B',
-  'Emotional Support NPC': '#2D9E8B',
   Unknown: '#888',
 };
 
 function archetypeColor(a: string): string {
-  return ARCHETYPE_COLORS[a] ?? '#7C6AFF';
+  // Hash the archetype string to one of the brand palette colors for consistency.
+  const PALETTE = ['#FF4D4D', '#2D9E8B', '#7C6AFF', '#D49E2D', '#C94B9E', '#E86F2D'];
+  if (ARCHETYPE_COLORS[a]) return ARCHETYPE_COLORS[a];
+  let h = 0;
+  for (let i = 0; i < a.length; i++) h = (h * 31 + a.charCodeAt(i)) & 0xffffffff;
+  return PALETTE[Math.abs(h) % PALETTE.length];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

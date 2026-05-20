@@ -152,10 +152,15 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     initParticles();
 
     let t = 0;
+    let lastTs = 0;
 
-    function draw() {
+    function draw(timestamp: number) {
       stateRef.current.animId = requestAnimationFrame(draw);
-      t += 0.005;
+      // Delta-time normalized increment: constant visual speed at any refresh rate.
+      // 0.005 at 60fps ≈ 0.3/s — match that: dt * 0.3
+      const dt = lastTs > 0 ? Math.min((timestamp - lastTs) / 1000, 0.05) : 1 / 60;
+      lastTs = timestamp;
+      t += dt * 0.3;
 
       const { phase: p, mouseX: mx, mouseY: my } = stateRef.current;
 
@@ -169,9 +174,9 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
       const intensity = [0.15, 0.45, 0.85, 1.1, 1.45][Math.min(p, 4)];
 
-      // Advance shockwave propagation
+      // Shockwave propagates at 840px/s regardless of frame rate
       if (shockwaveActive) {
-        shockwaveR += 14;
+        shockwaveR += dt * 840;
         if (shockwaveR > Math.max(W, H) * 1.2) {
           shockwaveActive = false;
         }
@@ -179,14 +184,16 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
       // Particle update loop (Vector force manipulation)
       particles.forEach(par => {
-        par.life += 0.0025;
+        par.life += dt * 0.15; // 0.0025/frame * 60fps = 0.15/s
         if (par.life > par.maxLife) par.life = 0;
 
-        // Apply physical fluid dragging
-        par.x += par.vx;
-        par.y += par.vy;
-        par.vx *= 0.982;
-        par.vy *= 0.982;
+        // Apply physical fluid dragging — drag coefficient normalized to dt
+        // 0.982 per frame at 60fps = exp(-0.018*60) ≈ exp(-1.08) per second
+        const drag = Math.exp(-1.08 * dt);
+        par.x += par.vx * dt * 60; // position updates still in "per frame" units
+        par.y += par.vy * dt * 60;
+        par.vx *= drag;
+        par.vy *= drag;
 
         const dx = par.x - cx;
         const dy = par.y - cy;
@@ -211,25 +218,22 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         par.vx += (dx / dist) * repel * 0.07;
         par.vy += (dy / dist) * repel * 0.07;
 
-        // Cinematic vortex physics (Orbital Gravity models)
+        // Cinematic vortex physics (Orbital Gravity models) — all rates in /second
         if (p >= 2) {
           // Keplerian Centripetal acceleration: speed increases dynamically as distance decreases
-          let speed = 0.002 + 0.001 * par.z;
+          let speedPerSec = 0.12 + 0.06 * par.z;
           if (p === 3) {
-            speed = 0.005 + 1.8 / (par.orbitRadius + 40);
+            speedPerSec = 0.3 + 108 / (par.orbitRadius + 40);
           } else if (p === 4) {
-            speed = 0.012 + 8.5 / (par.orbitRadius + 22);
+            speedPerSec = 0.72 + 510 / (par.orbitRadius + 22);
           }
-          par.angle += speed * intensity;
+          par.angle += speedPerSec * intensity * dt;
 
-          // Spiral aggressively inwards based on phase depth
-          let spiralStrength = 0.999; // Phase 2: very gentle drift
-          if (p === 3) {
-            spiralStrength = 0.995; // Phase 3: moderate drift forming spiral galaxy
-          } else if (p === 4) {
-            spiralStrength = 0.988; // Phase 4: aggressive black hole pull
-          }
-          par.orbitRadius *= spiralStrength;
+          // Spiral inwards — convert per-frame multiplier to per-second rate
+          let spiralDecayPerSec = 0.94; // phase 2: very gentle
+          if (p === 3) spiralDecayPerSec = 0.74; // moderate
+          if (p === 4) spiralDecayPerSec = 0.5; // aggressive black hole pull
+          par.orbitRadius *= Math.pow(spiralDecayPerSec, dt);
 
           // Phase 4 Event Horizon recycling portal
           if (p === 4 && par.orbitRadius < 14) {
@@ -246,8 +250,10 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
           const targetX = cx + Math.cos(par.angle) * par.orbitRadius;
           const targetY = cy + Math.sin(par.angle) * par.orbitRadius;
-          par.vx += (targetX - par.x) * 0.035;
-          par.vy += (targetY - par.y) * 0.035;
+          // Spring constant normalized to dt: 0.035/frame * 60fps = 2.1/s
+          const spring = 2.1 * dt;
+          par.vx += (targetX - par.x) * spring;
+          par.vy += (targetY - par.y) * spring;
         }
 
         // Warp screen margins
@@ -440,7 +446,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
       }
     }
 
-    draw();
+    draw(0);
 
     return () => {
       cancelAnimationFrame(stateRef.current.animId);
@@ -449,5 +455,12 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 w-full h-full"
+      style={{ zIndex: 0 }}
+      aria-hidden="true"
+    />
+  );
 }

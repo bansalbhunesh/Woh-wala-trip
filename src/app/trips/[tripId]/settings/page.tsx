@@ -178,7 +178,7 @@ export default function TripSettingsPage() {
               onClick={handleToggle}
               disabled={setStoryVisible.isPending}
               aria-label={storyVisible ? 'Hide public story' : 'Show public story'}
-              className="relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none mt-1"
+              className="relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200  mt-1"
               style={{
                 background: storyVisible ? 'rgba(45,158,139,0.7)' : 'rgba(0,0,0,0.15)',
                 opacity: setStoryVisible.isPending ? 0.6 : 1,

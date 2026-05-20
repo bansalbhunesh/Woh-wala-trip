@@ -62,7 +62,7 @@ export default function PrivacyPage() {
             </em>
           </h1>
           <p className="font-data text-sm pt-2" style={{ color: 'rgba(245,240,232,0.35)' }}>
-            Last updated: May 2025 &nbsp;·&nbsp; Effective immediately
+            Last updated: May 2026 &nbsp;·&nbsp; Effective immediately
           </p>
         </div>
 
@@ -242,7 +242,7 @@ export default function PrivacyPage() {
               />
               <ListItem
                 label="Withdrawal of consent"
-                body="Stop using the app at any time. Requests to exercise any of these rights should be sent to bhuneshbansal20039888@gmail.com."
+                body="Stop using the app at any time. Requests to exercise any of these rights should be sent to hello@yaarlore.app."
               />
             </ul>
           </section>
@@ -266,11 +266,11 @@ export default function PrivacyPage() {
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               To delete your entire account, email{' '}
               <a
-                href="mailto:bhuneshbansal20039888@gmail.com"
+                href="mailto:hello@yaarlore.app"
                 className="underline underline-offset-2 hover:opacity-80"
                 style={{ color: 'rgba(245,240,232,0.8)' }}
               >
-                bhuneshbansal20039888@gmail.com
+                hello@yaarlore.app
               </a>{' '}
               with the subject line{' '}
               <span style={{ color: 'rgba(245,240,232,0.8)' }}>&quot;Delete My Account&quot;</span>.
@@ -355,11 +355,11 @@ export default function PrivacyPage() {
             <p style={{ color: 'rgba(245,240,232,0.65)', lineHeight: 1.75, fontSize: '0.9375rem' }}>
               Questions or requests about this policy:{' '}
               <a
-                href="mailto:bhuneshbansal20039888@gmail.com"
+                href="mailto:hello@yaarlore.app"
                 className="underline underline-offset-2 hover:opacity-80"
                 style={{ color: 'rgba(245,240,232,0.8)' }}
               >
-                bhuneshbansal20039888@gmail.com
+                hello@yaarlore.app
               </a>
             </p>
           </section>

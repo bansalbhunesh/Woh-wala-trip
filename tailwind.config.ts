@@ -72,12 +72,99 @@ const config: Config = {
           '100%': { opacity: '1' },
         },
         'slide-up': {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', transform: 'translateY(20px)', filter: 'blur(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)', filter: 'blur(0)' },
         },
         'slide-in': {
           '0%': { opacity: '0', transform: 'scale(0.97)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'slide-in-left': {
+          '0%': { opacity: '0', transform: 'translate3d(-40px,0,0)', filter: 'blur(4px)' },
+          '100%': { opacity: '1', transform: 'translate3d(0,0,0)', filter: 'blur(0)' },
+        },
+        'slide-in-right': {
+          '0%': { opacity: '0', transform: 'translate3d(40px,0,0)', filter: 'blur(4px)' },
+          '100%': { opacity: '1', transform: 'translate3d(0,0,0)', filter: 'blur(0)' },
+        },
+        'slide-out-left': {
+          '0%': { opacity: '1', transform: 'translate3d(0,0,0)' },
+          '100%': { opacity: '0', transform: 'translate3d(-40px,0,0)', filter: 'blur(4px)' },
+        },
+        'slide-out-right': {
+          '0%': { opacity: '1', transform: 'translate3d(0,0,0)' },
+          '100%': { opacity: '0', transform: 'translate3d(40px,0,0)', filter: 'blur(4px)' },
+        },
+        'slam-up': {
+          '0%': {
+            opacity: '0',
+            transform: 'translate3d(0,48px,0) scale(0.88)',
+            filter: 'blur(10px)',
+          },
+          '100%': { opacity: '1', transform: 'translate3d(0,0,0) scale(1)', filter: 'blur(0)' },
+        },
+        'zoom-in': {
+          '0%': { opacity: '0', transform: 'scale(0.94) translateY(16px)', filter: 'blur(6px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)', filter: 'blur(0)' },
+        },
+        'zoom-out': {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.95)', filter: 'blur(4px)' },
+        },
+        shockwave: {
+          '0%': {
+            transform: 'scale(0.8)',
+            opacity: '0.8',
+            boxShadow: '0 0 0 0 rgba(255,77,77,0.6)',
+          },
+          '70%': { transform: 'scale(1)', opacity: '0', boxShadow: '0 0 0 40px rgba(255,77,77,0)' },
+          '100%': { transform: 'scale(1)', opacity: '0', boxShadow: '0 0 0 0 rgba(255,77,77,0)' },
+        },
+        'ring-pulse': {
+          '0%': { transform: 'scale(0.85)', opacity: '0.7' },
+          '100%': { transform: 'scale(1.6)', opacity: '0' },
+        },
+        'glow-pulse-red': {
+          '0%,100%': { boxShadow: '0 0 4px rgba(255,77,77,0.4)' },
+          '50%': { boxShadow: '0 0 16px rgba(255,77,77,0.9), 0 0 32px rgba(255,77,77,0.4)' },
+        },
+        'glow-pulse-teal': {
+          '0%,100%': { boxShadow: '0 0 4px rgba(45,158,139,0.4)' },
+          '50%': { boxShadow: '0 0 16px rgba(45,158,139,0.9), 0 0 32px rgba(45,158,139,0.4)' },
+        },
+        'number-reveal': {
+          '0%': {
+            opacity: '0',
+            transform: 'translate3d(0,20px,0) scale(0.8)',
+            filter: 'blur(8px)',
+          },
+          '60%': {
+            opacity: '1',
+            transform: 'translate3d(0,-4px,0) scale(1.05)',
+            filter: 'blur(0)',
+          },
+          '100%': { opacity: '1', transform: 'translate3d(0,0,0) scale(1)', filter: 'blur(0)' },
+        },
+        'pop-in': {
+          '0%': { opacity: '0', transform: 'scale(0.7)', filter: 'blur(4px)' },
+          '70%': { transform: 'scale(1.06)' },
+          '100%': { opacity: '1', transform: 'scale(1)', filter: 'blur(0)' },
+        },
+        'page-enter': {
+          '0%': { opacity: '0', transform: 'translate3d(0,12px,0)', filter: 'blur(3px)' },
+          '100%': { opacity: '1', transform: 'translate3d(0,0,0)', filter: 'blur(0)' },
+        },
+        'text-wipe': {
+          '0%': { clipPath: 'inset(0 100% 0 0)' },
+          '100%': { clipPath: 'inset(0 0% 0 0)' },
+        },
+        'float-horizontal': {
+          '0%,100%': { transform: 'translate3d(0,0,0)' },
+          '50%': { transform: 'translate3d(6px,0,0)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
         },
         floatA: {
           '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
@@ -107,10 +194,6 @@ const config: Config = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.4' },
         },
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
         flicker: {
           '0%, 90%, 100%': { opacity: '1' },
           '91%': { opacity: '0.5' },
@@ -126,7 +209,6 @@ const config: Config = {
           '0%': { transform: 'translateY(-100%)' },
           '100%': { transform: 'translateY(100vh)' },
         },
-        // Light page entrance animations
         'card-in': {
           '0%': { opacity: '0', transform: 'translateY(16px) rotate(var(--r, 0deg))' },
           '100%': { opacity: '1', transform: 'translateY(0) rotate(var(--r, 0deg))' },
@@ -138,18 +220,39 @@ const config: Config = {
         },
       },
       animation: {
-        marquee: 'marquee 40s linear infinite',
-        'fade-in': 'fade-in 0.5s ease-out forwards',
-        'slide-up': 'slide-up 0.5s ease-out forwards',
-        'slide-in': 'slide-in 0.4s ease-out forwards',
+        // Ticker — 28s feels right at any viewport width
+        marquee: 'marquee 28s linear infinite',
+        'marquee-slow': 'marquee 48s linear infinite',
+        // Entrances
+        'fade-in': 'fade-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
+        'fade-in-slow': 'fade-in 0.9s cubic-bezier(0.16,1,0.3,1) forwards',
+        'slide-up': 'slide-up 0.55s cubic-bezier(0.16,1,0.3,1) forwards',
+        'slide-in': 'slide-in 0.4s cubic-bezier(0.16,1,0.3,1) forwards',
+        'slide-in-left': 'slide-in-left 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
+        'slide-in-right': 'slide-in-right 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
+        'slide-out-left': 'slide-out-left 0.35s cubic-bezier(0.4,0,1,1) forwards',
+        'slide-out-right': 'slide-out-right 0.35s cubic-bezier(0.4,0,1,1) forwards',
+        'slam-up': 'slam-up 0.7s cubic-bezier(0.16,1,0.3,1) forwards',
+        'zoom-in': 'zoom-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
+        'zoom-out': 'zoom-out 0.3s cubic-bezier(0.4,0,1,1) forwards',
+        'page-enter': 'page-enter 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
+        'number-reveal': 'number-reveal 0.8s cubic-bezier(0.16,1,0.3,1) forwards',
+        'pop-in': 'pop-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
+        'text-wipe': 'text-wipe 0.6s cubic-bezier(0.16,1,0.3,1) forwards',
+        // Continuous
+        shockwave: 'shockwave 1.2s cubic-bezier(0.16,1,0.3,1) forwards',
+        'ring-pulse': 'ring-pulse 1.5s ease-out infinite',
+        'glow-pulse-red': 'glow-pulse-red 2s ease-in-out infinite',
+        'glow-pulse-teal': 'glow-pulse-teal 2s ease-in-out infinite',
         'float-a': 'floatA 14s ease-in-out infinite',
         'float-b': 'floatB 16s ease-in-out infinite',
         'float-c': 'floatC 12s ease-in-out infinite',
+        'float-up': 'float-up 5s ease-in-out infinite',
+        'float-horizontal': 'float-horizontal 6s ease-in-out infinite',
         grain: 'grain 1.2s steps(3) infinite',
         'pulse-soft': 'pulse-soft 2.5s ease-in-out infinite',
-        shimmer: 'shimmer 2s linear infinite',
+        shimmer: 'shimmer 1.6s ease-in-out infinite',
         flicker: 'flicker 8s ease-in-out infinite',
-        'float-up': 'float-up 5s ease-in-out infinite',
         scan: 'scan 6s linear infinite',
         'card-in': 'card-in 0.6s cubic-bezier(0.16,1,0.3,1) forwards',
         'blob-float': 'blob-float 12s ease-in-out infinite',
