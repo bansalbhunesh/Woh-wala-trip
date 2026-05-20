@@ -958,6 +958,36 @@ button.icon-btn,
   background: rgba(245, 240, 232, 0.05);
 }
 
+/* ─── Nav button hover classes (trips page header) ───────────── */
+/* Using !important to override the inline transform used for entry
+   animations (translate3d(0,24px,0) → translate3d(0,0,0)). The
+   transition on these properties is already declared in inline style,
+   so the animated lift still works correctly. */
+@media (hover: hover) {
+  .nav-btn-teal:hover {
+    transform: translate3d(0, -2px, 0) !important;
+    border-color: rgba(45, 158, 139, 0.5) !important;
+    color: #2d9e8b !important;
+  }
+  .nav-btn-gold:hover {
+    transform: translate3d(0, -2px, 0) !important;
+    border-color: rgba(212, 158, 45, 0.5) !important;
+    color: #d49e2d !important;
+  }
+  .nav-btn-primary:hover {
+    transform: translate3d(0, -2px, 0) !important;
+    box-shadow: 0 8px 32px rgba(245, 240, 232, 0.06) !important;
+    background: rgba(245, 240, 232, 0.1) !important;
+    border-color: rgba(245, 240, 232, 0.3) !important;
+  }
+  .nostalgia-thumb:hover {
+    transform: scale(1.06) !important;
+  }
+  .btn-lore-engine:hover:not(:disabled) {
+    box-shadow: 0 0 50px rgba(255, 77, 77, 0.3) !important;
+  }
+}
+
 /* ─── Marquee pause (WCAG 2.2.2) ────────────────────────────── */
 /* Pause marquee on hover or when user requests pause */
 .marquee-container:hover .animate-marquee,

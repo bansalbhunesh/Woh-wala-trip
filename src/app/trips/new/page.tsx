@@ -644,15 +644,38 @@ export default function NewTripPage() {
                 </div>
 
                 {createTrip.error && (
-                  <p
-                    className="text-center text-xs font-mono font-bold tracking-tight uppercase"
+                  <div
+                    className="flex items-center justify-center gap-2 text-center"
                     style={{
-                      color: 'oklch(60% 0.22 25)',
                       animation: 'nt-error-enter 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
                     }}
                   >
-                    ⚠️ {createTrip.error.message}
-                  </p>
+                    <span
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-[8px] uppercase tracking-[0.25em]"
+                      style={{
+                        background: 'oklch(96% 0.012 25 / 0.6)',
+                        border: '1px solid oklch(60% 0.22 25 / 0.35)',
+                        color: 'oklch(50% 0.22 25)',
+                        maxWidth: '100%',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          background: 'oklch(60% 0.22 25)',
+                          flexShrink: 0,
+                          display: 'inline-block',
+                        }}
+                      />
+                      <span className="truncate max-w-[280px]">
+                        {createTrip.error.message.length > 80
+                          ? createTrip.error.message.slice(0, 80) + '…'
+                          : createTrip.error.message}
+                      </span>
+                    </span>
+                  </div>
                 )}
               </motion.div>
             )}

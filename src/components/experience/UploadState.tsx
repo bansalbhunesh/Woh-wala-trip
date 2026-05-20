@@ -528,22 +528,14 @@ export function UploadState({ trip, tripId, onPhotosChanged }: Props) {
             <button
               onClick={() => generateLore.mutate({ tripId })}
               disabled={!canGenerate || generateLore.isPending || isActive}
-              className="w-full py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-25 flex items-center justify-center gap-3"
+              className="btn-lore-engine w-full py-[18px] rounded-full font-ui font-black text-[11px] uppercase tracking-[0.35em] transition-all duration-500 disabled:opacity-25 flex items-center justify-center gap-3"
               style={{
                 background: canGenerate ? 'rgba(255,77,77,0.12)' : 'rgba(245,240,232,0.04)',
                 border: `1px solid ${canGenerate ? 'rgba(255,77,77,0.4)' : 'rgba(245,240,232,0.08)'}`,
                 color: canGenerate ? 'rgba(255,77,77,0.95)' : 'rgba(245,240,232,0.2)',
                 boxShadow: canGenerate ? '0 0 30px rgba(255,77,77,0.12)' : 'none',
-              }}
-              onMouseEnter={e => {
-                if (canGenerate)
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                    '0 0 50px rgba(255,77,77,0.3)';
-              }}
-              onMouseLeave={e => {
-                if (canGenerate)
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                    '0 0 30px rgba(255,77,77,0.12)';
+                transition:
+                  'box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), background 0.5s, border-color 0.5s, color 0.5s, opacity 0.5s',
               }}
             >
               {generateLore.isPending ? (

@@ -225,7 +225,7 @@ function NostalgiaStrip() {
           <a
             key={m.photo_id}
             href={`/trips/${m.trip_id}`}
-            className="flex-shrink-0 relative rounded-xl overflow-hidden"
+            className="nostalgia-thumb flex-shrink-0 relative rounded-xl overflow-hidden"
             style={{
               width: 80,
               height: 80,
@@ -233,13 +233,7 @@ function NostalgiaStrip() {
               border: '1px solid rgba(245,240,232,0.12)',
               transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
             }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.06)';
-              playHomeChime(1.2, 0.015);
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)';
-            }}
+            onMouseEnter={() => playHomeChime(1.2, 0.015)}
           >
             {m.thumbnailUrl || m.url ? (
               <img
@@ -341,64 +335,45 @@ export default function TripsPage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Join an existing trip — second most common action after New */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Join an existing trip — visible on all screen sizes */}
           <Link
             href="/trips/join"
-            className="hidden sm:flex items-center gap-2 px-4 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+            className="nav-btn-teal flex items-center gap-2 px-3 sm:px-4 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
             style={{
               background: 'rgba(45,158,139,0.08)',
               border: '1px solid rgba(45,158,139,0.25)',
               color: 'rgba(45,158,139,0.8)',
               opacity: revealed ? 1 : 0,
               transition:
-                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.14s, transform 0.3s cubic-bezier(0.16,1,0.3,1)',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.transform = 'translate3d(0,-2px,0)';
-              el.style.borderColor = 'rgba(45,158,139,0.5)';
-              el.style.color = '#2D9E8B';
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.transform = 'translate3d(0,0,0)';
-              el.style.borderColor = 'rgba(45,158,139,0.25)';
-              el.style.color = 'rgba(45,158,139,0.8)';
+                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.14s, transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s',
+              willChange: 'transform, opacity',
             }}
           >
-            JOIN TRIP
+            <span className="hidden sm:inline">JOIN TRIP</span>
+            <span className="sm:hidden" aria-label="Join trip">
+              +
+            </span>
           </Link>
-          {/* FEAT: Hall of Chaos leaderboard link */}
+          {/* Hall of Chaos leaderboard */}
           <Link
             href="/leaderboard"
-            className="flex items-center gap-2 px-4 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+            className="nav-btn-gold hidden sm:flex items-center gap-2 px-4 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
             style={{
               background: 'rgba(212,158,45,0.08)',
               border: '1px solid rgba(212,158,45,0.25)',
               color: 'rgba(212,158,45,0.8)',
               opacity: revealed ? 1 : 0,
               transition:
-                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.18s, transform 0.3s cubic-bezier(0.16,1,0.3,1)',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.transform = 'translate3d(0,-2px,0)';
-              el.style.borderColor = 'rgba(212,158,45,0.5)';
-              el.style.color = '#D49E2D';
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.transform = 'translate3d(0,0,0)';
-              el.style.borderColor = 'rgba(212,158,45,0.25)';
-              el.style.color = 'rgba(212,158,45,0.8)';
+                'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.18s, transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s',
+              willChange: 'transform, opacity',
             }}
           >
             HALL OF CHAOS
           </Link>
           <Link
             href="/trips/new"
-            className="flex items-center gap-2 px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
+            className="nav-btn-primary flex items-center gap-2 px-4 sm:px-6 py-3 rounded-full font-ui font-black text-[10px] uppercase tracking-widest active:scale-95"
             style={{
               background: 'rgba(245,240,232,0.06)',
               border: '1px solid rgba(245,240,232,0.18)',
@@ -406,25 +381,15 @@ export default function TripsPage() {
               opacity: revealed ? 1 : 0,
               transition:
                 'opacity 0.55s cubic-bezier(0.16,1,0.3,1) 0.22s, transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s, background 0.3s, border-color 0.3s',
-              willChange: 'transform',
+              willChange: 'transform, opacity',
             }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.transform = 'translate3d(0,-2px,0)';
-              el.style.boxShadow = '0 8px 32px rgba(245,240,232,0.05)';
-              el.style.background = 'rgba(245,240,232,0.1)';
-              el.style.borderColor = 'rgba(245,240,232,0.3)';
-              playHomeChime(1.4, 0.02);
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.transform = 'translate3d(0,0,0)';
-              el.style.boxShadow = 'none';
-              el.style.background = 'rgba(245,240,232,0.06)';
-              el.style.borderColor = 'rgba(245,240,232,0.18)';
-            }}
+            onMouseEnter={() => playHomeChime(1.4, 0.02)}
           >
-            <Plus size={14} /> NEW SEASON
+            <Plus size={14} />
+            <span className="hidden sm:inline">NEW SEASON</span>
+            <span className="sm:hidden" aria-label="New season">
+              NEW
+            </span>
           </Link>
         </div>
       </header>
