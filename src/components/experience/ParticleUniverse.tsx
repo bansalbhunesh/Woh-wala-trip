@@ -93,10 +93,10 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           x: px,
           y: py,
           z: Math.random(),
-          vx: (Math.random() - 0.5) * 0.2,
-          vy: (Math.random() - 0.5) * 0.2,
-          vz: (Math.random() - 0.5) * 0.002,
-          size: Math.random() * 1.6 + 0.3,
+          vx: (Math.random() - 0.5) * 0.08,
+          vy: (Math.random() - 0.5) * 0.08,
+          vz: (Math.random() - 0.5) * 0.001,
+          size: Math.random() * 4.5 + 1.5,
           hue: Math.random() * 45 + 15, // warm firefly amber
           life: Math.random(),
           maxLife: 0.6 + Math.random() * 0.4,
@@ -116,10 +116,10 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           x: px,
           y: py,
           z: Math.random() * 0.4 + 0.6,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
+          vx: (Math.random() - 0.5) * 0.15,
+          vy: (Math.random() - 0.5) * 0.15,
           vz: 0,
-          size: Math.random() * 3.2 + 1.8,
+          size: Math.random() * 8.0 + 4.0,
           hue: Math.random() > 0.55 ? 28 : 190, // Cyberpunk Amber vs Hyper-teal
           life: Math.random(),
           maxLife: 0.5 + Math.random() * 0.5,
@@ -136,9 +136,9 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           y: Math.random() * H,
           z: Math.random() * 0.35,
           vx: 0,
-          vy: (Math.random() - 0.5) * 0.04,
+          vy: (Math.random() - 0.5) * 0.02,
           vz: 0,
-          size: Math.random() * 0.8 + 0.2,
+          size: Math.random() * 2.2 + 0.8,
           hue: 0,
           life: Math.random(),
           maxLife: 1.0,
@@ -157,26 +157,25 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
     function draw(timestamp: number) {
       stateRef.current.animId = requestAnimationFrame(draw);
       // Delta-time normalized increment: constant visual speed at any refresh rate.
-      // 0.005 at 60fps ≈ 0.3/s — match that: dt * 0.3
       const dt = lastTs > 0 ? Math.min((timestamp - lastTs) / 1000, 0.05) : 1 / 60;
       lastTs = timestamp;
-      t += dt * 0.3;
+      t += dt * 0.15; // Slowed down overall clock speed
 
       const { phase: p, mouseX: mx, mouseY: my } = stateRef.current;
 
       // Premium motion-blur accumulation buffer (creates light-trails elegantly)
-      const fadeAlpha = p >= 3 ? 0.15 : 0.08;
+      const fadeAlpha = p >= 3 ? 0.12 : 0.06;
       ctx.fillStyle = `rgba(6, 6, 4, ${fadeAlpha})`;
       ctx.fillRect(0, 0, W, H);
 
-      const cx = W / 2 + (mx - 0.5) * W * 0.06;
-      const cy = H / 2 + (my - 0.5) * H * 0.06;
+      const cx = W / 2 + (mx - 0.5) * W * 0.04;
+      const cy = H / 2 + (my - 0.5) * H * 0.04;
 
       const intensity = [0.15, 0.45, 0.85, 1.1, 1.45][Math.min(p, 4)];
 
-      // Shockwave propagates at 840px/s regardless of frame rate
+      // Shockwave propagates at 600px/s regardless of frame rate
       if (shockwaveActive) {
-        shockwaveR += dt * 840;
+        shockwaveR += dt * 600;
         if (shockwaveR > Math.max(W, H) * 1.2) {
           shockwaveActive = false;
         }
@@ -184,13 +183,12 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
       // Particle update loop (Vector force manipulation)
       particles.forEach(par => {
-        par.life += dt * 0.15; // 0.0025/frame * 60fps = 0.15/s
+        par.life += dt * 0.08; // Slower fade cycles
         if (par.life > par.maxLife) par.life = 0;
 
-        // Apply physical fluid dragging — drag coefficient normalized to dt
-        // 0.982 per frame at 60fps = exp(-0.018*60) ≈ exp(-1.08) per second
-        const drag = Math.exp(-1.08 * dt);
-        par.x += par.vx * dt * 60; // position updates still in "per frame" units
+        // Apply physical fluid dragging
+        const drag = Math.exp(-0.8 * dt);
+        par.x += par.vx * dt * 60;
         par.y += par.vy * dt * 60;
         par.vx *= drag;
         par.vy *= drag;
@@ -206,7 +204,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           const sDist = Math.sqrt(sDx * sDx + sDy * sDy) || 1;
           const diff = Math.abs(sDist - shockwaveR);
           if (diff < 50) {
-            const push = (1 - diff / 50) * 6.5;
+            const push = (1 - diff / 50) * 4.5;
             const angle = Math.atan2(sDy, sDx);
             par.vx += Math.cos(angle) * push;
             par.vy += Math.sin(angle) * push;
@@ -215,24 +213,23 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
         // Magnetic hover repulsion
         const repel = Math.max(0, 1 - dist / 220);
-        par.vx += (dx / dist) * repel * 0.07;
-        par.vy += (dy / dist) * repel * 0.07;
+        par.vx += (dx / dist) * repel * 0.04;
+        par.vy += (dy / dist) * repel * 0.04;
 
-        // Cinematic vortex physics (Orbital Gravity models) — all rates in /second
+        // Cinematic vortex physics (Orbital Gravity models)
         if (p >= 2) {
-          // Keplerian Centripetal acceleration: speed increases dynamically as distance decreases
-          let speedPerSec = 0.12 + 0.06 * par.z;
+          let speedPerSec = 0.04 + 0.02 * par.z;
           if (p === 3) {
-            speedPerSec = 0.3 + 108 / (par.orbitRadius + 40);
+            speedPerSec = 0.08 + 36 / (par.orbitRadius + 40);
           } else if (p === 4) {
-            speedPerSec = 0.72 + 510 / (par.orbitRadius + 22);
+            speedPerSec = 0.2 + 150 / (par.orbitRadius + 22);
           }
           par.angle += speedPerSec * intensity * dt;
 
-          // Spiral inwards — convert per-frame multiplier to per-second rate
-          let spiralDecayPerSec = 0.94; // phase 2: very gentle
-          if (p === 3) spiralDecayPerSec = 0.74; // moderate
-          if (p === 4) spiralDecayPerSec = 0.5; // aggressive black hole pull
+          // Spiral inwards
+          let spiralDecayPerSec = 0.97;
+          if (p === 3) spiralDecayPerSec = 0.85;
+          if (p === 4) spiralDecayPerSec = 0.65;
           par.orbitRadius *= Math.pow(spiralDecayPerSec, dt);
 
           // Phase 4 Event Horizon recycling portal
@@ -250,21 +247,20 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
           const targetX = cx + Math.cos(par.angle) * par.orbitRadius;
           const targetY = cy + Math.sin(par.angle) * par.orbitRadius;
-          // Spring constant normalized to dt: 0.035/frame * 60fps = 2.1/s
-          const spring = 2.1 * dt;
+          const spring = 1.2 * dt;
           par.vx += (targetX - par.x) * spring;
           par.vy += (targetY - par.y) * spring;
         }
 
         // Warp screen margins
-        if (par.x < -20) par.x = W + 20;
-        if (par.x > W + 20) par.x = -20;
-        if (par.y < -20) par.y = H + 20;
-        if (par.y > H + 20) par.y = -20;
+        if (par.x < -40) par.x = W + 40;
+        if (par.x > W + 40) par.x = -40;
+        if (par.y < -40) par.y = H + 40;
+        if (par.y > H + 40) par.y = -40;
       });
 
       // --- Batch drawing optimization: Stars ---
-      ctx.fillStyle = `rgba(245, 240, 232, ${0.4 * intensity})`;
+      ctx.fillStyle = `rgba(245, 240, 232, ${0.3 * intensity})`;
       ctx.beginPath();
       particles.forEach(par => {
         if (par.type !== 'star') return;
@@ -276,7 +272,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
       ctx.fill();
 
       // --- Batch drawing optimization: Dust (Amber glow) ---
-      ctx.fillStyle = `rgba(255, 120, 60, ${0.45 * intensity})`;
+      ctx.fillStyle = `rgba(255, 120, 60, ${0.35 * intensity})`;
       ctx.beginPath();
       particles.forEach(par => {
         if (par.type !== 'dust') return;
@@ -311,8 +307,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           const armOffset = 2.0 * par.angle - 3.0 * Math.log(par.orbitRadius + 10);
           const wave = Math.cos(armOffset);
           if (wave > 0.35) {
-            alpha *= 1.45;
-            pSize *= 1.25;
+            alpha *= 1.3;
+            pSize *= 1.15;
           }
         }
 
@@ -322,24 +318,26 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         ctx.globalAlpha = Math.min(1.0, alpha);
 
         // Glowing orbital aura
-        const grd = ctx.createRadialGradient(par.x, par.y, 0, par.x, par.y, pSize * 4.5);
+        const grd = ctx.createRadialGradient(par.x, par.y, 0, par.x, par.y, pSize * 5.0);
         if (par.hue < 60) {
-          grd.addColorStop(0, `rgba(255, 90, 40, ${alpha * 0.85})`);
-          grd.addColorStop(0.4, `rgba(255, 50, 15, ${alpha * 0.28})`);
+          grd.addColorStop(0, `rgba(255, 90, 40, ${alpha * 0.75})`);
+          grd.addColorStop(0.4, `rgba(255, 50, 15, ${alpha * 0.22})`);
           grd.addColorStop(1, 'rgba(255, 50, 15, 0)');
         } else {
-          grd.addColorStop(0, `rgba(40, 180, 160, ${alpha * 0.85})`);
-          grd.addColorStop(0.4, `rgba(30, 140, 130, ${alpha * 0.28})`);
+          grd.addColorStop(0, `rgba(40, 180, 160, ${alpha * 0.75})`);
+          grd.addColorStop(0.4, `rgba(30, 140, 130, ${alpha * 0.22})`);
           grd.addColorStop(1, 'rgba(30, 140, 130, 0)');
         }
         ctx.fillStyle = grd;
         ctx.beginPath();
-        ctx.arc(par.x, par.y, pSize * 4.5, 0, Math.PI * 2);
+        ctx.arc(par.x, par.y, pSize * 5.0, 0, Math.PI * 2);
         ctx.fill();
 
         // Spatial solid core
         ctx.fillStyle =
-          par.hue < 60 ? `rgba(255, 175, 90, ${alpha})` : `rgba(100, 240, 220, ${alpha})`;
+          par.hue < 60
+            ? `rgba(255, 175, 90, ${alpha * 0.8})`
+            : `rgba(100, 240, 220, ${alpha * 0.8})`;
         ctx.beginPath();
         ctx.arc(par.x, par.y, pSize, 0, Math.PI * 2);
         ctx.fill();
@@ -347,7 +345,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         ctx.restore();
       });
 
-      // Constellation proximity mesh between fragments (Highly Optimized O(N) connections)
+      // Constellation proximity mesh between fragments
       ctx.save();
       ctx.lineWidth = 0.5;
       const fragments = particles.filter(p => p.type === 'fragment');
@@ -360,7 +358,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
           const fDist = Math.sqrt(fDx * fDx + fDy * fDy);
 
           if (fDist < 95) {
-            const meshAlpha = (1 - fDist / 95) * 0.065 * intensity;
+            const meshAlpha = (1 - fDist / 95) * 0.045 * intensity;
             ctx.strokeStyle =
               f1.hue < 60 ? `rgba(255, 100, 50, ${meshAlpha})` : `rgba(50, 220, 190, ${meshAlpha})`;
             ctx.beginPath();
@@ -377,8 +375,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         // Accretion disk radial gradient glow
         ctx.save();
         const accGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 55);
-        accGrd.addColorStop(0, 'rgba(255, 110, 50, 0.45)');
-        accGrd.addColorStop(0.3, 'rgba(255, 60, 20, 0.22)');
+        accGrd.addColorStop(0, 'rgba(255, 110, 50, 0.4)');
+        accGrd.addColorStop(0.3, 'rgba(255, 60, 20, 0.18)');
         accGrd.addColorStop(1, 'rgba(6, 6, 4, 0)');
         ctx.fillStyle = accGrd;
         ctx.beginPath();
@@ -386,7 +384,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
         ctx.fill();
 
         // Accretion belt outer orbit outline
-        ctx.strokeStyle = 'rgba(255, 140, 60, 0.35)';
+        ctx.strokeStyle = 'rgba(255, 140, 60, 0.25)';
         ctx.lineWidth = 2.0;
         ctx.beginPath();
         ctx.arc(cx, cy, 18, 0, Math.PI * 2);
@@ -394,7 +392,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
         // Event Horizon: physical pitch-black singular core that swallows particles
         ctx.fillStyle = '#020202';
-        ctx.shadowColor = 'rgba(255, 77, 77, 0.9)';
+        ctx.shadowColor = 'rgba(255, 77, 77, 0.8)';
         ctx.shadowBlur = 18;
         ctx.beginPath();
         ctx.arc(cx, cy, 11, 0, Math.PI * 2);
@@ -404,8 +402,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
       // Pulsing electromagnetic scanning rings (Phase 1+)
       if (p >= 1) {
-        const pulseR = (t * 135) % 450;
-        const pulseA = Math.max(0, 0.075 - pulseR / 6000) * intensity;
+        const pulseR = (t * 80) % 450; // Slower scanning rings
+        const pulseA = Math.max(0, 0.05 - pulseR / 9000) * intensity;
         if (pulseA > 0) {
           ctx.save();
           ctx.strokeStyle = `rgba(255, 77, 77, ${pulseA})`;
@@ -419,7 +417,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
 
       // Interactive shockwave ring visualization
       if (shockwaveActive) {
-        const swA = Math.max(0, 0.18 - shockwaveR / 3000) * intensity;
+        const swA = Math.max(0, 0.12 - shockwaveR / 4000) * intensity;
         if (swA > 0) {
           ctx.save();
           ctx.strokeStyle = `rgba(255, 90, 90, ${swA})`;
@@ -434,8 +432,8 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
       // Analog cathode screen-grain noise (Phase 0–2)
       if (p <= 2) {
         ctx.save();
-        ctx.globalAlpha = 0.02;
-        for (let i = 0; i < 200; i++) {
+        ctx.globalAlpha = 0.01;
+        for (let i = 0; i < 120; i++) {
           const gx = Math.random() * W;
           const gy = Math.random() * H;
           const gs = Math.random() * 2.2;
@@ -458,7 +456,7 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full"
+      className="fixed inset-0 w-full h-full pointer-events-none filter blur-[10px] opacity-60"
       style={{ zIndex: 0 }}
       aria-hidden="true"
     />
