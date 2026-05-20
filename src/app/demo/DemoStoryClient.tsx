@@ -69,10 +69,14 @@ export default function DemoStoryClient({ lore, members }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<'forward' | 'backward'>('forward');
   const [animKey, setAnimKey] = useState(0);
-  const [slamActive, setSlamActive] = useState(false);
+  // Initial slamActive = true for the cooked slide so first render already shows
+  // the score (useCountUp can start). Prevents the 'blank slide' bug if the
+  // 200ms timer is interrupted by React strict-mode double-mount.
+  const slides = buildSlides(lore, members);
+  const initialSlide = slides[0];
+  const [slamActive, setSlamActive] = useState(initialSlide?.type === 'cooked');
   const touchStart = useRef<number | null>(null);
 
-  const slides = buildSlides(lore, members);
   const current = slides[idx];
 
   const advance = () => {
@@ -92,7 +96,9 @@ export default function DemoStoryClient({ lore, members }: Props) {
 
   useEffect(() => {
     if (current.type === 'cooked') {
-      const t = setTimeout(() => setSlamActive(true), 200);
+      // Tiny delay lets the slide-in animation breathe; if interrupted, the
+      // initial state above keeps the score visible regardless.
+      const t = setTimeout(() => setSlamActive(true), 120);
       return () => clearTimeout(t);
     }
     setSlamActive(false);
@@ -117,27 +123,41 @@ export default function DemoStoryClient({ lore, members }: Props) {
         touchStart.current = null;
       }}
     >
-      {/* Tap zones */}
-      <button
-        aria-label="Previous slide"
-        tabIndex={0}
-        onClick={retreat}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowLeft') retreat();
-        }}
-        className="absolute left-0 top-0 bottom-0 w-1/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-      />
-      <button
-        aria-label="Next slide"
-        tabIndex={0}
-        onClick={advance}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') advance();
-        }}
-        className="absolute right-0 top-0 bottom-0 w-2/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-      />
+      {/* Tap zones — hidden on the CTA (last) slide so links inside it are clickable */}
+      {current.type !== 'cta' && (
+        <>
+          <button
+            aria-label="Previous slide"
+            tabIndex={0}
+            onClick={retreat}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowLeft') retreat();
+            }}
+            className="absolute left-0 top-0 bottom-0 w-1/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+          />
+          <button
+            aria-label="Next slide"
+            tabIndex={0}
+            onClick={advance}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') advance();
+            }}
+            className="absolute right-0 top-0 bottom-0 w-2/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+          />
+        </>
+      )}
+      {/* On the CTA slide, keep a small "back" tap zone on the left edge only */}
+      {current.type === 'cta' && (
+        <button
+          aria-label="Previous slide"
+          tabIndex={0}
+          onClick={retreat}
+          className="absolute left-0 top-16 bottom-16 w-12 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+        />
+      )}
 
       {/* Progress bars */}
       <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-3">
@@ -195,7 +215,12 @@ export default function DemoStoryClient({ lore, members }: Props) {
         </div>
       )}
 
-      <style jsx>{`
+      {/* GLOBAL keyframes — must not be scoped by styled-jsx because SlideContent
+          is a separate function component that references them via inline style.
+          Scoped keyframes would get a hash suffix that inline styles don't know
+          about, leaving the slide score/verdict invisible (animation-fill-mode:
+          both keeps them at the missing keyframe's 0% state). */}
+      <style jsx global>{`
         @keyframes demo-slide-right {
           from {
             opacity: 0.4;
@@ -319,13 +344,14 @@ function SlideContent({
               animation: slamActive ? 'slam 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both' : 'none',
             }}
           >
-            {slamActive ? countedScore : ''}
+            {/* Show the counted score if animating; otherwise show the final value
+                so the slide is never blank if slamActive somehow stalls. */}
+            {slamActive ? countedScore : (slide.lore.cooked_level ?? '')}
           </div>
           <p
             className="text-2xl font-vibe font-bold uppercase tracking-tight text-white/90"
             style={{
-              animation: slamActive ? 'rise 0.5s ease 0.8s both' : 'none',
-              opacity: slamActive ? undefined : 0,
+              animation: slamActive ? 'rise 0.5s ease 0.8s both' : undefined,
             }}
           >
             {slide.lore.cooked_verdict}
@@ -334,8 +360,7 @@ function SlideContent({
             <p
               className="text-base font-data font-light text-white/45 italic leading-relaxed"
               style={{
-                animation: slamActive ? 'fade-in 0.6s ease 1.2s both' : 'none',
-                opacity: slamActive ? undefined : 0,
+                animation: slamActive ? 'fade-in 0.6s ease 1.2s both' : undefined,
               }}
             >
               {slide.lore.cooked_explanation}
