@@ -16,7 +16,7 @@
  *   3. Session refresh → redirect to /trips (or ?redirect=)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -173,7 +173,7 @@ export default function CinematicAuth() {
     return () => clearInterval(id);
   }, [cooldown]);
 
-  const goToTrips = useCallback(() => {
+  const goToTrips = () => {
     if (transitionRef.current) return;
     transitionRef.current = true;
     const target = readSafeRedirect();
@@ -182,7 +182,7 @@ export default function CinematicAuth() {
       router.refresh();
       router.push(target);
     }, 900);
-  }, [router]);
+  };
 
   // Send OTP
   const sendOtp = async () => {
@@ -215,39 +215,36 @@ export default function CinematicAuth() {
   };
 
   // Verify OTP
-  const verifyOtp = useCallback(
-    async (digits: string[]) => {
-      const token = digits.join('');
-      if (token.length !== 8 || verifyLoading) return;
-      setVerifyLoading(true);
-      setError('');
-      try {
-        const res = await fetch('/api/auth/verify-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), token }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setError(json.error ?? 'Verification failed. Try again.');
-          setVerifyLoading(false);
-        } else {
-          try {
-            const { createSupabaseBrowserClient } = await import('@/lib/supabase/client');
-            const supabase = createSupabaseBrowserClient();
-            await supabase.auth.refreshSession();
-          } catch {
-            // Continue regardless — session is set server-side
-          }
-          goToTrips();
-        }
-      } catch {
-        setError('Network error. Try again.');
+  const verifyOtp = async (digits: string[]) => {
+    const token = digits.join('');
+    if (token.length !== 8 || verifyLoading) return;
+    setVerifyLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), token }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? 'Verification failed. Try again.');
         setVerifyLoading(false);
+      } else {
+        try {
+          const { createSupabaseBrowserClient } = await import('@/lib/supabase/client');
+          const supabase = createSupabaseBrowserClient();
+          await supabase.auth.refreshSession();
+        } catch {
+          // Continue regardless — session is set server-side
+        }
+        goToTrips();
       }
-    },
-    [email, verifyLoading, goToTrips]
-  );
+    } catch {
+      setError('Network error. Try again.');
+      setVerifyLoading(false);
+    }
+  };
 
   const handleDigitChange = (i: number, val: string) => {
     const digits = val.replace(/\D/g, '');
@@ -464,7 +461,6 @@ export default function CinematicAuth() {
 
           <button
             onClick={sendOtp}
-            disabled={sendLoading || !email.trim() || cooldown > 0}
             style={{
               width: '100%',
               padding: '18px',
@@ -474,19 +470,19 @@ export default function CinematicAuth() {
               fontSize: 11,
               letterSpacing: '0.35em',
               textTransform: 'uppercase',
-              background: 'rgba(255,77,77,0.1)',
+              background: sendLoading ? 'rgba(255,77,77,0.06)' : 'rgba(255,77,77,0.1)',
               border: '1px solid rgba(255,140,30,0.4)',
               color: 'rgba(255,165,40,0.95)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 10,
-              cursor: sendLoading || !email.trim() || cooldown > 0 ? 'not-allowed' : 'pointer',
-              opacity: sendLoading || !email.trim() || cooldown > 0 ? 0.4 : 1,
+              cursor: sendLoading ? 'wait' : 'pointer',
+              opacity: sendLoading ? 0.7 : 1,
               transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
             }}
             onMouseEnter={e => {
-              if (!sendLoading && email.trim() && cooldown === 0) {
+              if (!sendLoading) {
                 (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,77,77,0.16)';
                 (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
                 (e.currentTarget as HTMLButtonElement).style.boxShadow =
@@ -494,7 +490,9 @@ export default function CinematicAuth() {
               }
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,77,77,0.1)';
+              (e.currentTarget as HTMLButtonElement).style.background = sendLoading
+                ? 'rgba(255,77,77,0.06)'
+                : 'rgba(255,77,77,0.1)';
               (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
               (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
             }}

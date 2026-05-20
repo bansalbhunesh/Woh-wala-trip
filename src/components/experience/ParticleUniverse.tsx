@@ -422,20 +422,24 @@ export default function ParticleUniverse({ phase, mouseX, mouseY }: Props) {
             ctx.shadowBlur = 30;
             ctx.shadowOffsetY = 10;
 
-            ctx.beginPath();
-            if (ctx.roundRect) {
-              ctx.roundRect(-frag.w! / 2, -frag.h! / 2, frag.w!, frag.h!, 12);
-              ctx.clip();
-            } else {
-              ctx.rect(-frag.w! / 2, -frag.h! / 2, frag.w!, frag.h!);
-              ctx.clip();
-            }
-
+            // No sharp clip — let it bleed and dissolve
             ctx.drawImage(img, -frag.w! / 2, -frag.h! / 2, frag.w!, frag.h!);
 
-            // Add a subtle dark overlay to blend with the cinematic environment
-            ctx.fillStyle = `rgba(10, 8, 6, ${frag.type === 1 ? 0.15 : 0.4})`;
-            ctx.fill();
+            // Atmospheric blend overlay (fades edges into the void)
+            const edgeMask = ctx.createRadialGradient(
+              0,
+              0,
+              0,
+              0,
+              0,
+              Math.max(frag.w!, frag.h!) / 1.6
+            );
+            edgeMask.addColorStop(0, `rgba(6, 6, 4, ${frag.type === 1 ? 0.05 : 0.2})`);
+            edgeMask.addColorStop(0.6, `rgba(6, 6, 4, ${frag.type === 1 ? 0.5 : 0.7})`);
+            edgeMask.addColorStop(1, 'rgba(6, 6, 4, 1.0)');
+
+            ctx.fillStyle = edgeMask;
+            ctx.fillRect(-frag.w! / 2, -frag.h! / 2, frag.w!, frag.h!);
           }
         } else if (frag.type === 3) {
           ctx.font = '500 9px "JetBrains Mono", ui-monospace, monospace';

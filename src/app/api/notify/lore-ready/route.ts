@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { sendPushToTripMembers } from '@/lib/push';
+import type { LoreJson } from '@/lib/types';
 
 // Called by the AI worker when lore generation completes.
 // Sends a push notification email via Resend to the trip creator.
@@ -29,10 +30,10 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createSupabaseServiceClient();
 
-    // Fetch trip + creator email in one join
+    // Fetch only real trips columns. The tagline lives inside lore_json.
     const { data: trip, error: tripError } = await supabase
       .from('trips' as never)
-      .select('id, name, destination, tagline, created_by')
+      .select('id, name, destination, lore_json, creator_id')
       .eq('id' as never, trip_id)
       .single();
 
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     // Resolve creator email via Supabase admin
     const { data: userResp, error: userError } = await supabase.auth.admin.getUserById(
-      (trip as any).created_by
+      (trip as any).creator_id
     );
     if (userError || !userResp?.user?.email) {
       console.error('[lore-ready] user lookup failed:', userError?.message);
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest) {
 
     const toEmail = userResp.user.email;
     const tripName = (trip as any).name ?? 'Your trip';
-    const tagline = (trip as any).tagline ?? null;
+    const lore = (trip as any).lore_json as LoreJson | null;
+    const tagline = lore?.tagline ?? null;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://yaarlore.com';
     const tripUrl = `${siteUrl}/trips/${trip_id}`;
 
@@ -98,15 +100,18 @@ async function sendLoreReadyEmail(
   const { Resend } = await import('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+  const safeTripName = escapeHtml(tripName);
+  const safeTagline = tagline ? escapeHtml(tagline) : null;
+  const safeTripUrl = escapeHtml(tripUrl);
 
-  const taglineBlock = tagline
+  const taglineBlock = safeTagline
     ? `
     <div style="background:#0e0e0c;border:1px solid rgba(255,77,77,0.15);border-radius:12px;padding:24px 28px;margin:24px 0;">
       <p style="font-size:10px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(245,240,232,0.3);margin:0 0 12px;">
         YOUR TAGLINE
       </p>
       <p style="font-size:15px;font-style:italic;color:rgba(245,240,232,0.85);margin:0;line-height:1.6;">
-        &ldquo;${tagline}&rdquo;
+        &ldquo;${safeTagline}&rdquo;
       </p>
     </div>`
     : '';
@@ -124,13 +129,13 @@ async function sendLoreReadyEmail(
       ● LORE ENGINE · TRANSMISSION COMPLETE
     </p>
     <h1 style="font-size:32px;font-weight:900;letter-spacing:-0.02em;color:#F5F0E8;margin:0 0 8px;line-height:1.1;text-transform:uppercase;">
-      ${tripName}
+      ${safeTripName}
     </h1>
     <p style="font-size:13px;color:rgba(245,240,232,0.55);margin:0 0 24px;">
       Your cinematic trip documentary is ready.
     </p>
     ${taglineBlock}
-    <a href="${tripUrl}"
+    <a href="${safeTripUrl}"
        style="display:block;width:100%;box-sizing:border-box;padding:18px 0;border-radius:999px;background:#F5F0E8;color:#060604;text-align:center;font-size:11px;font-weight:900;letter-spacing:0.3em;text-transform:uppercase;text-decoration:none;margin:24px 0;">
       OPEN YOUR ARCHIVE →
     </a>
@@ -145,5 +150,24 @@ async function sendLoreReadyEmail(
   </div>
 </body>
 </html>`,
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, char => {
+    switch (char) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&#39;';
+      default:
+        return char;
+    }
   });
 }

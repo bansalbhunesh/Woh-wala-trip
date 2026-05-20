@@ -758,6 +758,7 @@ export type Database = {
           trip_end_date: string;
           trip_signals: Json | null;
           trip_start_date: string;
+          webhook_payment_id: string | null;
         };
         Insert: {
           chaos_score?: number | null;
@@ -793,6 +794,7 @@ export type Database = {
           trip_end_date: string;
           trip_signals?: Json | null;
           trip_start_date: string;
+          webhook_payment_id?: string | null;
         };
         Update: {
           chaos_score?: number | null;
@@ -828,6 +830,7 @@ export type Database = {
           trip_end_date?: string;
           trip_signals?: Json | null;
           trip_start_date?: string;
+          webhook_payment_id?: string | null;
         };
         Relationships: [
           {

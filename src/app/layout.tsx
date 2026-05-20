@@ -1,6 +1,7 @@
 import { TRPCProvider } from '@/lib/trpc/provider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { ToastProvider } from '@/components/ui/Toast';
+import { RevealObserver } from '@/components/providers/RevealObserver';
 import { Bricolage_Grotesque, Nunito, Fira_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -122,29 +123,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Pages define their own <main> landmark internally;
                   we just need this id to exist as a jump target. */}
               <div id="main-content">{children}</div>
+              <RevealObserver />
             </ToastProvider>
           </PostHogProvider>
         </TRPCProvider>
-        {/* Scroll-reveal IntersectionObserver — activates .reveal elements as they enter viewport */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){
-  if(typeof IntersectionObserver==='undefined')return;
-  var io=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(e.isIntersecting){e.target.classList.add('revealed');io.unobserve(e.target);}
-    });
-  },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
-  function observe(){
-    document.querySelectorAll('.reveal,.reveal-fast').forEach(function(el){io.observe(el);});
-  }
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',observe);}
-  else{observe();}
-  var mo=new MutationObserver(observe);
-  mo.observe(document.body,{childList:true,subtree:true});
-})();`,
-          }}
-        />
       </body>
     </html>
   );

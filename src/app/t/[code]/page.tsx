@@ -11,11 +11,19 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
   const { data: trip } = await supabase
     .from('trips')
-    .select('id, name, destination, lore_json, chaos_score')
+    .select('id, name, destination, lore_json, chaos_score, story_visible')
     .eq('invite_code', code.toUpperCase())
     .single();
 
   if (!trip) return { title: 'Yaarlore' };
+
+  if ((trip as any).story_visible === false) {
+    return {
+      title: 'Story hidden — Yaarlore',
+      description: 'This trip story is private.',
+      robots: { index: false, follow: false },
+    };
+  }
 
   const lore = (trip as any).lore_json as LoreJson | null;
   const tripId = (trip as any).id as string;
@@ -50,7 +58,7 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
   const { data: tripData } = await supabase
     .from('trips')
     .select(
-      'id, name, destination, chaos_score, member_count, total_photos, lore_json, tier, invite_code, trip_start_date, trip_end_date'
+      'id, name, destination, chaos_score, member_count, total_photos, lore_json, tier, invite_code, trip_start_date, trip_end_date, story_visible'
     )
     .eq('invite_code', code.toUpperCase())
     .single();
@@ -61,6 +69,10 @@ export default async function PublicLorePage({ params }: { params: Promise<{ cod
     return <PublicNotFound code={code} />;
   }
   const trip = tripData as any;
+
+  if (trip.story_visible === false) {
+    return <PublicLoreHidden inviteCode={trip.invite_code} />;
+  }
 
   const lore = trip.lore_json as LoreJson | null;
   if (!lore) {
@@ -344,6 +356,30 @@ function PublicLorePending({
           className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white/70 transition-colors"
         >
           On this trip? Join to upload photos →
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function PublicLoreHidden({ inviteCode }: { inviteCode: string | null }) {
+  return (
+    <div className="min-h-screen bg-[#060604] text-[#F5F0E8] flex flex-col items-center justify-center px-6 text-center font-mono">
+      <FilmGrain />
+      <p className="text-[10px] uppercase tracking-[0.6em] text-white/35 mb-6">● ARCHIVE SEALED</p>
+      <h1 className="text-3xl font-black uppercase tracking-tighter text-[#F5F0E8] mb-3 max-w-md">
+        This story is private
+      </h1>
+      <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-8">
+        The trip creator has hidden this public lore page. Members can still open it from their
+        private trip room.
+      </p>
+      {inviteCode && (
+        <Link
+          href={`/trips/join?code=${inviteCode}`}
+          className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white/70 transition-colors"
+        >
+          On this trip? Join the season →
         </Link>
       )}
     </div>
