@@ -74,6 +74,12 @@ export default function TripRoomPage() {
   // below are still used as scroll anchors by the Chapter Deck cards in the hub.)
 
   const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
+  // Stable refetch ref — channel subscription dep array stays stable so the
+  // WebSocket is never torn down and rebuilt unnecessarily between renders.
+  const refetchRef = useRef(refetch);
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
   const { data: photoList } = trpc.photos.list.useQuery({ tripId }, { enabled: !!tripId });
 
   // Single shared Supabase browser client — fixes the previous dual-client issue
@@ -113,7 +119,7 @@ export default function TripRoomPage() {
         payload => {
           if (!mounted) return;
           const newStatus = (payload.new as any)?.lore_status;
-          if (newStatus === 'ready' || newStatus === 'failed') refetch();
+          if (newStatus === 'ready' || newStatus === 'failed') refetchRef.current();
         }
       )
       .subscribe();
@@ -121,13 +127,15 @@ export default function TripRoomPage() {
       mounted = false;
       supabase.removeChannel(channel);
     };
-  }, [tripId, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId]); // refetch intentionally excluded — use refetchRef for stability
 
   useEffect(() => {
     if (loreStatus === 'ready' && !localStorage.getItem(`wrapped_${tripId}`)) {
       setShowWrapped(true);
     }
-  }, [loreStatus, refetch, tripId]);
+    // refetch intentionally excluded — this effect never calls refetch, the dep was spurious
+  }, [loreStatus, tripId]);
 
   const handleFinishWrapped = () => {
     setShowWrapped(false);

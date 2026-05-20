@@ -21,6 +21,14 @@ export default function GeneratingPage() {
   const tripId = params.tripId as string;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);
+  // Mounted guard — prevents router.push after the component unmounts
+  // (e.g. user navigates back during the 1800ms unlock animation)
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const [stage, setStage] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -55,6 +63,13 @@ export default function GeneratingPage() {
     )
   );
 
+  // Stable ref for refetch — keeps channel subscription dep array stable so
+  // the channel is never needlessly torn down and rebuilt between renders.
+  const refetchRef = useRef(refetch);
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
   // Supabase Realtime — push update when lore_status changes instead of polling
   useEffect(() => {
     let mounted = true;
@@ -73,7 +88,7 @@ export default function GeneratingPage() {
           if (!mounted) return;
           const newStatus = (payload.new as any)?.lore_status;
           if (newStatus === 'ready' || newStatus === 'failed') {
-            refetch();
+            refetchRef.current();
           }
         }
       )
@@ -82,7 +97,9 @@ export default function GeneratingPage() {
       mounted = false;
       supabase.removeChannel(channel);
     };
-  }, [tripId, refetch]);
+    // Only re-subscribe when tripId changes — not when refetch changes identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trip = (tripData as any)?.trip;
   const loreStatus = trip?.lore_status;
@@ -96,7 +113,11 @@ export default function GeneratingPage() {
       analytics.generationCompleted(tripId, trip?.chaos_score ?? 0);
       setUnlocking(true);
       setProgress(100);
-      setTimeout(() => router.push(`/trips/${tripId}`), 1800);
+      // Only navigate if still mounted — prevents stale push if user navigated away
+      // during the 1800ms unlock animation (which corrupts Next.js router state).
+      setTimeout(() => {
+        if (mountedRef.current) router.push(`/trips/${tripId}`);
+      }, 1800);
     } else if (loreStatus === 'failed') {
       setLoreStatusResolved(true);
       router.push(`/trips/${tripId}`);
