@@ -110,15 +110,15 @@ const MEMORIES = [
   {
     id: 'm08',
     src: '/memories/m08.png',
-    cx: 43,
-    cy: 74,
-    w: 245,
+    cx: 24,
+    cy: 82,
+    w: 210,
     rot: 2.9,
-    depth: 0.76,
-    baseOp: 0.62,
-    blur: 0.5,
+    depth: 0.48,
+    baseOp: 0.32,
+    blur: 2.2,
     revealAt: 3000,
-  },
+  }, // moved bottom-left — was blocking insight/CTA center
   {
     id: 'm09',
     src: '/memories/m09.png',
@@ -146,33 +146,33 @@ const MEMORIES = [
   {
     id: 'm11',
     src: '/memories/m11.png',
-    cx: 92,
+    cx: 87,
     cy: 50,
-    w: 220,
+    w: 205,
     rot: -8.1,
-    depth: 0.54,
-    baseOp: 0.5,
-    blur: 1.5,
+    depth: 0.48,
+    baseOp: 0.42,
+    blur: 1.8,
     revealAt: 6800,
-  },
+  }, // pulled in from cx:92 edge
   {
     id: 'm12',
     src: '/memories/m12.png',
-    cx: 55,
-    cy: 86,
-    w: 232,
+    cx: 65,
+    cy: 92,
+    w: 200,
     rot: 3.6,
-    depth: 0.66,
-    baseOp: 0.56,
-    blur: 1.0,
+    depth: 0.36,
+    baseOp: 0.22,
+    blur: 3.0,
     revealAt: 4800,
-  },
+  }, // very low opacity — was behind CTA wordmark
 ] as const;
 
 // Thread connections between emotionally related memories
 const THREAD_PAIRS: [string, string, number][] = [
   ['m03', 'm05', 0.28], // two hero anchors — core mythology
-  ['m03', 'm08', 0.18], // nature group shots
+  ['m01', 'm08', 0.12], // nature group shots — m08 now bottom-left
   ['m04', 'm05', 0.16], // eating / gathering
   ['m01', 'm06', 0.14], // mountain landscapes
   ['m11', 'm12', 0.2], // night / travel
@@ -443,19 +443,22 @@ export default function MemoryConstellationHero() {
         }}
       />
 
-      {/* ── Subtle atmospheric warmth bleed — bottom ──────────────── */}
+      {/* ── Dark pocket for insight + CTA — clears readability zone ─ */}
+      {/* Not a box — an atmospheric absence of light in the center-bottom */}
       <div
         aria-hidden
         style={{
           position: 'absolute',
           bottom: 0,
-          left: '20%',
-          right: '20%',
-          height: '30%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '62%',
+          height: '52%',
           pointerEvents: 'none',
           zIndex: 2,
-          background:
-            'radial-gradient(ellipse at bottom, rgba(160,60,20,0.04) 0%, transparent 70%)',
+          background: [
+            'radial-gradient(ellipse 75% 85% at 50% 80%, rgba(3,2,2,0.72) 0%, rgba(4,3,2,0.45) 50%, transparent 100%)',
+          ].join(', '),
         }}
       />
 
@@ -603,8 +606,9 @@ export default function MemoryConstellationHero() {
                   fontSize: 8,
                   letterSpacing: '0.55em',
                   textTransform: 'uppercase',
-                  color: 'rgba(255,150,80,0.5)',
+                  color: 'rgba(255,150,80,0.65)',
                   marginBottom: 14,
+                  textShadow: '0 1px 12px rgba(0,0,0,0.9)',
                 }}
               >
                 ● PATTERN IDENTIFIED
@@ -617,10 +621,11 @@ export default function MemoryConstellationHero() {
                   fontStyle: 'italic',
                   fontWeight: 900,
                   fontSize: 'clamp(22px, 3.5vw, 38px)',
-                  color: 'rgba(245,240,232,0.88)',
+                  color: 'rgba(245,240,232,0.92)',
                   letterSpacing: '-0.02em',
                   lineHeight: 1.15,
                   minHeight: '1.15em',
+                  textShadow: '0 2px 24px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.6)',
                 }}
               >
                 {visibleText}
@@ -665,7 +670,8 @@ export default function MemoryConstellationHero() {
                 fontSize: 'clamp(14px, 2vw, 18px)',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
-                color: 'rgba(245,240,232,0.55)',
+                color: 'rgba(245,240,232,0.70)',
+                textShadow: '0 2px 16px rgba(0,0,0,0.9)',
               }}
             >
               YAAR
@@ -676,9 +682,10 @@ export default function MemoryConstellationHero() {
                 fontFamily: 'var(--font-display)',
                 fontStyle: 'italic',
                 fontSize: 'clamp(11px, 1.2vw, 13px)',
-                color: 'rgba(245,240,232,0.28)',
+                color: 'rgba(245,240,232,0.35)',
                 marginTop: 4,
                 letterSpacing: '0.01em',
+                textShadow: '0 1px 8px rgba(0,0,0,0.8)',
               }}
             >
               Upload your memories. The AI discovers your mythology.
