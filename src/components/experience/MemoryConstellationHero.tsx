@@ -220,6 +220,10 @@ export default function MemoryConstellationHero() {
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const targetRef = useRef({ x: 0.5, y: 0.5 });
 
+  // threadsOpacityRef is read every RAF frame so the loop doesn't need to restart
+  // when threads fade in. threadsOpacity state is kept only for the CSS transition
+  // on the <canvas> element's opacity property.
+  const threadsOpacityRef = useRef(0);
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [threadsOpacity, setThreadsOpacity] = useState(0);
   const [insightIdx, setInsightIdx] = useState(-1);
@@ -259,8 +263,15 @@ export default function MemoryConstellationHero() {
       );
     });
 
-    // Threads appear once the two anchors have materialised
-    timers.push(setTimeout(() => setThreadsOpacity(1), 3400));
+    // Threads appear once the two anchors have materialised.
+    // ref is set first so the RAF loop sees the new value immediately without
+    // needing to tear down and restart the entire animation loop.
+    timers.push(
+      setTimeout(() => {
+        threadsOpacityRef.current = 1;
+        setThreadsOpacity(1);
+      }, 3400)
+    );
 
     // CTA appears early so users always have a clear action
     timers.push(setTimeout(() => setCtaVisible(true), 4000));
@@ -306,9 +317,10 @@ export default function MemoryConstellationHero() {
     }, 48);
 
     // After showing for 7 seconds, transition to next insight
+    let innerTimer: ReturnType<typeof setTimeout>;
     const cycleTimer = setTimeout(() => {
       setInsightVisible(false);
-      setTimeout(() => {
+      innerTimer = setTimeout(() => {
         setInsightIdx(prev => prev + 1);
         setInsightVisible(true);
         setInsightChars(0);
@@ -318,6 +330,7 @@ export default function MemoryConstellationHero() {
     return () => {
       clearInterval(typeInterval);
       clearTimeout(cycleTimer);
+      clearTimeout(innerTimer);
     };
   }, [insightIdx]);
 
@@ -413,7 +426,7 @@ export default function MemoryConstellationHero() {
         const p1 = centers[a];
         const p2 = centers[b];
         if (!p1 || !p2) return;
-        const alpha = baseAlpha * threadPulse * (threadsOpacity > 0 ? 1 : 0);
+        const alpha = baseAlpha * threadPulse * (threadsOpacityRef.current > 0 ? 1 : 0);
         if (alpha < 0.005) return;
 
         const grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
@@ -444,7 +457,7 @@ export default function MemoryConstellationHero() {
       cancelAnimationFrame(rafRef.current);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [mounted, threadsOpacity]);
+  }, [mounted]); // threadsOpacity intentionally excluded — read via threadsOpacityRef to avoid RAF restart
 
   // ── Canvas resize ────────────────────────────────────────────────────────────
   useEffect(() => {

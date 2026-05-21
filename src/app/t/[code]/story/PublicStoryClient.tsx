@@ -292,27 +292,45 @@ export default function PublicStoryClient({
       {/* Blurred background photo */}
       <SlidePhotoBackground photos={photos} slideIdx={idx} />
 
-      {/* Accessible tap zones — keyboard + screen-reader navigable */}
-      <button
-        aria-label="Previous slide"
-        tabIndex={0}
-        onClick={retreat}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowLeft') retreat();
-        }}
-        className="absolute left-0 top-0 bottom-0 w-1/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-      />
-      <button
-        aria-label="Next slide"
-        tabIndex={0}
-        onClick={advance}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') advance();
-        }}
-        className="absolute right-0 top-0 bottom-0 w-2/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-      />
+      {/* Accessible tap zones — hidden on slides with interactive content (verdict/join)
+          so their links and buttons receive clicks instead of the zone intercepting them. */}
+      {current.type !== 'join' && current.type !== 'verdict' && (
+        <>
+          <button
+            aria-label="Previous slide"
+            tabIndex={0}
+            onClick={retreat}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowLeft') retreat();
+            }}
+            className="absolute left-0 top-0 bottom-0 w-1/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+          />
+          <button
+            aria-label="Next slide"
+            tabIndex={0}
+            onClick={advance}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') advance();
+            }}
+            className="absolute right-0 top-0 bottom-0 w-2/3 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+          />
+        </>
+      )}
+      {/* On interactive slides keep only a narrow left-edge back zone */}
+      {(current.type === 'join' || current.type === 'verdict') && (
+        <button
+          aria-label="Previous slide"
+          tabIndex={0}
+          onClick={retreat}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowLeft') retreat();
+          }}
+          className="absolute left-0 top-16 bottom-16 w-12 z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+        />
+      )}
       {/* Progress bars */}
       <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-4 pt-3">
         {slides.map((_, i) => (
