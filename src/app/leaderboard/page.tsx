@@ -7,7 +7,7 @@ export const metadata = {
   description: 'The most historically cooked trips on Yaarlore. Ranked by chaos score.',
 };
 
-export const revalidate = 3600; // Revalidate every hour
+export const dynamic = 'force-dynamic';
 
 export default async function LeaderboardPage() {
   const supabase = createSupabaseServiceClient();

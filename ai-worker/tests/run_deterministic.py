@@ -83,6 +83,8 @@ def mock_table(table_name):
     return MagicMock()
 
 _clients_mod.supabase.table = mock_table
+# Make rpc raise so _budget_ok falls back to the fal_budget table path (which the mock covers)
+_clients_mod.supabase.rpc = MagicMock(side_effect=RuntimeError("rpc not available in test"))
 _clients_mod.anthropic_client = MagicMock()
 sys.modules["src.clients"] = _clients_mod
 
