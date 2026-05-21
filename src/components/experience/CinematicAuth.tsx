@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 /**
  * CinematicAuth — premium OTP login with reliable first paint.
@@ -317,8 +318,8 @@ export default function CinematicAuth() {
         }}
       />
 
-      {/* Back to landing */}
-      <a
+      {/* Back to landing — Link for client-side nav (avoids full page reload) */}
+      <Link
         href="/"
         style={{
           position: 'fixed',
@@ -337,7 +338,7 @@ export default function CinematicAuth() {
         onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(245,240,232,0.35)')}
       >
         ← HOME
-      </a>
+      </Link>
 
       {/* Wordmark top-right */}
       <span

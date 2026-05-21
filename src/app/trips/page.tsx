@@ -159,9 +159,13 @@ function seasonAccent(name: string) {
   return SEASON_ACCENTS[hashName(name) % SEASON_ACCENTS.length];
 }
 
+// AudioContext is intentionally module-level so oscillators from the same
+// page session share one context (browsers cap concurrent contexts).
+// It's never explicitly closed — the browser GC's it on page unload.
+// Closure is NOT called on client-nav because that would cut off any
+// currently-playing chime mid-note; the next page load creates a fresh one.
 let sharedAudioCtx: AudioContext | null = null;
 
-// Global lightweight browser chime synthesizer for premium interaction feedback
 function playHomeChime(pitchMultiplier = 1.0, volume = 0.02) {
   try {
     if (typeof window === 'undefined') return;
