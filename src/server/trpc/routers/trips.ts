@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
@@ -1091,7 +1091,7 @@ export const tripsRouter = router({
     // No trip names or user IDs are exposed; chaos_score alone is returned.
     // ChaosDistributionRow from supabase-extended.types.ts covers the materialized view row shape.
     const { data: viewData, error: viewError } = await createSupabaseServiceClient()
-      .from('chaos_distribution_cache' as never)
+      .from('chaos_distribution_cache')
       .select('chaos_score');
 
     // If the view doesn't exist yet (pre-migration deployment), fall back to direct query.
@@ -1720,7 +1720,7 @@ export const tripsRouter = router({
 
       // Create dispute — UNIQUE constraint prevents duplicate active disputes
       const { data: dispute, error } = await admin
-        .from('lore_disputes' as never)
+        .from('lore_disputes')
         .insert({
           trip_id: input.tripId,
           user_id: ctx.user.id,
@@ -1750,7 +1750,7 @@ export const tripsRouter = router({
       const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
 
       // Emit group pulse event — surfaces on everyone's home screen
-      await admin.from('group_pulse_events' as never).insert({
+      await admin.from('group_pulse_events').insert({
         trip_id: input.tripId,
         event_type: 'dispute_filed',
         actor_user_id: ctx.user.id,
@@ -1778,7 +1778,7 @@ export const tripsRouter = router({
 
       // Load dispute to check trip membership and deadline
       const { data: disputeRaw } = await admin
-        .from('lore_disputes' as never)
+        .from('lore_disputes')
         .select(
           'id, trip_id, user_id, status, vote_deadline, ai_vote_count, user_vote_count, total_eligible'
         )
@@ -1812,7 +1812,7 @@ export const tripsRouter = router({
       if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
 
       // Record vote — PK prevents double-voting
-      const { error: voteError } = await admin.from('dispute_votes' as never).insert({
+      const { error: voteError } = await admin.from('dispute_votes').insert({
         dispute_id: input.disputeId,
         voter_user_id: ctx.user.id,
         vote: input.vote,
@@ -1837,7 +1837,7 @@ export const tripsRouter = router({
       }
 
       await admin
-        .from('lore_disputes' as never)
+        .from('lore_disputes')
         .update({
           ai_vote_count: newAi,
           user_vote_count: newUser,
@@ -1853,7 +1853,7 @@ export const tripsRouter = router({
         .eq('trip_id', dispute.trip_id);
       const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
 
-      await admin.from('group_pulse_events' as never).insert({
+      await admin.from('group_pulse_events').insert({
         trip_id: dispute.trip_id,
         event_type: newStatus !== 'voting' ? 'dispute_resolved' : 'vote_cast',
         actor_user_id: ctx.user.id,
@@ -1916,10 +1916,10 @@ export const tripsRouter = router({
       if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
 
       // Resolve expired disputes first
-      await admin.rpc('resolve_expired_disputes' as never);
+      await admin.rpc('resolve_expired_disputes');
 
       const { data } = await admin
-        .from('lore_disputes' as never)
+        .from('lore_disputes')
         .select(
           'id, user_id, dispute_type, ai_claim, user_claim, status, vote_deadline, ai_vote_count, user_vote_count, total_eligible, created_at, resolved_at'
         )
@@ -1931,10 +1931,10 @@ export const tripsRouter = router({
       let votedDisputeIds = new Set<string>();
       if (disputeIds.length > 0) {
         const { data: votes } = await admin
-          .from('dispute_votes' as never)
+          .from('dispute_votes')
           .select('dispute_id')
           .eq('voter_user_id', ctx.user.id)
-          .in('dispute_id' as never, disputeIds);
+          .in('dispute_id', disputeIds);
         votedDisputeIds = new Set(((votes as any[]) ?? []).map((v: any) => v.dispute_id));
       }
 
@@ -1968,9 +1968,9 @@ export const tripsRouter = router({
       const admin = createSupabaseServiceClient();
 
       let query = admin
-        .from('group_pulse_events' as never)
+        .from('group_pulse_events')
         .select('id, trip_id, event_type, actor_user_id, payload, created_at')
-        .contains('visible_to' as never, [ctx.user.id])
+        .contains('visible_to', [ctx.user.id])
         .order('created_at', { ascending: false })
         .limit(input.limit);
 
@@ -2035,7 +2035,7 @@ export const tripsRouter = router({
         .single();
       if (!memberRaw) throw new TRPCError({ code: 'FORBIDDEN' });
 
-      await admin.from('pending_incidents' as never).insert({
+      await admin.from('pending_incidents').insert({
         trip_id: input.tripId,
         triggered_by: ctx.user.id,
         note: input.note ?? null,
@@ -2054,7 +2054,7 @@ export const tripsRouter = router({
         .eq('id', ctx.user.id)
         .single();
 
-      await admin.from('group_pulse_events' as never).insert({
+      await admin.from('group_pulse_events').insert({
         trip_id: input.tripId,
         event_type: 'incident_flagged',
         actor_user_id: ctx.user.id,
@@ -2086,14 +2086,14 @@ export const tripsRouter = router({
 
       const [{ data: incidents }, { data: gaps }] = await Promise.all([
         admin
-          .from('trip_incidents' as never)
+          .from('trip_incidents')
           .select(
             'id, incident_ref, title, timeframe, confidence, verified_facts, inferred_elements, unknown_elements, participant_names, is_contested, callback_potential, mythology_status, investigator_note'
           )
           .eq('trip_id', input.tripId)
           .order('incident_ref'),
         admin
-          .from('evidence_gaps' as never)
+          .from('evidence_gaps')
           .select('id, gap_ref, timeframe, what_we_know, what_we_dont, significance')
           .eq('trip_id', input.tripId)
           .order('gap_ref'),
@@ -2132,7 +2132,7 @@ export const tripsRouter = router({
     const admin = createSupabaseServiceClient();
 
     const { data: snapshots } = await admin
-      .from('user_identity_snapshots' as never)
+      .from('user_identity_snapshots')
       .select('archetype, chaos_rating, role_title, signature_behavior, snapshot_at, trip_id')
       .eq('user_id', ctx.user.id)
       .order('snapshot_at', { ascending: true });
@@ -2215,7 +2215,7 @@ export const tripsRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Memory review window has closed.' });
       }
 
-      await admin.from('memory_contributions' as never).insert({
+      await admin.from('memory_contributions').insert({
         trip_id: input.tripId,
         user_id: ctx.user.id,
         contribution_type: input.contributionType,
@@ -2230,7 +2230,7 @@ export const tripsRouter = router({
           .select('user_id')
           .eq('trip_id', input.tripId);
         const visibleTo = (members ?? []).map((m: any) => m.user_id as string);
-        await admin.from('group_pulse_events' as never).insert({
+        await admin.from('group_pulse_events').insert({
           trip_id: input.tripId,
           event_type: 'memory_added',
           actor_user_id: ctx.user.id,
@@ -2263,7 +2263,7 @@ export const tripsRouter = router({
 
       // Has this user contributed?
       const { data: myContrib } = await admin
-        .from('memory_contributions' as never)
+        .from('memory_contributions')
         .select('id')
         .eq('trip_id', input.tripId)
         .eq('user_id', ctx.user.id)
@@ -2271,7 +2271,7 @@ export const tripsRouter = router({
 
       // Get all contributions
       const { data: allContribs } = await admin
-        .from('memory_contributions' as never)
+        .from('memory_contributions')
         .select('user_id, contribution_type, content, created_at')
         .eq('trip_id', input.tripId)
         .order('created_at', { ascending: false });
@@ -2329,9 +2329,9 @@ export const tripsRouter = router({
       }
 
       const { data: allSnaps } = await admin
-        .from('user_identity_snapshots' as never)
+        .from('user_identity_snapshots')
         .select('user_id, archetype, chaos_rating, role_title, snapshot_at')
-        .in('user_id' as never, memberIds)
+        .in('user_id', memberIds)
         .order('snapshot_at', { ascending: false });
 
       // Group by user, take last 3 per user
@@ -2419,7 +2419,7 @@ Raw JSON only. No markdown.`;
           .eq('id', input.tripId);
 
         // Store WhatsApp card
-        await admin.from('trip_prophecy_cards' as never).upsert({
+        await admin.from('trip_prophecy_cards').upsert({
           trip_id: input.tripId,
           whatsapp_text: prophecy.whatsapp_text ?? prophecy.headline,
           card_headline: prophecy.headline,
@@ -2431,7 +2431,7 @@ Raw JSON only. No markdown.`;
           .select('user_id')
           .eq('trip_id', input.tripId);
         const visibleTo = ((allMembers as any[]) ?? []).map((m: any) => m.user_id as string);
-        await admin.from('group_pulse_events' as never).insert({
+        await admin.from('group_pulse_events').insert({
           trip_id: input.tripId,
           event_type: 'lore_generated',
           actor_user_id: null,
@@ -2473,7 +2473,7 @@ Raw JSON only. No markdown.`;
         'trip_id, trips(id, name, destination, trip_start_date, chaos_score, lore_status, lore_json, member_count)'
       )
       .eq('user_id', ctx.user.id)
-      .eq('trips.lore_status' as never, 'ready')
+      .eq('trips.lore_status', 'ready')
       .order('trips(trip_start_date)' as never, { ascending: true });
 
     const trips = ((memberships as any[]) ?? []).map((m: any) => m.trips).filter(Boolean) as any[];
@@ -2483,10 +2483,10 @@ Raw JSON only. No markdown.`;
     // For each trip, get identity snapshot for this user
     const tripIds = trips.map((t: any) => t.id as string);
     const { data: snapshots } = await admin
-      .from('user_identity_snapshots' as never)
+      .from('user_identity_snapshots')
       .select('trip_id, archetype, chaos_rating, role_title')
       .eq('user_id', ctx.user.id)
-      .in('trip_id' as never, tripIds);
+      .in('trip_id', tripIds);
 
     const snapshotByTrip = new Map<string, any>();
     for (const snap of (snapshots as any[]) ?? []) {
@@ -2495,10 +2495,10 @@ Raw JSON only. No markdown.`;
 
     // Get canonical incidents per trip (high callback potential)
     const { data: incidents } = await admin
-      .from('trip_incidents' as never)
+      .from('trip_incidents')
       .select('trip_id, incident_ref, title, callback_potential, mythology_status')
-      .in('trip_id' as never, tripIds)
-      .in('callback_potential' as never, ['HIGH'])
+      .in('trip_id', tripIds)
+      .in('callback_potential', ['HIGH'])
       .order('incident_ref');
 
     const incidentsByTrip = new Map<string, any[]>();
@@ -2551,7 +2551,7 @@ Raw JSON only. No markdown.`;
 
       const { data: tripRaw } = await ctx.supabase
         .from('trips')
-        .select('tier, slambook_path' as never)
+        .select('tier, slambook_path')
         .eq('id', input.tripId)
         .single();
 
