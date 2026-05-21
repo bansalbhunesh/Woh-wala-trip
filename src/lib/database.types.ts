@@ -62,6 +62,151 @@ export type Database = {
           },
         ];
       };
+      character_arc_updates: {
+        Row: {
+          arc_pct: number | null;
+          archetype_current: string | null;
+          chaos_delta: number | null;
+          chaos_trajectory: string | null;
+          created_at: string;
+          id: string;
+          narrative: string;
+          trip_count: number | null;
+          user_id: string;
+          week_of: string;
+        };
+        Insert: {
+          arc_pct?: number | null;
+          archetype_current?: string | null;
+          chaos_delta?: number | null;
+          chaos_trajectory?: string | null;
+          created_at?: string;
+          id?: string;
+          narrative: string;
+          trip_count?: number | null;
+          user_id: string;
+          week_of: string;
+        };
+        Update: {
+          arc_pct?: number | null;
+          archetype_current?: string | null;
+          chaos_delta?: number | null;
+          chaos_trajectory?: string | null;
+          created_at?: string;
+          id?: string;
+          narrative?: string;
+          trip_count?: number | null;
+          user_id?: string;
+          week_of?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'character_arc_updates_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'character_arc_updates_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      dispute_votes: {
+        Row: {
+          dispute_id: string;
+          vote: string;
+          voted_at: string;
+          voter_user_id: string;
+        };
+        Insert: {
+          dispute_id: string;
+          vote: string;
+          voted_at?: string;
+          voter_user_id: string;
+        };
+        Update: {
+          dispute_id?: string;
+          vote?: string;
+          voted_at?: string;
+          voter_user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'dispute_votes_dispute_id_fkey';
+            columns: ['dispute_id'];
+            isOneToOne: false;
+            referencedRelation: 'lore_disputes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'dispute_votes_voter_user_id_fkey';
+            columns: ['voter_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'dispute_votes_voter_user_id_fkey';
+            columns: ['voter_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      evidence_gaps: {
+        Row: {
+          created_at: string;
+          gap_ref: string;
+          id: string;
+          significance: string | null;
+          timeframe: string;
+          trip_id: string;
+          what_we_dont: string;
+          what_we_know: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          gap_ref: string;
+          id?: string;
+          significance?: string | null;
+          timeframe: string;
+          trip_id: string;
+          what_we_dont: string;
+          what_we_know?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          gap_ref?: string;
+          id?: string;
+          significance?: string | null;
+          timeframe?: string;
+          trip_id?: string;
+          what_we_dont?: string;
+          what_we_know?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'evidence_gaps_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'evidence_gaps_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       fal_budget: {
         Row: {
           calls_count: number;
@@ -118,6 +263,242 @@ export type Database = {
             columns: ['trip_id'];
             isOneToOne: true;
             referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      group_lore_os: {
+        Row: {
+          canonical_members: string[];
+          group_hash: string | null;
+          id: string;
+          last_trip_id: string | null;
+          last_updated: string | null;
+          mythology_state: Json | null;
+          trip_count: number | null;
+        };
+        Insert: {
+          canonical_members: string[];
+          group_hash?: string | null;
+          id?: string;
+          last_trip_id?: string | null;
+          last_updated?: string | null;
+          mythology_state?: Json | null;
+          trip_count?: number | null;
+        };
+        Update: {
+          canonical_members?: string[];
+          group_hash?: string | null;
+          id?: string;
+          last_trip_id?: string | null;
+          last_updated?: string | null;
+          mythology_state?: Json | null;
+          trip_count?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'group_lore_os_last_trip_id_fkey';
+            columns: ['last_trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'group_lore_os_last_trip_id_fkey';
+            columns: ['last_trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      group_pulse_events: {
+        Row: {
+          actor_user_id: string | null;
+          created_at: string;
+          event_type: string;
+          id: string;
+          payload: Json;
+          seen_by: string[];
+          trip_id: string;
+          visible_to: string[];
+        };
+        Insert: {
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          payload?: Json;
+          seen_by?: string[];
+          trip_id: string;
+          visible_to?: string[];
+        };
+        Update: {
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          payload?: Json;
+          seen_by?: string[];
+          trip_id?: string;
+          visible_to?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'group_pulse_events_actor_user_id_fkey';
+            columns: ['actor_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'group_pulse_events_actor_user_id_fkey';
+            columns: ['actor_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'group_pulse_events_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'group_pulse_events_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      incident_references: {
+        Row: {
+          created_at: string;
+          id: string;
+          reference_context: string | null;
+          reference_type: string | null;
+          referencing_trip_id: string;
+          source_incident_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          reference_context?: string | null;
+          reference_type?: string | null;
+          referencing_trip_id: string;
+          source_incident_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          reference_context?: string | null;
+          reference_type?: string | null;
+          referencing_trip_id?: string;
+          source_incident_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'incident_references_referencing_trip_id_fkey';
+            columns: ['referencing_trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'incident_references_referencing_trip_id_fkey';
+            columns: ['referencing_trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'incident_references_source_incident_id_fkey';
+            columns: ['source_incident_id'];
+            isOneToOne: false;
+            referencedRelation: 'trip_incidents';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      lore_disputes: {
+        Row: {
+          ai_claim: string;
+          ai_vote_count: number;
+          canonical_text: string | null;
+          created_at: string;
+          dispute_type: string;
+          id: string;
+          resolved_at: string | null;
+          status: string;
+          total_eligible: number;
+          trip_id: string;
+          user_claim: string;
+          user_id: string;
+          user_vote_count: number;
+          vote_deadline: string;
+        };
+        Insert: {
+          ai_claim: string;
+          ai_vote_count?: number;
+          canonical_text?: string | null;
+          created_at?: string;
+          dispute_type: string;
+          id?: string;
+          resolved_at?: string | null;
+          status?: string;
+          total_eligible?: number;
+          trip_id: string;
+          user_claim: string;
+          user_id: string;
+          user_vote_count?: number;
+          vote_deadline?: string;
+        };
+        Update: {
+          ai_claim?: string;
+          ai_vote_count?: number;
+          canonical_text?: string | null;
+          created_at?: string;
+          dispute_type?: string;
+          id?: string;
+          resolved_at?: string | null;
+          status?: string;
+          total_eligible?: number;
+          trip_id?: string;
+          user_claim?: string;
+          user_id?: string;
+          user_vote_count?: number;
+          vote_deadline?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lore_disputes_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'lore_disputes_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'lore_disputes_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'lore_disputes_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
             referencedColumns: ['id'];
           },
         ];
@@ -181,6 +562,164 @@ export type Database = {
           },
         ];
       };
+      memory_contributions: {
+        Row: {
+          content: string | null;
+          contribution_type: string;
+          created_at: string;
+          id: string;
+          photo_id: string | null;
+          target_section: string | null;
+          trip_id: string;
+          user_id: string;
+        };
+        Insert: {
+          content?: string | null;
+          contribution_type: string;
+          created_at?: string;
+          id?: string;
+          photo_id?: string | null;
+          target_section?: string | null;
+          trip_id: string;
+          user_id: string;
+        };
+        Update: {
+          content?: string | null;
+          contribution_type?: string;
+          created_at?: string;
+          id?: string;
+          photo_id?: string | null;
+          target_section?: string | null;
+          trip_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'memory_contributions_photo_id_fkey';
+            columns: ['photo_id'];
+            isOneToOne: false;
+            referencedRelation: 'photos';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'memory_contributions_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'memory_contributions_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'memory_contributions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'memory_contributions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      mythology_edges: {
+        Row: {
+          created_at: string;
+          edge_type: string;
+          id: string;
+          source_node: string;
+          target_node: string;
+          trip_id: string | null;
+          weight: number | null;
+        };
+        Insert: {
+          created_at?: string;
+          edge_type: string;
+          id?: string;
+          source_node: string;
+          target_node: string;
+          trip_id?: string | null;
+          weight?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          edge_type?: string;
+          id?: string;
+          source_node?: string;
+          target_node?: string;
+          trip_id?: string | null;
+          weight?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'mythology_edges_source_node_fkey';
+            columns: ['source_node'];
+            isOneToOne: false;
+            referencedRelation: 'mythology_nodes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'mythology_edges_target_node_fkey';
+            columns: ['target_node'];
+            isOneToOne: false;
+            referencedRelation: 'mythology_nodes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'mythology_edges_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'mythology_edges_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      mythology_nodes: {
+        Row: {
+          created_at: string;
+          id: string;
+          label: string;
+          mythology_weight: number | null;
+          node_ref: string | null;
+          node_type: string;
+          trip_group_key: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          label: string;
+          mythology_weight?: number | null;
+          node_ref?: string | null;
+          node_type: string;
+          trip_group_key: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          label?: string;
+          mythology_weight?: number | null;
+          node_ref?: string | null;
+          node_type?: string;
+          trip_group_key?: string;
+        };
+        Relationships: [];
+      };
       otp_codes: {
         Row: {
           code: string;
@@ -207,6 +746,62 @@ export type Database = {
           used?: boolean | null;
         };
         Relationships: [];
+      };
+      pending_incidents: {
+        Row: {
+          id: string;
+          incorporated: boolean;
+          note: string | null;
+          triggered_at: string;
+          triggered_by: string;
+          trip_id: string;
+        };
+        Insert: {
+          id?: string;
+          incorporated?: boolean;
+          note?: string | null;
+          triggered_at?: string;
+          triggered_by: string;
+          trip_id: string;
+        };
+        Update: {
+          id?: string;
+          incorporated?: boolean;
+          note?: string | null;
+          triggered_at?: string;
+          triggered_by?: string;
+          trip_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'pending_incidents_triggered_by_fkey';
+            columns: ['triggered_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'pending_incidents_triggered_by_fkey';
+            columns: ['triggered_by'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'pending_incidents_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'pending_incidents_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       photo_views: {
         Row: {
@@ -433,6 +1028,197 @@ export type Database = {
         };
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          auth_key: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          p256dh_key: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          auth_key: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          p256dh_key: string;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: {
+          auth_key?: string;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          p256dh_key?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'push_subscriptions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'push_subscriptions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      recurring_references: {
+        Row: {
+          activation_condition: string | null;
+          context: string | null;
+          created_at: string;
+          id: string;
+          invocation_count: number | null;
+          last_referenced_at: string | null;
+          origin_incident_id: string | null;
+          origin_trip_id: string;
+          phrase: string;
+        };
+        Insert: {
+          activation_condition?: string | null;
+          context?: string | null;
+          created_at?: string;
+          id?: string;
+          invocation_count?: number | null;
+          last_referenced_at?: string | null;
+          origin_incident_id?: string | null;
+          origin_trip_id: string;
+          phrase: string;
+        };
+        Update: {
+          activation_condition?: string | null;
+          context?: string | null;
+          created_at?: string;
+          id?: string;
+          invocation_count?: number | null;
+          last_referenced_at?: string | null;
+          origin_incident_id?: string | null;
+          origin_trip_id?: string;
+          phrase?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_references_origin_incident_id_fkey';
+            columns: ['origin_incident_id'];
+            isOneToOne: false;
+            referencedRelation: 'trip_incidents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recurring_references_origin_trip_id_fkey';
+            columns: ['origin_trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'recurring_references_origin_trip_id_fkey';
+            columns: ['origin_trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      relationship_dynamics: {
+        Row: {
+          alliance_dispute_count: number | null;
+          archetype_similarity: string | null;
+          chaos_delta: number | null;
+          duo_descriptor: string | null;
+          id: string;
+          is_notable_pairing: boolean | null;
+          opposing_dispute_count: number | null;
+          shared_incident_count: number | null;
+          snapshot_at: string;
+          trip_id: string;
+          user_a: string;
+          user_b: string;
+        };
+        Insert: {
+          alliance_dispute_count?: number | null;
+          archetype_similarity?: string | null;
+          chaos_delta?: number | null;
+          duo_descriptor?: string | null;
+          id?: string;
+          is_notable_pairing?: boolean | null;
+          opposing_dispute_count?: number | null;
+          shared_incident_count?: number | null;
+          snapshot_at?: string;
+          trip_id: string;
+          user_a: string;
+          user_b: string;
+        };
+        Update: {
+          alliance_dispute_count?: number | null;
+          archetype_similarity?: string | null;
+          chaos_delta?: number | null;
+          duo_descriptor?: string | null;
+          id?: string;
+          is_notable_pairing?: boolean | null;
+          opposing_dispute_count?: number | null;
+          shared_incident_count?: number | null;
+          snapshot_at?: string;
+          trip_id?: string;
+          user_a?: string;
+          user_b?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'relationship_dynamics_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'relationship_dynamics_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'relationship_dynamics_user_a_fkey';
+            columns: ['user_a'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'relationship_dynamics_user_a_fkey';
+            columns: ['user_a'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'relationship_dynamics_user_b_fkey';
+            columns: ['user_b'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'relationship_dynamics_user_b_fkey';
+            columns: ['user_b'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       scheduled_emails: {
         Row: {
           created_at: string | null;
@@ -492,6 +1278,56 @@ export type Database = {
           },
         ];
       };
+      social_role_assignments: {
+        Row: {
+          confidence: number | null;
+          role_type: string;
+          trip_id: string;
+          user_id: string;
+        };
+        Insert: {
+          confidence?: number | null;
+          role_type: string;
+          trip_id: string;
+          user_id: string;
+        };
+        Update: {
+          confidence?: number | null;
+          role_type?: string;
+          trip_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'social_role_assignments_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'social_role_assignments_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'social_role_assignments_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'social_role_assignments_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       trip_eras: {
         Row: {
           description: string | null;
@@ -537,12 +1373,85 @@ export type Database = {
           },
         ];
       };
+      trip_incidents: {
+        Row: {
+          callback_potential: string | null;
+          confidence: string;
+          created_at: string;
+          id: string;
+          incident_ref: string;
+          inferred_elements: string[] | null;
+          investigator_note: string | null;
+          invocation_count: number | null;
+          is_contested: boolean;
+          mythology_status: string | null;
+          participant_names: string[] | null;
+          timeframe: string | null;
+          title: string;
+          trip_id: string;
+          unknown_elements: string[] | null;
+          verified_facts: string[] | null;
+        };
+        Insert: {
+          callback_potential?: string | null;
+          confidence: string;
+          created_at?: string;
+          id?: string;
+          incident_ref: string;
+          inferred_elements?: string[] | null;
+          investigator_note?: string | null;
+          invocation_count?: number | null;
+          is_contested?: boolean;
+          mythology_status?: string | null;
+          participant_names?: string[] | null;
+          timeframe?: string | null;
+          title: string;
+          trip_id: string;
+          unknown_elements?: string[] | null;
+          verified_facts?: string[] | null;
+        };
+        Update: {
+          callback_potential?: string | null;
+          confidence?: string;
+          created_at?: string;
+          id?: string;
+          incident_ref?: string;
+          inferred_elements?: string[] | null;
+          investigator_note?: string | null;
+          invocation_count?: number | null;
+          is_contested?: boolean;
+          mythology_status?: string | null;
+          participant_names?: string[] | null;
+          timeframe?: string | null;
+          title?: string;
+          trip_id?: string;
+          unknown_elements?: string[] | null;
+          verified_facts?: string[] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'trip_incidents_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_incidents_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       trip_members: {
         Row: {
           absence_reason: string | null;
           created_at: string | null;
           id: string;
           portrait_url: string | null;
+          role_archetype_tag: string | null;
           role_chaos_rating: number | null;
           role_description: string | null;
           role_title: string | null;
@@ -555,6 +1464,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           portrait_url?: string | null;
+          role_archetype_tag?: string | null;
           role_chaos_rating?: number | null;
           role_description?: string | null;
           role_title?: string | null;
@@ -567,6 +1477,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           portrait_url?: string | null;
+          role_archetype_tag?: string | null;
           role_chaos_rating?: number | null;
           role_description?: string | null;
           role_title?: string | null;
@@ -601,6 +1512,42 @@ export type Database = {
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      trip_prophecy_cards: {
+        Row: {
+          card_headline: string;
+          created_at: string;
+          trip_id: string;
+          whatsapp_text: string;
+        };
+        Insert: {
+          card_headline: string;
+          created_at?: string;
+          trip_id: string;
+          whatsapp_text: string;
+        };
+        Update: {
+          card_headline?: string;
+          created_at?: string;
+          trip_id?: string;
+          whatsapp_text?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'trip_prophecy_cards_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: true;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_prophecy_cards_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: true;
+            referencedRelation: 'trips';
             referencedColumns: ['id'];
           },
         ];
@@ -640,6 +1587,67 @@ export type Database = {
           },
           {
             foreignKeyName: 'trip_stats_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      trip_timeline_events: {
+        Row: {
+          created_at: string;
+          day_number: number | null;
+          estimated_time: string | null;
+          event_description: string;
+          evidence_type: string | null;
+          id: string;
+          incident_id: string | null;
+          photo_count: number | null;
+          time_confidence: number | null;
+          trip_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          day_number?: number | null;
+          estimated_time?: string | null;
+          event_description: string;
+          evidence_type?: string | null;
+          id?: string;
+          incident_id?: string | null;
+          photo_count?: number | null;
+          time_confidence?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          created_at?: string;
+          day_number?: number | null;
+          estimated_time?: string | null;
+          event_description?: string;
+          evidence_type?: string | null;
+          id?: string;
+          incident_id?: string | null;
+          photo_count?: number | null;
+          time_confidence?: number | null;
+          trip_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'trip_timeline_events_incident_id_fkey';
+            columns: ['incident_id'];
+            isOneToOne: false;
+            referencedRelation: 'trip_incidents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'trip_timeline_events_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'trip_timeline_events_trip_id_fkey';
             columns: ['trip_id'];
             isOneToOne: false;
             referencedRelation: 'trips';
@@ -748,9 +1756,14 @@ export type Database = {
           lore_status: string | null;
           lore_trace_id: string | null;
           member_count: number | null;
+          memory_review_closes_at: string | null;
           name: string;
           payment_id: string | null;
+          pretrip_prophecy: Json | null;
           processing_started_at: string | null;
+          prophecy_accuracy: Json | null;
+          review_confirmed_count: number | null;
+          slambook_path: string | null;
           storage_used_bytes: number;
           story_visible: boolean;
           tier: string | null;
@@ -784,9 +1797,14 @@ export type Database = {
           lore_status?: string | null;
           lore_trace_id?: string | null;
           member_count?: number | null;
+          memory_review_closes_at?: string | null;
           name: string;
           payment_id?: string | null;
+          pretrip_prophecy?: Json | null;
           processing_started_at?: string | null;
+          prophecy_accuracy?: Json | null;
+          review_confirmed_count?: number | null;
+          slambook_path?: string | null;
           storage_used_bytes?: number;
           story_visible?: boolean;
           tier?: string | null;
@@ -820,9 +1838,14 @@ export type Database = {
           lore_status?: string | null;
           lore_trace_id?: string | null;
           member_count?: number | null;
+          memory_review_closes_at?: string | null;
           name?: string;
           payment_id?: string | null;
+          pretrip_prophecy?: Json | null;
           processing_started_at?: string | null;
+          prophecy_accuracy?: Json | null;
+          review_confirmed_count?: number | null;
+          slambook_path?: string | null;
           storage_used_bytes?: number;
           story_visible?: boolean;
           tier?: string | null;
@@ -903,10 +1926,146 @@ export type Database = {
           },
         ];
       };
+      user_identity_snapshots: {
+        Row: {
+          archetype: string;
+          archetype_confidence: number | null;
+          chaos_rating: number;
+          dispute_count: number | null;
+          id: string;
+          role_title: string | null;
+          signature_behavior: string | null;
+          snapshot_at: string;
+          trip_id: string;
+          user_id: string;
+        };
+        Insert: {
+          archetype: string;
+          archetype_confidence?: number | null;
+          chaos_rating: number;
+          dispute_count?: number | null;
+          id?: string;
+          role_title?: string | null;
+          signature_behavior?: string | null;
+          snapshot_at?: string;
+          trip_id: string;
+          user_id: string;
+        };
+        Update: {
+          archetype?: string;
+          archetype_confidence?: number | null;
+          chaos_rating?: number;
+          dispute_count?: number | null;
+          id?: string;
+          role_title?: string | null;
+          signature_behavior?: string | null;
+          snapshot_at?: string;
+          trip_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_identity_snapshots_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'chaos_distribution_cache';
+            referencedColumns: ['trip_id'];
+          },
+          {
+            foreignKeyName: 'user_identity_snapshots_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_identity_snapshots_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_identity_snapshots_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_reputation: {
+        Row: {
+          alliance_consistency: number | null;
+          archetype_stability: string | null;
+          chaos_percentile: number | null;
+          chaos_trend: string | null;
+          dispute_win_rate: number | null;
+          documenter_tendency: number | null;
+          incident_centrality: number | null;
+          last_updated: string;
+          mythology_influence: number | null;
+          planner_tendency: number | null;
+          reliability_score: number | null;
+          stabilizer_tendency: number | null;
+          total_trips_documented: number | null;
+          user_id: string;
+        };
+        Insert: {
+          alliance_consistency?: number | null;
+          archetype_stability?: string | null;
+          chaos_percentile?: number | null;
+          chaos_trend?: string | null;
+          dispute_win_rate?: number | null;
+          documenter_tendency?: number | null;
+          incident_centrality?: number | null;
+          last_updated?: string;
+          mythology_influence?: number | null;
+          planner_tendency?: number | null;
+          reliability_score?: number | null;
+          stabilizer_tendency?: number | null;
+          total_trips_documented?: number | null;
+          user_id: string;
+        };
+        Update: {
+          alliance_consistency?: number | null;
+          archetype_stability?: string | null;
+          chaos_percentile?: number | null;
+          chaos_trend?: string | null;
+          dispute_win_rate?: number | null;
+          documenter_tendency?: number | null;
+          incident_centrality?: number | null;
+          last_updated?: string;
+          mythology_influence?: number | null;
+          planner_tendency?: number | null;
+          reliability_score?: number | null;
+          stabilizer_tendency?: number | null;
+          total_trips_documented?: number | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_reputation_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_reputation_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       yearly_wraps: {
         Row: {
           created_at: string | null;
           id: string;
+          status: string | null;
+          trip_ids: string[] | null;
           user_id: string;
           wrap_json: Json;
           year: number;
@@ -914,6 +2073,8 @@ export type Database = {
         Insert: {
           created_at?: string | null;
           id?: string;
+          status?: string | null;
+          trip_ids?: string[] | null;
           user_id: string;
           wrap_json?: Json;
           year: number;
@@ -921,6 +2082,8 @@ export type Database = {
         Update: {
           created_at?: string | null;
           id?: string;
+          status?: string | null;
+          trip_ids?: string[] | null;
           user_id?: string;
           wrap_json?: Json;
           year?: number;
@@ -1008,6 +2171,11 @@ export type Database = {
       };
     };
     Functions: {
+      canonical_group_hash: { Args: { member_ids: string[] }; Returns: string };
+      claim_fal_budget_slot: {
+        Args: { p_cap: number; p_date: string };
+        Returns: boolean;
+      };
       claim_generation_job: { Args: never; Returns: string };
       claim_lore_generation: {
         Args: { p_trip_id: string; p_user_id: string };
@@ -1079,6 +2247,7 @@ export type Database = {
         }[];
       };
       refresh_chaos_distribution: { Args: never; Returns: undefined };
+      resolve_expired_disputes: { Args: never; Returns: undefined };
       submit_confession: {
         Args: { p_confession: string; p_trip_id: string };
         Returns: Json;
