@@ -73,7 +73,20 @@ export default function TripRoomPage() {
   // (Tab system removed earlier — content is linear scroll. The section IDs
   // below are still used as scroll anchors by the Chapter Deck cards in the hub.)
 
-  const { data: tripData, isLoading, refetch } = trpc.trips.getFull.useQuery({ tripId });
+  const {
+    data: tripData,
+    isLoading,
+    refetch,
+  } = trpc.trips.getFull.useQuery(
+    { tripId },
+    {
+      // Window-focus refetch disabled — this page has a Realtime subscription for
+      // lore_status changes. refetchOnWindowFocus (default: true) was triggering extra
+      // round-trips whenever the user switched tabs or clicked back from DevTools.
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    }
+  );
   // Stable refetch ref — channel subscription dep array stays stable so the
   // WebSocket is never torn down and rebuilt unnecessarily between renders.
   const refetchRef = useRef(refetch);

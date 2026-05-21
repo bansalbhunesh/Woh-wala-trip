@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import type { LoreJson } from '@/lib/types';
 // MoodSoundtrack removed — audio is blocked by default on iOS/Android.
 // It created a visible UI element for <1% of users who could use it.
@@ -188,14 +189,14 @@ export default function DemoStoryClient({ lore, members }: Props) {
         ◎ DEMO ARCHIVE
       </div>
 
-      {/* Back to landing */}
-      <a
+      {/* Back to landing — Link for client-side nav (avoids full page reload) */}
+      <Link
         href="/"
         className="absolute top-6 right-4 z-50 text-white/40 text-xs font-vibe uppercase tracking-wider hover:text-white/65 transition-colors"
         onClick={e => e.stopPropagation()}
       >
         ← Home
-      </a>
+      </Link>
 
       {/* Slide */}
       <div
@@ -532,18 +533,18 @@ function SlideContent({
             Upload your photos. Get your chaos score, character cards, and a cinematic documentary
             of your group's collective unraveling.
           </p>
-          <a
+          <Link
             href="/login"
             className="block w-full py-5 bg-white text-[#060604] rounded-full font-vibe font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-center"
           >
             Start your friendship archive →
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="block text-[10px] uppercase tracking-widest font-vibe text-white/40 hover:text-white/55 transition-colors"
           >
             ← Back to landing
-          </a>
+          </Link>
           <p
             className="font-mono text-[7.5px] uppercase tracking-[0.4em]"
             style={{ color: 'rgba(245,240,232,0.18)' }}

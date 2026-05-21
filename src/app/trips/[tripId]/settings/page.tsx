@@ -18,7 +18,10 @@ export default function TripSettingsPage() {
     data: tripData,
     isLoading,
     refetch,
-  } = trpc.trips.getFull.useQuery({ tripId }, { refetchOnMount: true });
+  } = trpc.trips.getFull.useQuery(
+    { tripId },
+    { refetchOnMount: true, refetchOnWindowFocus: false, staleTime: 30_000 }
+  );
 
   const setStoryVisible = trpc.trips.setStoryVisible.useMutation({
     onSuccess: () => {

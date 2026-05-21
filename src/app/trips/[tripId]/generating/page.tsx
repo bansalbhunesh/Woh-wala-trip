@@ -40,6 +40,11 @@ export default function GeneratingPage() {
     { tripId },
     {
       refetchOnMount: true,
+      // Window-focus refetch disabled — the generating page has both a Realtime
+      // subscription AND a 15s polling fallback. refetchOnWindowFocus (default: true)
+      // was firing an extra refetch every time the user clicked back from DevTools,
+      // creating a burst of rapid-fire requests visible in the network tab.
+      refetchOnWindowFocus: false,
       // Polling fallback: refetch every 15s so mobile users whose WebSocket drops
       // don't spin forever. Realtime fires immediately; polling is the safety net.
       // Stop polling once lore status is terminal (ready/failed).
