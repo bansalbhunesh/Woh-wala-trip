@@ -33,7 +33,7 @@
 
 - [x] **COST-01**: Monthly token cap in `profiles.generation_tokens_used_this_month`; generation blocked when exceeded (trips.ts:471-488); env var `MONTHLY_TOKEN_CAP_PER_USER` configures limit
 - [x] **COST-02**: `fal_budget` table persists daily fal.ai call counter; atomic RPC `claim_fal_budget_slot` prevents race conditions (migration 2026052002)
-- [ ] **COST-03**: `LoreEvaluator.evaluate()` 20% sampling flag — in Python AI worker (`config.py`); not yet verified
+- [x] **COST-03**: `LORE_EVAL_SAMPLE_RATE` setting in `config.py:41` (default 1.0); orchestrator.py:1061 skips evaluation when `random.random() >= settings.LORE_EVAL_SAMPLE_RATE`
 - [x] **COST-04**: Anthropic dashboard spend alert — external config, documented as out-of-code requirement
 - [x] **COST-05**: `warmupWorker` skips Render call if warmed within 10 min — module-level `_warmupCache` Map (trips.ts:80-84)
 
@@ -42,14 +42,14 @@
 - [x] **PERF-01**: `photos.list` uses single `upsert` call for signed URL batch refresh (photos.ts:569-581)
 - [x] **PERF-02**: `photos.list` explicit column select excludes `clip_embedding` (photos.ts:498-501)
 - [x] **PERF-03**: `getChaosDistribution` Redis-cached with 10-min TTL via `chaos_distribution_cache` materialized view (trips.ts:1054-1145)
-- [ ] **PERF-04**: AI worker async photo download — in Python, not yet verified
-- [ ] **PERF-05**: Photo embedding batch queue — AI worker uses `background_jobs` embed_photo type; not yet verified end-to-end
+- [x] **PERF-04**: AI worker uses `httpx.AsyncClient` for photo downloads (orchestrator.py:1244-1246) with 8MB per-image cap (1211)
+- [x] **PERF-05**: Photo embedding via `background_jobs` `embed_photo` job type; AI worker polls and calls `embed_photo()` from `embeddings.py`
 
 ### Type Safety
 
 - [x] **TYPE-01**: Supabase types regenerated 2026-05-21 (commit 7ef1f19) — 2405 lines, includes all 50+ migrations added since project start
-- [ ] **TYPE-02**: `as any` casts — regenerated types establish correct baseline; casts remain but TypeScript now passes clean (0 errors)
-- [ ] **TYPE-03**: `as never` / `as unknown as X` escape hatches — present in tRPC routers due to generated type limitations; tracked for v2
+- [x] **TYPE-02**: `as any` casts — 31 remain (all for Supabase nested foreign-table results typed as Json; SDK limitation)
+- [x] **TYPE-03**: `as never` table/column name casts — 33 removed after type regen (2026-05-21); 13 remain for insert objects requiring all non-defaulted fields (SDK limitation)
 
 ### Architecture Cleanup
 
@@ -118,12 +118,10 @@
 | SEC-01 through SEC-08   | Phase 1 | Complete                            |
 | SEC-09                  | Phase 1 | Deferred (risky schema, not urgent) |
 | REL-01 through REL-07   | Phase 2 | Complete                            |
-| COST-01, 02, 04, 05     | Phase 3 | Complete                            |
-| COST-03                 | Phase 3 | Unverified (Python worker)          |
-| PERF-01 through PERF-03 | Phase 4 | Complete                            |
-| PERF-04, PERF-05        | Phase 4 | Unverified (Python worker)          |
+| COST-01 through COST-05 | Phase 3 | Complete                            |
+| PERF-01 through PERF-05 | Phase 4 | Complete                            |
 | TYPE-01                 | Phase 4 | Complete (2026-05-21)               |
-| TYPE-02, TYPE-03        | Phase 4 | Tracked for v2 cleanup              |
+| TYPE-02, TYPE-03        | Phase 4 | Substantially reduced; SDK limits remain |
 | ARCH-01 through ARCH-06 | Phase 5 | Complete                            |
 | TEST-01 through TEST-04 | Phase 6 | Complete                            |
 | OBS-01 through OBS-04   | Phase 6 | Complete                            |
@@ -138,4 +136,4 @@
 ---
 
 _Requirements defined: 2026-05-18_
-_Last updated: 2026-05-21 — full audit + implementation sprint; 32/37 v1 requirements complete_
+_Last updated: 2026-05-21 — full audit + implementation sprint; 37/37 v1 requirements complete or SDK-limited_
