@@ -132,16 +132,25 @@ export default function GeneratingPage() {
     }
   }, [loreStatus, router, tripId, tripData, unlocking]);
 
-  // 4-minute client-side timeout — if still processing, show retry rather than spinning forever
+  // 4-minute client-side timeout — REL-04: automatically reset lore_status → 'failed'
+  // so the user can retry without manual DB intervention. The mutation is fire-and-forget;
+  // if it succeeds, Realtime fires → refetch → 'failed' → redirects to FailedState.
+  // If the user closes the tab before clicking, the status resets automatically on mount.
   useEffect(() => {
     const timeout = setTimeout(
       () => {
-        if (loreStatus === 'processing' || loreStatus === undefined) setTimedOut(true);
+        if (loreStatus === 'processing' || loreStatus === undefined) {
+          setTimedOut(true);
+          // Auto-reset: trip stays retryable even if user doesn't click the button.
+          resetStuckLore.mutate({ tripId });
+        }
       },
       4 * 60 * 1000
     );
     return () => clearTimeout(timeout);
-  }, [loreStatus]);
+    // resetStuckLore.mutate is stable (tRPC mutation ref doesn't change identity)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loreStatus, tripId]);
 
   // Progress simulation — deterministic eased curve.
   // Replaces the previous Math.random-jitter (which felt manic on screen) with
